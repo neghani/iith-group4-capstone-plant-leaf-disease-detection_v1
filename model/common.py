@@ -9,12 +9,16 @@ from __future__ import annotations
 import json
 import os
 import random
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageOps
+
+# CROP_MASK is off until diagnostics.py shows crop-masked top-1 is worth a required dropdown.
+CROP_MASK = os.environ.get("CROP_MASK", "").lower() in ("1", "true", "yes")
 
 # --------------------------------------------------------------------------------------
 # Environment / Hugging Face token
@@ -89,15 +93,14 @@ KAGGLE_DATASET = "abdallahalidev/plantvillage-dataset"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 # --------------------------------------------------------------------------------------
-# Image quality gate (same thresholds as api/app/vision/quality.py)
+# Image quality gate: the API's leaf-based, scale-normalised gate from shared/vision/quality.py
+# (docs/challenges-and-approach.md #1-3). The Phase 1 whole-frame Laplacian gate was removed
+# because it rejected large clean photos as blurry.
 # --------------------------------------------------------------------------------------
 
-MIN_WIDTH = 128
-MIN_HEIGHT = 128
-MAX_DIMENSION = 4096
-MIN_BRIGHTNESS = 35.0
-MAX_BRIGHTNESS = 230.0
-MIN_BLUR_VARIANCE = 80.0
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 @dataclass
@@ -106,39 +109,21 @@ class QualityResult:
     message: str | None = None
     brightness: float | None = None
     blur_score: float | None = None
-
-
-def laplacian_variance(gray: np.ndarray) -> float:
-    padded = np.pad(gray.astype(np.float32), 1, mode="edge")
-    lap = (
-        -4 * padded[1:-1, 1:-1]
-        + padded[:-2, 1:-1]
-        + padded[2:, 1:-1]
-        + padded[1:-1, :-2]
-        + padded[1:-1, 2:]
-    )
-    return float(lap.var())
+    reason: str | None = None
 
 
 def check_image_quality(img: Image.Image) -> QualityResult:
     """Return a farmer-facing message when the photo should be retaken."""
-    w, h = img.size
-    if w < MIN_WIDTH or h < MIN_HEIGHT:
-        return QualityResult(False, "Image is too small. Move closer so the leaf fills more of the frame.")
-    if w > MAX_DIMENSION or h > MAX_DIMENSION:
-        return QualityResult(False, "Image dimensions are too large.")
+    from shared.vision.candidates import find_candidates
+    from shared.vision.config import WORK_MAX_SIDE
+    from shared.vision.quality import check_gate
 
-    gray = np.array(img.convert("L"), dtype=np.float32)
-    brightness = float(gray.mean())
-    blur_score = laplacian_variance(gray)
-
-    if brightness < MIN_BRIGHTNESS:
-        return QualityResult(False, "Photo is too dark. Retake in better light without strong shadows.", brightness, blur_score)
-    if brightness > MAX_BRIGHTNESS:
-        return QualityResult(False, "Photo is overexposed. Avoid direct glare on the leaf.", brightness, blur_score)
-    if blur_score < MIN_BLUR_VARIANCE:
-        return QualityResult(False, "Photo looks blurry. Hold steady and focus on the leaf surface.", brightness, blur_score)
-    return QualityResult(True, None, brightness, blur_score)
+    size = img.size
+    if max(size) > WORK_MAX_SIDE:
+        img = img.copy()
+        img.thumbnail((WORK_MAX_SIDE, WORK_MAX_SIDE), Image.Resampling.LANCZOS)
+    gate = check_gate(img, find_candidates(img), size)
+    return QualityResult(gate.ok, gate.message, gate.brightness, gate.blur_score, gate.reason)
 
 
 def load_image(path: str | Path) -> Image.Image:
@@ -300,14 +285,36 @@ class TopK:
         return self.scores[0]
 
 
+def load_temperature(model_id: str, explicit: float | None = None) -> float:
+    """T from an argument, else <model>/calibration.json, else 1.0."""
+    if explicit is not None:
+        return float(explicit)
+    path = Path(model_id) / "calibration.json"
+    if path.exists():
+        return float(json.loads(path.read_text())["temperature"])
+    env = os.environ.get("CALIBRATION_TEMPERATURE")
+    return float(env) if env else 1.0
+
+
 class Predictor:
     """Loads a classifier from a local dir or the Hub and returns softmax top-k per image.
 
     Uses the model's own AutoImageProcessor (resize + center-crop + normalize), i.e. exactly
     what `transformers.pipeline("image-classification")` does, so Phase 5 can use either.
+    Logits are divided by `temperature` (calibration.json) before softmax. `crop_hint` plus
+    CROP_MASK (off by default) keeps only that crop's classes.
     """
 
-    def __init__(self, model_id: str = DEFAULT_HF_MODEL_ID, revision: str | None = None, device: str | None = None, token: str | None = None):
+    def __init__(
+        self,
+        model_id: str = DEFAULT_HF_MODEL_ID,
+        revision: str | None = None,
+        device: str | None = None,
+        token: str | None = None,
+        temperature: float | None = None,
+        crop_hint: str | None = None,
+        crop_mask: bool | None = None,
+    ):
         import torch
         from transformers import AutoImageProcessor, AutoModelForImageClassification
 
@@ -326,16 +333,38 @@ class Predictor:
         self.model.to(device)
         self.id2label = {int(k): v for k, v in self.model.config.id2label.items()}
         self.label_names = [self.id2label[i] for i in range(len(self.id2label))]
+        self.temperature = load_temperature(model_id, temperature)
+        self.crop_hint = crop_hint
+        self.crop_mask = CROP_MASK if crop_mask is None else crop_mask
 
-    def probabilities(self, images: list[Image.Image]) -> np.ndarray:
+    def logits(self, images: list[Image.Image]) -> np.ndarray:
         import torch
 
         inputs = self.processor(images=[im.convert("RGB") for im in images], return_tensors="pt").to(self.device)
         with torch.no_grad():
-            logits = self.model(**inputs).logits
-        return torch.softmax(logits.float(), dim=-1).cpu().numpy()
+            z = self.model(**inputs).logits
+        return z.float().cpu().numpy()
 
-    def predict_topk(self, image: Image.Image, k: int = 3) -> TopK:
-        probs = self.probabilities([image])[0]
+    def probabilities(self, images: list[Image.Image], crop_hint: str | None = None) -> np.ndarray:
+        import torch
+        from shared.vision.calibration import crop_mask as mask_crop
+
+        z = self.logits(list(images))
+        t = self.temperature
+        if t != 1.0:
+            z = z / t
+        probs = torch.softmax(torch.from_numpy(z), dim=-1).numpy()
+        hint = crop_hint if crop_hint is not None else self.crop_hint
+        if self.crop_mask and hint:
+            probs = mask_crop(probs, self.label_names, hint)
+        return probs
+
+    def predict_proba(self, images: list[Image.Image], crop_hint: str | None = None) -> list[dict[str, float]]:
+        """shared.vision.strategies.Predictor: full softmax per image, one batch."""
+        probs = self.probabilities(list(images), crop_hint=crop_hint)
+        return [{self.id2label[i]: float(p[i]) for i in range(len(p))} for p in probs]
+
+    def predict_topk(self, image: Image.Image, k: int = 3, crop_hint: str | None = None) -> TopK:
+        probs = self.probabilities([image], crop_hint=crop_hint)[0]
         order = np.argsort(-probs)[:k]
         return TopK(labels=[self.id2label[int(i)] for i in order], scores=[float(probs[i]) for i in order])

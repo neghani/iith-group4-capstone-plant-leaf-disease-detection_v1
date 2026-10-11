@@ -5,27 +5,36 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { UploadGuidelinesCard } from "@/components/UploadGuidelinesCard";
 import { UploadStepCard } from "@/components/UploadStepCard";
-import { predictLeaf } from "@/lib/api";
+import { checkQuality, predictLeaf } from "@/lib/api";
+import { prepareUpload } from "@/lib/image";
 import { saveCheckSession } from "@/lib/session";
 import type { CheckSession } from "@/lib/types";
 
+type Stage = "idle" | "checking" | "analyzing";
+
 export default function CheckPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [retakeMessage, setRetakeMessage] = useState<string | null>(null);
 
   async function handleAnalyze(file: File, crop: string, symptoms: string) {
-    setLoading(true);
     setError(null);
+    setRetakeMessage(null);
     try {
-      const previewDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      setStage("checking");
+      // Shrink big phone photos once; both API calls and the saved preview reuse the result.
+      const { file: upload, previewDataUrl } = await prepareUpload(file);
+      const quality = await checkQuality(upload);
+      if (!quality.ok) {
+        setRetakeMessage(
+          quality.message || "Please retake the photo with the leaf in focus."
+        );
+        return;
+      }
 
-      const data = await predictLeaf(file, crop, symptoms);
+      setStage("analyzing");
+      const data = await predictLeaf(upload, crop, symptoms);
       const cropLabel =
         data.report.crop || crop || "crop";
 
@@ -36,8 +45,10 @@ export default function CheckPage() {
         previewDataUrl,
         report: data.report,
         sessionContext: data.session_context,
+        topK: data.top_k,
         lowConfidence: data.low_confidence,
         qualityOk: data.quality.ok,
+        inference: data.inference ?? undefined,
       };
 
       saveCheckSession(session);
@@ -45,7 +56,7 @@ export default function CheckPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
-      setLoading(false);
+      setStage("idle");
     }
   }
 
@@ -64,7 +75,23 @@ export default function CheckPage() {
 
       <div className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div>
-          <UploadStepCard onAnalyze={handleAnalyze} loading={loading} />
+          <UploadStepCard onAnalyze={handleAnalyze} loading={stage !== "idle"} />
+          {stage !== "idle" && (
+            <p className="mt-4 text-center text-sm text-[var(--color-text-muted)]">
+              {stage === "checking"
+                ? "Checking photo quality…"
+                : "Photo looks good. Analyzing the leaf…"}
+            </p>
+          )}
+          {retakeMessage && (
+            <div className="mt-4 rounded-card border border-sage bg-sage/40 p-4 text-sm text-forest">
+              <p className="font-semibold">Photo needs improvement</p>
+              <p className="mt-1">{retakeMessage}</p>
+              <p className="mt-1 text-[var(--color-text-muted)]">
+                Retake the photo with the leaf centered, in daylight, and in focus.
+              </p>
+            </div>
+          )}
           {error && (
             <p className="mt-4 text-center text-sm text-red-700">{error}</p>
           )}

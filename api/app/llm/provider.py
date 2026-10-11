@@ -29,11 +29,14 @@ AGRICULTURE_SYSTEM = (
     "If the user asks about unrelated topics, politely decline in one sentence "
     "and invite an agriculture-related question. "
     "Do not invent chemical products; prefer general integrated pest management guidance "
-    "and remind users to confirm with local extension services for critical decisions."
+    "and remind users to confirm with local extension services for critical decisions. "
+    "The diagnosis comes from an image classifier; if its confidence is low, say the result is uncertain."
 )
 
 
 def generate_text(system: str, user: str) -> str | None:
+    if not isinstance(system, str) or not isinstance(user, str):
+        raise TypeError("LLM accepts text only; images go to the Hugging Face classifier.")
     model = get_chat_model()
     if model is None:
         return None

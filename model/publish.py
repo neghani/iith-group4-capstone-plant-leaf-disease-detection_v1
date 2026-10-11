@@ -13,6 +13,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -21,6 +22,9 @@ from common import DEFAULT_HF_MODEL_ID, get_hf_token, hf_api  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-mobilenetv2"
+V10_PV_ACCURACY = 0.9912
+MAX_PV_DROP = 0.02
+DIAGNOSTICS = HERE / "outputs" / "diagnostics_v1_0.json"
 
 # Trainer scratch files that should never land on the Hub.
 IGNORE = ["checkpoint-*", "checkpoint-*/**", "runs/**", "optimizer.pt", "scheduler.pt", "rng_state*.pth", "*.log", ".DS_Store"]
@@ -38,7 +42,41 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--commit_message", default="Phase 1: MobileNetV2 on PlantVillage")
     p.add_argument("--check", action="store_true", help="Verify token / owner / repo access and exit.")
     p.add_argument("--dry_run", action="store_true", help="Show the files that would be uploaded and exit.")
+    p.add_argument("--skip_gate", action="store_true", help="Do not enforce the v1.1 publish gate (not for the real release).")
+    p.add_argument("--diagnostics", default=str(DIAGNOSTICS), help="v1.0 validation diagnostics (diagnostics.py).")
     return p.parse_args()
+
+
+def publish_gate(model_dir: Path, tag: str, diagnostics: Path = DIAGNOSTICS) -> None:
+    """v1.1 is published only if PlantDoc val macro-F1 beats v1.0 and PV accuracy drops by at most 2 points."""
+    if tag != "v1.1":
+        return
+    if not diagnostics.exists():
+        raise SystemExit(f"v1.1 gate: {diagnostics} missing. Run diagnostics.py on the validation split first.")
+    diag = json.loads(diagnostics.read_text())
+    v10_f1 = float(diag["plantdoc_macro_f1"])
+    eval_path = model_dir / "eval_results.json"
+    if not eval_path.exists():
+        eval_path = model_dir / "all_results.json"
+    if not eval_path.exists():
+        raise SystemExit(f"v1.1 gate: {model_dir}/eval_results.json missing.")
+    ev = json.loads(eval_path.read_text())
+    v11_f1 = ev.get("eval_plantdoc_macro_f1")
+    if v11_f1 is None:
+        raise SystemExit("v1.1 gate: eval_plantdoc_macro_f1 not in eval results.")
+    metrics_path = model_dir / "reports" / "metrics.json"
+    if not metrics_path.exists():
+        raise SystemExit(f"v1.1 gate: {metrics_path} missing. Run evaluate.py on the PlantVillage test split.")
+    pv_acc = float(json.loads(metrics_path.read_text())["accuracy"])
+    problems = []
+    if v11_f1 <= v10_f1:
+        problems.append(f"PlantDoc val macro F1 {v11_f1:.4f} is not higher than v1.0 {v10_f1:.4f}")
+    if pv_acc < V10_PV_ACCURACY - MAX_PV_DROP:
+        problems.append(f"PlantVillage test accuracy {pv_acc:.4f} dropped more than {MAX_PV_DROP:.0%} from {V10_PV_ACCURACY:.4f}")
+    if problems:
+        raise SystemExit("v1.1 publish gate failed:\n  - " + "\n  - ".join(problems))
+    print(f"Publish gate OK: PlantDoc val F1 {v11_f1:.4f} > {v10_f1:.4f}; "
+          f"PlantVillage acc {pv_acc:.4f} (floor {V10_PV_ACCURACY - MAX_PV_DROP:.4f})")
 
 
 def verify_access(api, repo_id: str) -> str:
@@ -66,13 +104,13 @@ def verify_access(api, repo_id: str) -> str:
 
 def main() -> None:
     args = parse_args()
-    if not get_hf_token():
-        raise SystemExit("No HF token found. Put HF_TOKEN=... in .env, add the Colab secret HF_TOKEN, or run `hf auth login`.")
-
-    api = hf_api()
-    verify_access(api, args.hub_model_id)
-    if args.check:
-        return
+    if not args.dry_run:
+        if not get_hf_token():
+            raise SystemExit("No HF token found. Put HF_TOKEN=... in .env, add the Colab secret HF_TOKEN, or run `hf auth login`.")
+        api = hf_api()
+        verify_access(api, args.hub_model_id)
+        if args.check:
+            return
 
     model_dir = Path(args.model)
     if not model_dir.is_dir():
@@ -85,6 +123,15 @@ def main() -> None:
         print("Warning: reports/metrics.json missing. Run model/evaluate.py first so the Hub gets metrics and the model card.")
     if not (model_dir / "README.md").exists():
         print("Warning: README.md (model card) missing. evaluate.py writes it.")
+    if args.tag == "v1.1" and not args.skip_gate:
+        try:
+            publish_gate(model_dir, args.tag, Path(args.diagnostics))
+        except SystemExit as exc:
+            if not args.dry_run:
+                raise
+            print(f"[dry run] the real publish would stop here: {exc}")
+    if args.tag == "v1.1" and not (model_dir / "calibration.json").exists():
+        print("Warning: calibration.json missing; v1.1 should ship the fitted temperature.")
 
     ignore = IGNORE + (WEIGHT_PATTERNS if args.reports_only else [])
     allow = ["README.md", "reports/**"] if args.reports_only else None

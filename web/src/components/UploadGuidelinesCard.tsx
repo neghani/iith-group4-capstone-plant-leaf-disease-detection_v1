@@ -19,7 +19,7 @@ const tips = [
   {
     icon: CheckCircle2,
     title: "Upload one clear leaf",
-    body: "JPEG, PNG, or WebP up to 10 MB works best for this demo.",
+    body: "JPEG, PNG, or WebP up to 25 MB. Large phone photos are shrunk automatically.",
   },
 ];
 

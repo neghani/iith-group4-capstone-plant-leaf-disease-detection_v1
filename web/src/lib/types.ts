@@ -17,11 +17,41 @@ export type DiagnosisReport = {
   initial_message: string;
 };
 
+export type ImageQualityResult = {
+  ok: boolean;
+  message?: string | null;
+  brightness?: number | null;
+  blur_score?: number | null;
+  leaf_found?: boolean | null;
+  leaf_coverage?: number | null;
+  original_size?: number[] | null;
+};
+
+export type InferenceInfo = {
+  model_id: string;
+  model_revision: string;
+  model_verified: boolean;
+  source: string;
+  endpoint_host: string;
+  latency_ms: number;
+  input_bytes: number;
+  input_size?: number[] | null;
+  preprocessing: Record<string, unknown>;
+};
+
+export type TopKPrediction = {
+  label: string;
+  display_name: string;
+  score: number;
+};
+
 export type PredictResponse = {
-  quality: { ok: boolean; message?: string | null };
+  quality: ImageQualityResult;
   low_confidence: boolean;
   report: DiagnosisReport;
+  top_k: TopKPrediction[];
   session_context: Record<string, unknown>;
+  inference?: InferenceInfo | null;
 };
 
 export type CheckSession = {
@@ -31,6 +61,8 @@ export type CheckSession = {
   previewDataUrl: string;
   report: DiagnosisReport;
   sessionContext: Record<string, unknown>;
+  topK?: TopKPrediction[];
   lowConfidence: boolean;
   qualityOk: boolean;
+  inference?: InferenceInfo;
 };

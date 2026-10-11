@@ -1,13 +1,13 @@
-"""Reference inference for Phase 5: quality gate -> MobileNetV2 on Hugging Face -> top-k with "not sure".
+"""Reference inference: shared quality gate + crop strategy -> MobileNetV2 -> top-k with "not sure".
 
-This is what `api/app/vision/predictor.py` should do once the placeholder is replaced:
+Same preprocessing as the API (shared/vision), with the model run locally:
 
     from predict import diagnose
     result = diagnose("leaf.jpg")              # uses HF_MODEL_ID / HF_MODEL_REVISION env or defaults
     result["status"]                           # "ok" | "not_sure" | "retake_photo"
 
 CLI:
-    python model/predict.py leaf.jpg [--model neghani/plantvillage-mobilenetv2 --revision v1.0 --threshold 0.6]
+    python model/predict.py leaf.jpg [--model neghani/plantvillage-mobilenetv2 --revision v1.0 --threshold 0.6 --strategy B]
 """
 
 from __future__ import annotations
@@ -25,7 +25,6 @@ from common import (  # noqa: E402
     DEFAULT_HF_MODEL_ID,
     DEFAULT_HF_REVISION,
     Predictor,
-    check_image_quality,
     crop_from_class,
     display_name,
     load_image,
@@ -47,35 +46,37 @@ def diagnose(
     top_k: int = 3,
     skip_quality_gate: bool = False,
     device: str | None = None,
+    strategy: str = "B",
 ) -> dict:
     """Return a JSON-serialisable dict the API/agent can consume directly."""
+    from shared.vision.candidates import find_candidates
+    from shared.vision.config import WORK_MAX_SIDE
+    from shared.vision.quality import check_gate
+    from shared.vision.strategies import run_strategy
+
     img = image if isinstance(image, Image.Image) else load_image(image)
     img = img.convert("RGB")
+    size = img.size
+    if max(size) > WORK_MAX_SIDE:
+        img.thumbnail((WORK_MAX_SIDE, WORK_MAX_SIDE), Image.Resampling.LANCZOS)
 
-    quality = check_image_quality(img)
+    candidates = find_candidates(img)
+    gate = check_gate(img, candidates, size)
     out: dict = {
-        "quality": {"ok": quality.ok, "message": quality.message, "brightness": quality.brightness, "blur_score": quality.blur_score},
+        "quality": {"ok": gate.ok, "message": gate.message, "reason": gate.reason,
+                    "brightness": gate.brightness, "blur_score": gate.blur_score},
         "model": model_id,
         "revision": revision,
         "threshold": threshold,
     }
-    if not quality.ok and not skip_quality_gate:
-        out.update({"status": "retake_photo", "disease": None, "confidence": None, "top_k": []})
-        return out
-
-    topk = get_predictor(model_id, revision, device).predict_topk(img, k=top_k)
-    low = topk.confidence < threshold
-    out.update(
-        {
-            "status": "not_sure" if low else "ok",
-            "disease": topk.top1,
-            "display_name": display_name(topk.top1),
-            "crop": crop_from_class(topk.top1),
-            "confidence": round(topk.confidence, 4),
-            "low_confidence": low,
-            "top_k": [{"label": l, "display_name": display_name(l), "score": round(s, 4)} for l, s in zip(topk.labels, topk.scores)],
-        }
-    )
+    if skip_quality_gate:
+        gate.ok, gate.reason = True, None
+    res = run_strategy(img, strategy, get_predictor(model_id, revision, device), threshold=threshold,
+                       top_k=top_k, candidates=candidates, gate=gate)
+    out.update(res)
+    if res["disease"]:
+        out.update(display_name=display_name(res["disease"]), crop=crop_from_class(res["disease"]),
+                   confidence=round(res["confidence"], 4), low_confidence=res["status"] != "ok")
     return out
 
 
@@ -88,11 +89,13 @@ def main() -> None:
     p.add_argument("--top_k", type=int, default=3)
     p.add_argument("--skip_quality_gate", action="store_true")
     p.add_argument("--device", default=None)
+    p.add_argument("--strategy", default="B", choices=list("ABCDE"))
     args = p.parse_args()
 
     revision = None if args.revision in ("", "main") and Path(args.model).exists() else args.revision
     for path in args.image:
-        result = diagnose(path, args.model, revision, args.threshold, args.top_k, args.skip_quality_gate, args.device)
+        result = diagnose(path, args.model, revision, args.threshold, args.top_k, args.skip_quality_gate,
+                          args.device, args.strategy)
         result["image"] = path
         print(json.dumps(result, indent=2))
 

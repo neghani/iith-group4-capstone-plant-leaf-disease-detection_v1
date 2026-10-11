@@ -1,0 +1,8 @@
+# Root build context is used by api/Dockerfile only (it needs shared/); keep it small.
+**
+!api/requirements.txt
+!api/app/**
+!api/data/**
+!shared/**
+**/__pycache__
+**/.venv
