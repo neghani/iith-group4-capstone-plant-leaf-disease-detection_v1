@@ -122,6 +122,23 @@ def test_manifest_goes_to_artifacts_dir(prepared):
     assert manifest["counts"]["plantdoc_validation"] > 0
 
 
+def test_plantvillage_vs_test_ignores_cross_crop_hash_collisions():
+    """Leaf photos cluster in pHash space; dist ≤6 blueberry vs apple is not leakage."""
+    train = [Item(path="train/t.jpg", split="train", label="Tomato___healthy",
+                  phash=(1 << 32) - 1, group="g1", source="plantdoc")]
+    val = [Item(path="train/v.jpg", split="validation", label="Tomato___healthy",
+                phash=(1 << 63) - 1, group="g2", source="plantdoc")]
+    test = [Item(path="test/Apple leaf/a.jpg", split="holdout", label="Apple___healthy",
+                 phash=0, group="t", source="plantdoc")]
+    extra_other = [Item(path="pv/Blueberry___healthy/x.JPG", split="train", label="Blueberry___healthy",
+                        phash=0, group="pv", source="plantvillage")]
+    assert_protocol(train, val, test, extra_other)
+    extra_same = [Item(path="pv/Apple___healthy/x.JPG", split="train", label="Apple___healthy",
+                       phash=0, group="pv", source="plantvillage")]
+    with pytest.raises(ProtocolError, match="extra"):
+        assert_protocol(train, val, test, extra_same)
+
+
 def test_assertions_reload_and_catch_injected_leak(prepared):
     p, _ = prepared
     items = items_from_json(p.pd_train / "items.json")

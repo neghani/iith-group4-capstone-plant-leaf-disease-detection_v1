@@ -165,6 +165,25 @@ def latest_checkpoint(output_dir: Path) -> str | None:
     return str(sorted(ckpts)[-1][1]) if ckpts else None
 
 
+def has_weights(output_dir: Path) -> bool:
+    return any(output_dir.glob("*.safetensors")) or any(output_dir.glob("pytorch_model*.bin"))
+
+
+def training_finished(output_dir: Path, num_epochs: float, max_steps: int | None) -> bool:
+    """True when this output_dir already holds a completed run (re-running the cell must not start over)."""
+    if not has_weights(output_dir):
+        return False
+    state_path = output_dir / "trainer_state.json"
+    if not state_path.exists():
+        return True  # saved model, no trainer state: treat as done
+    state = json.loads(state_path.read_text())
+    step = int(state.get("global_step") or 0)
+    if max_steps and max_steps > 0:
+        return step >= int(max_steps)
+    epoch = float(state.get("epoch") or 0)
+    return epoch + 1e-6 >= float(num_epochs)
+
+
 def _size_value(size, *keys: str) -> int | None:
     if size is None:
         return None
@@ -241,7 +260,8 @@ def assert_training_protocol(data_dir: Path, pv_train: list[tuple[str, int]], ex
     extra_items = []
     for rel, _ in pv_train:
         path = data_dir / rel
-        extra_items.append(Item(path=str(path), split="train", label="", phash=phash_cached(path, cache),
+        extra_items.append(Item(path=str(path), split="train", label=Path(rel).parts[0],
+                                phash=phash_cached(path, cache),
                                 group=f"pv:{rel}", source="plantvillage"))
     save_hash_cache(cache_path, cache)
     assert_protocol(prepared["train"], prepared["validation"], prepared["final_test"], extra_items)
@@ -372,11 +392,29 @@ def main(argv: list[str] | None = None) -> None:
         model_args.model_name_or_path = model_args.init_from
 
     output_dir = Path(training_args.output_dir)
+    overwrite = bool(getattr(training_args, "overwrite_output_dir", False))
     resume = training_args.resume_from_checkpoint
+    found = latest_checkpoint(output_dir)
     if isinstance(resume, str) and resume.lower() == "auto":
-        found = latest_checkpoint(output_dir)
         training_args.resume_from_checkpoint = found
         logger.info("resume_from_checkpoint=auto -> %s", found or "(none, starting fresh)")
+    elif training_args.do_train and found and not resume and not overwrite:
+        # Re-running the Colab train cell after a disconnect must not start from scratch.
+        training_args.resume_from_checkpoint = found
+        logger.warning("Found %s; resuming instead of training from scratch. "
+                       "Pass --overwrite_output_dir to start over.", found)
+
+    if training_args.do_train and not overwrite and training_finished(
+        output_dir, training_args.num_train_epochs, getattr(training_args, "max_steps", None)
+    ):
+        logger.info("Training already finished in %s (weights present). Skipping --do_train. "
+                    "Pass --overwrite_output_dir to retrain.", output_dir)
+        training_args.do_train = False
+    if not training_args.do_train and has_weights(output_dir):
+        logger.info("Loading finished weights from %s (not the base checkpoint).", output_dir)
+        model_args.model_name_or_path = str(output_dir)
+        model_args.init_from = None
+        model_args.model_revision = None
 
     training_args.remove_unused_columns = False
     resuming = bool(training_args.resume_from_checkpoint)
