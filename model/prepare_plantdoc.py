@@ -357,7 +357,14 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--exclude_set", default=str(HERE / "data" / "real_world_set"))
     ap.add_argument("--artifacts_dir", default=str(HERE / "outputs"), help="where data_manifest.json goes")
     ap.add_argument("--val_pct", type=int, default=VAL_PCT)
+    ap.add_argument("--skip_if_exists", action="store_true",
+                    help="Do nothing if items.json is already there (do not rebuild crops).")
     a = ap.parse_args(argv)
+
+    if a.skip_if_exists and (Path(a.out_train) / "items.json").exists():
+        print(f"Skipping prepare; {a.out_train}/items.json already exists. "
+              "Drop --skip_if_exists to rebuild.")
+        return
 
     src, commit = ensure_repo(Path(a.src), a.repo_url, clone=not a.no_clone)
     s = prepare(src, Path(a.out_train), Path(a.out_test), Path(a.exclude_set), a.val_pct, commit,

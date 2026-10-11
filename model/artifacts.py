@@ -87,7 +87,12 @@ def main(argv: list[str] | None = None) -> None:
     if a.hub:
         from common import get_hf_token
 
-        print(f"[artifacts] Hub: {to_hub(files, a.hub, a.run, a.step, token=get_hf_token())}")
+        try:
+            print(f"[artifacts] Hub: {to_hub(files, a.hub, a.run, a.step, token=get_hf_token())}")
+        except Exception as exc:
+            if not a.drive:
+                raise
+            print(f"[artifacts] Hub upload failed ({exc}). Drive copy is intact; not failing the run.")
 
 
 if __name__ == "__main__":
