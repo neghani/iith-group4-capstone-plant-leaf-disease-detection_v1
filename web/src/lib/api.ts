@@ -1,4 +1,4 @@
-import type { PredictResponse } from "./types";
+import type { ImageQualityResult, PredictResponse } from "./types";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
@@ -7,6 +7,12 @@ const API_URL = (
 export async function fetchHealth(): Promise<{
   status: string;
   llm_configured: boolean;
+  hf_model_configured: boolean;
+  hf_model_id: string;
+  hf_model_revision: string;
+  hf_endpoint_configured: boolean;
+  hf_reachable?: boolean | null;
+  hf_served_model?: string | null;
 } | null> {
   try {
     const res = await fetch(`${API_URL}/health`, { cache: "no-store" });
@@ -15,6 +21,24 @@ export async function fetchHealth(): Promise<{
   } catch {
     return null;
   }
+}
+
+async function errorDetail(res: Response, fallback: string): Promise<string> {
+  const err = await res.json().catch(() => ({}));
+  return typeof err.detail === "string" ? err.detail : fallback;
+}
+
+export async function checkQuality(file: File): Promise<ImageQualityResult> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${API_URL}/quality-check`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) throw new Error(await errorDetail(res, "Quality check failed"));
+  return res.json();
 }
 
 export async function predictLeaf(
@@ -32,12 +56,7 @@ export async function predictLeaf(
     body: form,
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      typeof err.detail === "string" ? err.detail : "Upload failed"
-    );
-  }
+  if (!res.ok) throw new Error(await errorDetail(res, "Upload failed"));
 
   return res.json();
 }

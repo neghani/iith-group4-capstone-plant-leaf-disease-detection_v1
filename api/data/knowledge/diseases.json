@@ -5,14 +5,32 @@
     "category": "fungal",
     "description": "Early blight is a common fungal disease that causes dark spots with concentric rings on lower leaves, often spreading upward in warm, humid weather.",
     "symptoms": [
-      {"name": "Target-like spots", "explanation": "Brown lesions with rings on older leaves."},
-      {"name": "Yellowing", "explanation": "Leaves may yellow around spots and drop early."}
+      {
+        "name": "Target-like spots",
+        "explanation": "Brown lesions with rings on older leaves."
+      },
+      {
+        "name": "Yellowing",
+        "explanation": "Leaves may yellow around spots and drop early."
+      }
     ],
-    "alternatives": ["Septoria leaf spot", "Nutrient deficiency"],
+    "alternatives": [
+      "Septoria leaf spot",
+      "Nutrient deficiency"
+    ],
     "actions": [
-      {"step": "Remove heavily infected lower leaves and destroy them (do not compost).", "safety_note": "Wash hands and tools after handling infected plants."},
-      {"step": "Improve airflow by spacing plants and avoiding overhead watering.", "safety_note": null},
-      {"step": "Apply a fungicide labeled for early blight only if local extension guidance recommends it.", "safety_note": "Follow label rates and pre-harvest intervals."}
+      {
+        "step": "Remove heavily infected lower leaves and destroy them (do not compost).",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Improve airflow by spacing plants and avoiding overhead watering.",
+        "safety_note": null
+      },
+      {
+        "step": "Apply a fungicide labeled for early blight only if local extension guidance recommends it.",
+        "safety_note": "Follow label rates and pre-harvest intervals."
+      }
     ],
     "monitoring": "Check lower leaves every few days; watch for new spots after rain.",
     "limitations": "Similar spots can come from other fungi or physical damage; confirm with an expert if unsure."
@@ -23,14 +41,32 @@
     "category": "fungal",
     "description": "Late blight spreads quickly in cool, wet conditions and can destroy foliage and fruit within days if not managed.",
     "symptoms": [
-      {"name": "Water-soaked patches", "explanation": "Large irregular gray-green areas on leaves."},
-      {"name": "White growth", "explanation": "Fuzzy growth may appear on undersides in humid weather."}
+      {
+        "name": "Water-soaked patches",
+        "explanation": "Large irregular gray-green areas on leaves."
+      },
+      {
+        "name": "White growth",
+        "explanation": "Fuzzy growth may appear on undersides in humid weather."
+      }
     ],
-    "alternatives": ["Bacterial spot", "Sunscald on fruit"],
+    "alternatives": [
+      "Bacterial spot",
+      "Sunscald on fruit"
+    ],
     "actions": [
-      {"step": "Isolate affected plants if possible; remove severely infected plants.", "safety_note": "Dispose away from the field; do not leave debris on soil."},
-      {"step": "Avoid working in wet fields to limit spread.", "safety_note": null},
-      {"step": "Use protectant fungicides per local agricultural extension advice.", "safety_note": "Wear protective equipment as required on the label."}
+      {
+        "step": "Isolate affected plants if possible; remove severely infected plants.",
+        "safety_note": "Dispose away from the field; do not leave debris on soil."
+      },
+      {
+        "step": "Avoid working in wet fields to limit spread.",
+        "safety_note": null
+      },
+      {
+        "step": "Use protectant fungicides per local agricultural extension advice.",
+        "safety_note": "Wear protective equipment as required on the label."
+      }
     ],
     "monitoring": "Inspect daily during cool, rainy periods; act at first signs.",
     "limitations": "Requires prompt action; photo-only diagnosis may miss early or mixed infections."
@@ -41,14 +77,32 @@
     "category": "fungal",
     "description": "Early blight on potato causes dark lesions on leaves and can reduce tuber yield if left unmanaged.",
     "symptoms": [
-      {"name": "Dark leaf spots", "explanation": "Angular to circular brown spots, often with rings."},
-      {"name": "Defoliation", "explanation": "Severe infection causes premature leaf drop."}
+      {
+        "name": "Dark leaf spots",
+        "explanation": "Angular to circular brown spots, often with rings."
+      },
+      {
+        "name": "Defoliation",
+        "explanation": "Severe infection causes premature leaf drop."
+      }
     ],
-    "alternatives": ["Late blight", "Brown spot"],
+    "alternatives": [
+      "Late blight",
+      "Brown spot"
+    ],
     "actions": [
-      {"step": "Rotate crops and use certified seed where available.", "safety_note": null},
-      {"step": "Maintain balanced fertility; avoid excess nitrogen that favors lush, susceptible foliage.", "safety_note": null},
-      {"step": "Consider fungicide programs aligned with local recommendations.", "safety_note": "Follow label restrictions for food crops."}
+      {
+        "step": "Rotate crops and use certified seed where available.",
+        "safety_note": null
+      },
+      {
+        "step": "Maintain balanced fertility; avoid excess nitrogen that favors lush, susceptible foliage.",
+        "safety_note": null
+      },
+      {
+        "step": "Consider fungicide programs aligned with local recommendations.",
+        "safety_note": "Follow label restrictions for food crops."
+      }
     ],
     "monitoring": "Scout from tuber initiation through canopy closure.",
     "limitations": "Field history and weather strongly affect risk; confirm critical decisions locally."
@@ -59,14 +113,32 @@
     "category": "fungal",
     "description": "Apple scab causes olive-green to dark scabby lesions on leaves and fruit, favored by spring moisture.",
     "symptoms": [
-      {"name": "Velvety spots", "explanation": "Olive lesions on young leaves and fruit."},
-      {"name": "Leaf curl", "explanation": "Infected leaves may distort and fall."}
+      {
+        "name": "Velvety spots",
+        "explanation": "Olive lesions on young leaves and fruit."
+      },
+      {
+        "name": "Leaf curl",
+        "explanation": "Infected leaves may distort and fall."
+      }
     ],
-    "alternatives": ["Flyspeck", "Sooty blotch"],
+    "alternatives": [
+      "Flyspeck",
+      "Sooty blotch"
+    ],
     "actions": [
-      {"step": "Remove fallen leaves in autumn to reduce overwintering spores.", "safety_note": null},
-      {"step": "Prune for light penetration and faster leaf drying.", "safety_note": null},
-      {"step": "Apply scab-targeted sprays per regional orchard calendar.", "safety_note": "Respect re-entry and harvest intervals."}
+      {
+        "step": "Remove fallen leaves in autumn to reduce overwintering spores.",
+        "safety_note": null
+      },
+      {
+        "step": "Prune for light penetration and faster leaf drying.",
+        "safety_note": null
+      },
+      {
+        "step": "Apply scab-targeted sprays per regional orchard calendar.",
+        "safety_note": "Respect re-entry and harvest intervals."
+      }
     ],
     "monitoring": "Watch new growth in wet springs; track weather-based infection periods if available.",
     "limitations": "Fruit and leaf symptoms differ by variety; expert verification helps before spray decisions."
@@ -77,16 +149,1174 @@
     "category": "fungal",
     "description": "Common rust produces reddish-brown pustules on leaves, usually mid to late season depending on hybrid susceptibility.",
     "symptoms": [
-      {"name": "Rust pustules", "explanation": "Small raised reddish-brown spots on both leaf surfaces."},
-      {"name": "Yellow halos", "explanation": "Chlorosis may surround heavy infections." }
+      {
+        "name": "Rust pustules",
+        "explanation": "Small raised reddish-brown spots on both leaf surfaces."
+      },
+      {
+        "name": "Yellow halos",
+        "explanation": "Chlorosis may surround heavy infections."
+      }
     ],
-    "alternatives": ["Southern rust", "Physiological leaf streak"],
+    "alternatives": [
+      "Southern rust",
+      "Physiological leaf streak"
+    ],
     "actions": [
-      {"step": "Choose resistant hybrids for future plantings if rust is recurring.", "safety_note": null},
-      {"step": "Scout fields to distinguish common vs southern rust.", "safety_note": "Misidentification changes urgency of control."},
-      {"step": "Treat only when thresholds and economics justify it locally.", "safety_note": "Follow label directions for grain crops."}
+      {
+        "step": "Choose resistant hybrids for future plantings if rust is recurring.",
+        "safety_note": null
+      },
+      {
+        "step": "Scout fields to distinguish common vs southern rust.",
+        "safety_note": "Misidentification changes urgency of control."
+      },
+      {
+        "step": "Treat only when thresholds and economics justify it locally.",
+        "safety_note": "Follow label directions for grain crops."
+      }
     ],
     "monitoring": "Check mid-canopy leaves weekly in humid seasons.",
     "limitations": "Rust species look similar in photos; lab or expert ID may be needed."
+  },
+  "Apple___Black_rot": {
+    "display_name": "Apple Black Rot",
+    "crop": "Apple",
+    "category": "fungal",
+    "description": "Black rot is a fungal disease causing leaf spots, rotting fruit, and cankers on branches, spreading in warm, wet weather.",
+    "symptoms": [
+      {
+        "name": "Frog-eye spots",
+        "explanation": "Small purple spots that enlarge with tan centres and purple edges."
+      },
+      {
+        "name": "Fruit rot",
+        "explanation": "Brown to black rot on fruit, often starting at the blossom end."
+      }
+    ],
+    "alternatives": [
+      "Apple scab",
+      "Cedar apple rust"
+    ],
+    "actions": [
+      {
+        "step": "Prune out dead wood, cankers, and mummified fruit and remove them from the orchard.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Rake and destroy fallen leaves and fruit.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check leaves and fruit every week from bloom; watch branches for sunken cankers.",
+    "limitations": "Leaf spots can resemble other apple diseases; confirm with an expert if unsure."
+  },
+  "Apple___Cedar_apple_rust": {
+    "display_name": "Apple Cedar Apple Rust",
+    "crop": "Apple",
+    "category": "fungal",
+    "description": "Cedar apple rust is a fungal disease that needs both apple and nearby juniper/cedar trees to complete its life cycle.",
+    "symptoms": [
+      {
+        "name": "Orange spots",
+        "explanation": "Bright yellow-orange spots on upper leaf surface in spring."
+      },
+      {
+        "name": "Tufts underneath",
+        "explanation": "Small tube-like structures on the leaf underside later in the season."
+      }
+    ],
+    "alternatives": [
+      "Apple scab",
+      "Nutrient deficiency"
+    ],
+    "actions": [
+      {
+        "step": "Remove nearby juniper or cedar galls where practical.",
+        "safety_note": null
+      },
+      {
+        "step": "Rake and remove fallen infected leaves.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Watch new leaves in spring after wet weather; note any junipers within a few hundred metres.",
+    "limitations": "Other rusts and leaf spots look similar; confirm locally if unsure."
+  },
+  "Cherry_(including_sour)___Powdery_mildew": {
+    "display_name": "Cherry Powdery Mildew",
+    "crop": "Cherry",
+    "category": "fungal",
+    "description": "Powdery mildew is a fungal disease that coats young leaves and shoots with white powder, favoured by humid nights and dry days.",
+    "symptoms": [
+      {
+        "name": "White powder",
+        "explanation": "Fluffy white patches on leaves, often on young growth."
+      },
+      {
+        "name": "Curled leaves",
+        "explanation": "Infected leaves may curl, pucker, or turn brittle."
+      }
+    ],
+    "alternatives": [
+      "Dust or spray residue",
+      "Leaf spot"
+    ],
+    "actions": [
+      {
+        "step": "Prune to open the canopy and improve airflow.",
+        "safety_note": null
+      },
+      {
+        "step": "Remove heavily infected shoots.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check new shoots every few days during humid weather.",
+    "limitations": "Residue or dust can look like mildew; rub the leaf to check."
+  },
+  "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {
+    "display_name": "Corn Gray Leaf Spot",
+    "crop": "Corn (maize)",
+    "category": "fungal",
+    "description": "Gray leaf spot is a fungal disease of maize that forms long grey lesions between leaf veins, worst in warm, humid weather with residue left in the field.",
+    "symptoms": [
+      {
+        "name": "Rectangular lesions",
+        "explanation": "Narrow grey to tan lesions running parallel to the veins."
+      },
+      {
+        "name": "Leaf death",
+        "explanation": "Lesions join together and whole leaves dry out."
+      }
+    ],
+    "alternatives": [
+      "Northern leaf blight",
+      "Common rust"
+    ],
+    "actions": [
+      {
+        "step": "Rotate with a non-host crop and manage crop residue.",
+        "safety_note": null
+      },
+      {
+        "step": "Use tolerant varieties in the next season.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Scout lower leaves weekly from knee height through grain fill.",
+    "limitations": "Other leaf blights look similar early; confirm with an expert if unsure."
+  },
+  "Corn_(maize)___Northern_Leaf_Blight": {
+    "display_name": "Corn Northern Leaf Blight",
+    "crop": "Corn (maize)",
+    "category": "fungal",
+    "description": "Northern leaf blight is a fungal disease that forms long cigar-shaped lesions on maize leaves in moderate temperatures with heavy dew.",
+    "symptoms": [
+      {
+        "name": "Cigar-shaped lesions",
+        "explanation": "Long grey-green to tan lesions, several centimetres long."
+      },
+      {
+        "name": "Lower leaves first",
+        "explanation": "Usually starts on lower leaves and moves upward."
+      }
+    ],
+    "alternatives": [
+      "Gray leaf spot",
+      "Common rust"
+    ],
+    "actions": [
+      {
+        "step": "Rotate crops and manage infected residue.",
+        "safety_note": null
+      },
+      {
+        "step": "Choose resistant hybrids for the next planting.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check leaves weekly, especially before tasselling.",
+    "limitations": "Lesion shape helps, but lab confirmation may be needed for similar blights."
+  },
+  "Grape___Black_rot": {
+    "display_name": "Grape Black Rot",
+    "crop": "Grape",
+    "category": "fungal",
+    "description": "Black rot is a fungal disease of grapes that causes leaf spots and turns berries into hard black mummies in warm, wet weather.",
+    "symptoms": [
+      {
+        "name": "Tan leaf spots",
+        "explanation": "Round tan spots with dark borders and tiny black dots."
+      },
+      {
+        "name": "Mummified berries",
+        "explanation": "Berries shrivel into hard black raisins."
+      }
+    ],
+    "alternatives": [
+      "Downy mildew",
+      "Leaf blight"
+    ],
+    "actions": [
+      {
+        "step": "Remove mummified berries and infected leaves from vines and ground.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Prune for airflow and sunlight in the canopy.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Inspect leaves and young clusters weekly after rain.",
+    "limitations": "Other grape leaf spots look similar; confirm locally if unsure."
+  },
+  "Grape___Esca_(Black_Measles)": {
+    "display_name": "Grape Esca (Black Measles)",
+    "crop": "Grape",
+    "category": "fungal",
+    "description": "Esca is a trunk disease of grapevines caused by wood-infecting fungi, showing as striped leaves and spotted berries.",
+    "symptoms": [
+      {
+        "name": "Tiger-stripe leaves",
+        "explanation": "Yellow or red bands between veins that dry out."
+      },
+      {
+        "name": "Spotted berries",
+        "explanation": "Small dark spots on berries; vines may suddenly wilt."
+      }
+    ],
+    "alternatives": [
+      "Nutrient deficiency",
+      "Leaf blight"
+    ],
+    "actions": [
+      {
+        "step": "Mark affected vines and prune out dead wood in dry weather.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Protect large pruning wounds and disinfect tools between vines.",
+        "safety_note": null
+      },
+      {
+        "step": "Ask an expert about trunk renewal for badly affected vines.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Track marked vines each season; symptoms can come and go between years.",
+    "limitations": "Leaf symptoms vary year to year; wood inspection by an expert confirms it."
+  },
+  "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {
+    "display_name": "Grape Leaf Blight (Isariopsis Leaf Spot)",
+    "crop": "Grape",
+    "category": "fungal",
+    "description": "Isariopsis leaf spot is a fungal disease causing dark irregular spots that can lead to early leaf drop in humid conditions.",
+    "symptoms": [
+      {
+        "name": "Dark irregular spots",
+        "explanation": "Brown to black angular spots on older leaves."
+      },
+      {
+        "name": "Early leaf drop",
+        "explanation": "Badly affected leaves yellow and fall early."
+      }
+    ],
+    "alternatives": [
+      "Black rot",
+      "Esca"
+    ],
+    "actions": [
+      {
+        "step": "Remove fallen and infected leaves.",
+        "safety_note": null
+      },
+      {
+        "step": "Improve airflow by canopy management.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check older leaves weekly during humid weather.",
+    "limitations": "Several grape leaf spots look alike; confirm with an expert if unsure."
+  },
+  "Orange___Haunglongbing_(Citrus_greening)": {
+    "display_name": "Citrus Greening (Huanglongbing)",
+    "crop": "Orange",
+    "category": "bacterial",
+    "description": "Citrus greening is a serious bacterial disease spread by the Asian citrus psyllid. It has no cure and slowly kills trees.",
+    "symptoms": [
+      {
+        "name": "Blotchy mottle",
+        "explanation": "Uneven yellow blotches that do not match on both sides of the leaf."
+      },
+      {
+        "name": "Poor fruit",
+        "explanation": "Small, lopsided, bitter fruit that stays partly green."
+      }
+    ],
+    "alternatives": [
+      "Zinc or nutrient deficiency",
+      "Other citrus mottles"
+    ],
+    "actions": [
+      {
+        "step": "Report suspected trees to your local agricultural or plant protection office.",
+        "safety_note": null
+      },
+      {
+        "step": "Control psyllids as advised by local experts.",
+        "safety_note": "Follow local guidance for any insecticide use."
+      },
+      {
+        "step": "Remove confirmed infected trees as advised to protect nearby trees.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect trees monthly for psyllids and new yellowing.",
+    "limitations": "Nutrient deficiency looks similar; lab testing is needed to confirm greening."
+  },
+  "Peach___Bacterial_spot": {
+    "display_name": "Peach Bacterial Spot",
+    "crop": "Peach",
+    "category": "bacterial",
+    "description": "Bacterial spot causes small leaf spots, shot holes, and pitted fruit on peaches, spreading in warm, wet, windy weather.",
+    "symptoms": [
+      {
+        "name": "Shot holes",
+        "explanation": "Small angular spots whose centres drop out, leaving holes."
+      },
+      {
+        "name": "Fruit pitting",
+        "explanation": "Small dark spots and cracks on the fruit skin."
+      }
+    ],
+    "alternatives": [
+      "Fungal shot hole",
+      "Spray injury"
+    ],
+    "actions": [
+      {
+        "step": "Choose tolerant varieties for new plantings.",
+        "safety_note": null
+      },
+      {
+        "step": "Avoid overhead irrigation and prune for airflow.",
+        "safety_note": null
+      },
+      {
+        "step": "Ask your extension office about copper-based sprays and timing.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check leaves and young fruit after rainy, windy spells.",
+    "limitations": "Fungal shot hole looks similar; confirm with an expert if unsure."
+  },
+  "Pepper,_bell___Bacterial_spot": {
+    "display_name": "Bell Pepper Bacterial Spot",
+    "crop": "Pepper bell",
+    "category": "bacterial",
+    "description": "Bacterial spot causes water-soaked spots on pepper leaves and fruit and spreads by splashing water and infected seed.",
+    "symptoms": [
+      {
+        "name": "Water-soaked spots",
+        "explanation": "Small dark spots, sometimes with yellow halos."
+      },
+      {
+        "name": "Leaf drop",
+        "explanation": "Badly affected leaves yellow and drop, exposing fruit to sun."
+      }
+    ],
+    "alternatives": [
+      "Fungal leaf spot",
+      "Sunscald"
+    ],
+    "actions": [
+      {
+        "step": "Remove infected plants and debris.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Avoid overhead watering and working with wet plants.",
+        "safety_note": null
+      },
+      {
+        "step": "Use disease-free seed and rotate away from peppers and tomatoes.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Check leaves every few days in warm, wet weather.",
+    "limitations": "Several spot diseases look similar; confirm with an expert if unsure."
+  },
+  "Potato___Late_blight": {
+    "display_name": "Potato Late Blight",
+    "crop": "Potato",
+    "category": "fungal",
+    "description": "Late blight spreads fast in cool, wet weather and can destroy potato foliage and rot tubers within days.",
+    "symptoms": [
+      {
+        "name": "Water-soaked patches",
+        "explanation": "Dark, greasy-looking patches that spread quickly."
+      },
+      {
+        "name": "White growth",
+        "explanation": "White fuzzy growth on the leaf underside in humid conditions."
+      }
+    ],
+    "alternatives": [
+      "Early blight",
+      "Frost damage"
+    ],
+    "actions": [
+      {
+        "step": "Remove and destroy badly affected leaves (do not compost).",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Avoid overhead watering and hill up soil to protect tubers.",
+        "safety_note": null
+      },
+      {
+        "step": "Contact your extension office quickly; protective sprays may be needed.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check plants daily during cool, wet weather; act fast if it spreads.",
+    "limitations": "Can be confused with early blight; rapid spread suggests late blight."
+  },
+  "Squash___Powdery_mildew": {
+    "display_name": "Squash Powdery Mildew",
+    "crop": "Squash",
+    "category": "fungal",
+    "description": "Powdery mildew coats squash leaves with white powder, weakening plants and reducing yield, especially in dry days with humid nights.",
+    "symptoms": [
+      {
+        "name": "White powder",
+        "explanation": "Round white powdery spots that spread across leaves."
+      },
+      {
+        "name": "Yellowing",
+        "explanation": "Leaves yellow and dry out early."
+      }
+    ],
+    "alternatives": [
+      "Downy mildew",
+      "Dust or residue"
+    ],
+    "actions": [
+      {
+        "step": "Remove the most affected older leaves.",
+        "safety_note": null
+      },
+      {
+        "step": "Space plants for airflow and water at the base.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check leaf tops and undersides twice a week.",
+    "limitations": "Residue can look similar; rub the leaf to check."
+  },
+  "Strawberry___Leaf_scorch": {
+    "display_name": "Strawberry Leaf Scorch",
+    "crop": "Strawberry",
+    "category": "fungal",
+    "description": "Leaf scorch is a fungal disease causing many small purple spots that merge until leaves look burnt.",
+    "symptoms": [
+      {
+        "name": "Purple spots",
+        "explanation": "Many small dark purple spots without pale centres."
+      },
+      {
+        "name": "Scorched look",
+        "explanation": "Spots join and leaves dry up as if burnt."
+      }
+    ],
+    "alternatives": [
+      "Leaf spot",
+      "Drought stress"
+    ],
+    "actions": [
+      {
+        "step": "Remove infected old leaves after harvest.",
+        "safety_note": null
+      },
+      {
+        "step": "Avoid overhead watering and keep beds weed-free.",
+        "safety_note": null
+      },
+      {
+        "step": "Plant certified disease-free runners.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Check leaves weekly, especially in wet periods.",
+    "limitations": "Other strawberry leaf spots look similar; confirm locally if unsure."
+  },
+  "Tomato___Bacterial_spot": {
+    "display_name": "Tomato Bacterial Spot",
+    "crop": "Tomato",
+    "category": "bacterial",
+    "description": "Bacterial spot causes small dark spots on tomato leaves and fruit and spreads by splashing water and infected seed.",
+    "symptoms": [
+      {
+        "name": "Small dark spots",
+        "explanation": "Greasy dark spots, sometimes with yellow halos."
+      },
+      {
+        "name": "Fruit scabs",
+        "explanation": "Raised, scabby spots on green fruit."
+      }
+    ],
+    "alternatives": [
+      "Septoria leaf spot",
+      "Early blight"
+    ],
+    "actions": [
+      {
+        "step": "Remove infected leaves and plant debris.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Avoid overhead watering and handling wet plants.",
+        "safety_note": null
+      },
+      {
+        "step": "Use disease-free seed and rotate crops.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Check leaves every few days after rain.",
+    "limitations": "Several tomato spots look alike; confirm with an expert if unsure."
+  },
+  "Tomato___Leaf_Mold": {
+    "display_name": "Tomato Leaf Mould",
+    "crop": "Tomato",
+    "category": "fungal",
+    "description": "Leaf mould is a fungal disease common in humid greenhouses or dense plantings.",
+    "symptoms": [
+      {
+        "name": "Yellow patches",
+        "explanation": "Pale yellow patches on the upper leaf surface."
+      },
+      {
+        "name": "Olive mould",
+        "explanation": "Olive-green to grey velvety growth on the leaf underside."
+      }
+    ],
+    "alternatives": [
+      "Late blight",
+      "Nutrient deficiency"
+    ],
+    "actions": [
+      {
+        "step": "Improve ventilation and reduce humidity.",
+        "safety_note": null
+      },
+      {
+        "step": "Remove infected leaves.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check leaf undersides twice a week in humid conditions.",
+    "limitations": "Underside growth helps confirm; consult an expert if unsure."
+  },
+  "Tomato___Septoria_leaf_spot": {
+    "display_name": "Tomato Septoria Leaf Spot",
+    "crop": "Tomato",
+    "category": "fungal",
+    "description": "Septoria leaf spot causes many small round spots on lower tomato leaves and spreads in wet weather.",
+    "symptoms": [
+      {
+        "name": "Small round spots",
+        "explanation": "Many spots with grey centres and dark edges."
+      },
+      {
+        "name": "Lower leaves first",
+        "explanation": "Starts on lower leaves; they yellow and drop."
+      }
+    ],
+    "alternatives": [
+      "Early blight",
+      "Bacterial spot"
+    ],
+    "actions": [
+      {
+        "step": "Remove and destroy badly affected leaves (do not compost).",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Mulch the soil and water at the base.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check lower leaves every few days after rain.",
+    "limitations": "Can resemble other spots; confirm with an expert if unsure."
+  },
+  "Tomato___Spider_mites Two-spotted_spider_mite": {
+    "display_name": "Tomato Spider Mites (Two-spotted)",
+    "crop": "Tomato",
+    "category": "pest",
+    "description": "Two-spotted spider mites are tiny pests that suck sap from leaves, multiplying fast in hot, dry weather.",
+    "symptoms": [
+      {
+        "name": "Fine speckling",
+        "explanation": "Tiny yellow or white dots on the leaf surface."
+      },
+      {
+        "name": "Webbing",
+        "explanation": "Fine webs on the leaf underside in heavy infestations."
+      }
+    ],
+    "alternatives": [
+      "Nutrient deficiency",
+      "Virus mottling"
+    ],
+    "actions": [
+      {
+        "step": "Spray leaf undersides with a strong jet of water.",
+        "safety_note": null
+      },
+      {
+        "step": "Remove heavily infested leaves.",
+        "safety_note": null
+      },
+      {
+        "step": "Ask your extension office about miticides or beneficial predators.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check leaf undersides with a hand lens twice a week in hot weather.",
+    "limitations": "Mites are hard to see; confirm with a lens before treating."
+  },
+  "Tomato___Target_Spot": {
+    "display_name": "Tomato Target Spot",
+    "crop": "Tomato",
+    "category": "fungal",
+    "description": "Target spot is a fungal disease causing brown spots with rings on tomato leaves, stems, and fruit in warm, humid weather.",
+    "symptoms": [
+      {
+        "name": "Ringed spots",
+        "explanation": "Brown spots with light concentric rings."
+      },
+      {
+        "name": "Leaf drop",
+        "explanation": "Spots merge and leaves drop from the bottom up."
+      }
+    ],
+    "alternatives": [
+      "Early blight",
+      "Bacterial spot"
+    ],
+    "actions": [
+      {
+        "step": "Remove and destroy badly affected leaves (do not compost).",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Improve airflow by pruning and spacing.",
+        "safety_note": null
+      },
+      {
+        "step": "Use a fungicide only if your local extension office recommends one for this disease.",
+        "safety_note": "Follow label rates, protective gear, and pre-harvest intervals."
+      }
+    ],
+    "monitoring": "Check lower and middle leaves weekly in humid weather.",
+    "limitations": "Very similar to early blight; confirm with an expert if unsure."
+  },
+  "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {
+    "display_name": "Tomato Yellow Leaf Curl Virus",
+    "crop": "Tomato",
+    "category": "viral",
+    "description": "Tomato yellow leaf curl virus is spread by whiteflies and stunts plants. There is no cure for infected plants.",
+    "symptoms": [
+      {
+        "name": "Upward curling",
+        "explanation": "Leaves curl upward and become small and cup-shaped."
+      },
+      {
+        "name": "Yellow edges",
+        "explanation": "Leaf edges turn yellow; plants are stunted."
+      }
+    ],
+    "alternatives": [
+      "Herbicide damage",
+      "Nutrient deficiency"
+    ],
+    "actions": [
+      {
+        "step": "Remove and destroy infected plants early.",
+        "safety_note": null
+      },
+      {
+        "step": "Control whiteflies with yellow sticky traps and netting.",
+        "safety_note": null
+      },
+      {
+        "step": "Use resistant varieties next season.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Check new growth and whitefly numbers twice a week.",
+    "limitations": "Virus symptoms vary; lab testing confirms the virus."
+  },
+  "Tomato___Tomato_mosaic_virus": {
+    "display_name": "Tomato Mosaic Virus",
+    "crop": "Tomato",
+    "category": "viral",
+    "description": "Tomato mosaic virus causes mottled leaves and spreads easily on hands, tools, and seed. There is no cure for infected plants.",
+    "symptoms": [
+      {
+        "name": "Mosaic pattern",
+        "explanation": "Light and dark green mottling on leaves."
+      },
+      {
+        "name": "Distorted leaves",
+        "explanation": "Leaves may be narrow, curled, or fern-like."
+      }
+    ],
+    "alternatives": [
+      "Nutrient deficiency",
+      "Herbicide damage"
+    ],
+    "actions": [
+      {
+        "step": "Remove infected plants and do not compost them.",
+        "safety_note": "Wash hands and tools after handling infected plants."
+      },
+      {
+        "step": "Disinfect tools and wash hands between plants.",
+        "safety_note": null
+      },
+      {
+        "step": "Use certified seed and resistant varieties.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Check new leaves weekly, especially after handling plants.",
+    "limitations": "Mosaic symptoms vary; lab testing confirms the virus."
+  },
+  "Apple___healthy": {
+    "display_name": "Apple — Healthy",
+    "crop": "Apple",
+    "category": "healthy",
+    "description": "No disease signs were detected on this apple leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Keep pruning for airflow and clear fallen leaves in autumn.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Blueberry___healthy": {
+    "display_name": "Blueberry — Healthy",
+    "crop": "Blueberry",
+    "category": "healthy",
+    "description": "No disease signs were detected on this blueberry leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Keep mulch and soil moisture even; avoid waterlogging.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Cherry_(including_sour)___healthy": {
+    "display_name": "Cherry — Healthy",
+    "crop": "Cherry",
+    "category": "healthy",
+    "description": "No disease signs were detected on this cherry leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Prune for airflow and remove dead wood.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Corn_(maize)___healthy": {
+    "display_name": "Corn (maize) — Healthy",
+    "crop": "Corn (maize)",
+    "category": "healthy",
+    "description": "No disease signs were detected on this corn (maize) leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Rotate crops and keep weeds under control.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Grape___healthy": {
+    "display_name": "Grape — Healthy",
+    "crop": "Grape",
+    "category": "healthy",
+    "description": "No disease signs were detected on this grape leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Manage the canopy for airflow and sunlight.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Peach___healthy": {
+    "display_name": "Peach — Healthy",
+    "crop": "Peach",
+    "category": "healthy",
+    "description": "No disease signs were detected on this peach leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Prune for an open canopy and avoid overhead watering.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Pepper,_bell___healthy": {
+    "display_name": "Pepper bell — Healthy",
+    "crop": "Pepper bell",
+    "category": "healthy",
+    "description": "No disease signs were detected on this pepper bell leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Water at the base and rotate away from peppers and tomatoes.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Potato___healthy": {
+    "display_name": "Potato — Healthy",
+    "crop": "Potato",
+    "category": "healthy",
+    "description": "No disease signs were detected on this potato leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Hill soil around plants and water at the base.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Raspberry___healthy": {
+    "display_name": "Raspberry — Healthy",
+    "crop": "Raspberry",
+    "category": "healthy",
+    "description": "No disease signs were detected on this raspberry leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Thin canes for airflow and remove old canes after fruiting.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Soybean___healthy": {
+    "display_name": "Soybean — Healthy",
+    "crop": "Soybean",
+    "category": "healthy",
+    "description": "No disease signs were detected on this soybean leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Rotate crops and use quality seed.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Strawberry___healthy": {
+    "display_name": "Strawberry — Healthy",
+    "crop": "Strawberry",
+    "category": "healthy",
+    "description": "No disease signs were detected on this strawberry leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Water at the base and keep beds weed-free.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
+  },
+  "Tomato___healthy": {
+    "display_name": "Tomato — Healthy",
+    "crop": "Tomato",
+    "category": "healthy",
+    "description": "No disease signs were detected on this tomato leaf. Keep up good field practices to keep the crop healthy.",
+    "symptoms": [
+      {
+        "name": "Even colour",
+        "explanation": "Leaf colour is uniform without spots, rings, or powdery patches."
+      },
+      {
+        "name": "Intact surface",
+        "explanation": "No lesions, holes, curling, or mould growth visible."
+      }
+    ],
+    "alternatives": [
+      "Very early infection not yet visible",
+      "Problems on other parts of the plant"
+    ],
+    "actions": [
+      {
+        "step": "Water at the base, stake plants, and remove lower leaves touching soil.",
+        "safety_note": null
+      },
+      {
+        "step": "Check a few plants across the field, not just one leaf.",
+        "safety_note": null
+      }
+    ],
+    "monitoring": "Inspect leaves weekly, especially after rain or humid spells.",
+    "limitations": "A single leaf photo cannot rule out disease elsewhere on the plant or in the field."
   }
 }

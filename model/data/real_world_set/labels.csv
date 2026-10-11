@@ -1,0 +1,51 @@
+file,label,plantdoc_class,split
+images/Apple___Apple_scab/rw_001_Apple_Scab_Leaf.jpg,Apple___Apple_scab,Apple Scab Leaf,tune
+images/Apple___Apple_scab/rw_002_Apple_Scab_Leaf.jpg,Apple___Apple_scab,Apple Scab Leaf,final
+images/Apple___healthy/rw_003_Apple_leaf.jpg,Apple___healthy,Apple leaf,tune
+images/Apple___healthy/rw_004_Apple_leaf.jpg,Apple___healthy,Apple leaf,final
+images/Apple___Cedar_apple_rust/rw_005_Apple_rust_leaf.jpg,Apple___Cedar_apple_rust,Apple rust leaf,tune
+"images/Pepper,_bell___healthy/rw_006_Bell_pepper_leaf.jpg","Pepper,_bell___healthy",Bell_pepper leaf,final
+"images/Pepper,_bell___healthy/rw_007_Bell_pepper_leaf.jpg","Pepper,_bell___healthy",Bell_pepper leaf,tune
+"images/Pepper,_bell___Bacterial_spot/rw_008_Bell_pepper_leaf_spot.jpg","Pepper,_bell___Bacterial_spot",Bell_pepper leaf spot,tune
+"images/Pepper,_bell___Bacterial_spot/rw_009_Bell_pepper_leaf_spot.jpg","Pepper,_bell___Bacterial_spot",Bell_pepper leaf spot,final
+images/Blueberry___healthy/rw_010_Blueberry_leaf.jpg,Blueberry___healthy,Blueberry leaf,tune
+images/Blueberry___healthy/rw_011_Blueberry_leaf.jpg,Blueberry___healthy,Blueberry leaf,final
+images/Cherry_(including_sour)___healthy/rw_012_Cherry_leaf.jpg,Cherry_(including_sour)___healthy,Cherry leaf,final
+images/Cherry_(including_sour)___healthy/rw_013_Cherry_leaf.jpg,Cherry_(including_sour)___healthy,Cherry leaf,tune
+images/Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot/rw_014_Corn_Gray_leaf_spot.jpg,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,Corn Gray leaf spot,final
+images/Corn_(maize)___Northern_Leaf_Blight/rw_015_Corn_leaf_blight.jpg,Corn_(maize)___Northern_Leaf_Blight,Corn leaf blight,tune
+images/Corn_(maize)___Northern_Leaf_Blight/rw_016_Corn_leaf_blight.jpg,Corn_(maize)___Northern_Leaf_Blight,Corn leaf blight,final
+images/Corn_(maize)___Common_rust_/rw_017_Corn_rust_leaf.jpg,Corn_(maize)___Common_rust_,Corn rust leaf,final
+images/Corn_(maize)___Common_rust_/rw_018_Corn_rust_leaf.jpg,Corn_(maize)___Common_rust_,Corn rust leaf,tune
+images/Peach___healthy/rw_019_Peach_leaf.jpg,Peach___healthy,Peach leaf,final
+images/Peach___healthy/rw_020_Peach_leaf.jpg,Peach___healthy,Peach leaf,tune
+images/Potato___Early_blight/rw_021_Potato_leaf_early_blight.jpg,Potato___Early_blight,Potato leaf early blight,final
+images/Potato___Early_blight/rw_022_Potato_leaf_early_blight.jpg,Potato___Early_blight,Potato leaf early blight,tune
+images/Potato___Late_blight/rw_023_Potato_leaf_late_blight.jpg,Potato___Late_blight,Potato leaf late blight,tune
+images/Raspberry___healthy/rw_024_Raspberry_leaf.jpg,Raspberry___healthy,Raspberry leaf,final
+images/Raspberry___healthy/rw_025_Raspberry_leaf.jpg,Raspberry___healthy,Raspberry leaf,tune
+images/Soybean___healthy/rw_026_Soyabean_leaf.jpg,Soybean___healthy,Soyabean leaf,tune
+images/Soybean___healthy/rw_027_Soyabean_leaf.jpg,Soybean___healthy,Soyabean leaf,final
+images/Squash___Powdery_mildew/rw_028_Squash_Powdery_mildew_leaf.jpg,Squash___Powdery_mildew,Squash Powdery mildew leaf,tune
+images/Squash___Powdery_mildew/rw_029_Squash_Powdery_mildew_leaf.jpg,Squash___Powdery_mildew,Squash Powdery mildew leaf,final
+images/Strawberry___healthy/rw_030_Strawberry_leaf.jpg,Strawberry___healthy,Strawberry leaf,tune
+images/Strawberry___healthy/rw_031_Strawberry_leaf.jpg,Strawberry___healthy,Strawberry leaf,final
+images/Tomato___Early_blight/rw_032_Tomato_Early_blight_leaf.jpg,Tomato___Early_blight,Tomato Early blight leaf,final
+images/Tomato___Early_blight/rw_033_Tomato_Early_blight_leaf.jpg,Tomato___Early_blight,Tomato Early blight leaf,tune
+images/Tomato___Septoria_leaf_spot/rw_034_Tomato_Septoria_leaf_spot.jpg,Tomato___Septoria_leaf_spot,Tomato Septoria leaf spot,tune
+images/Tomato___Septoria_leaf_spot/rw_035_Tomato_Septoria_leaf_spot.jpg,Tomato___Septoria_leaf_spot,Tomato Septoria leaf spot,final
+images/Tomato___healthy/rw_036_Tomato_leaf.jpg,Tomato___healthy,Tomato leaf,final
+images/Tomato___healthy/rw_037_Tomato_leaf.jpg,Tomato___healthy,Tomato leaf,tune
+images/Tomato___Bacterial_spot/rw_038_Tomato_leaf_bacterial_spot.jpg,Tomato___Bacterial_spot,Tomato leaf bacterial spot,final
+images/Tomato___Bacterial_spot/rw_039_Tomato_leaf_bacterial_spot.jpg,Tomato___Bacterial_spot,Tomato leaf bacterial spot,tune
+images/Tomato___Late_blight/rw_040_Tomato_leaf_late_blight.jpg,Tomato___Late_blight,Tomato leaf late blight,final
+images/Tomato___Tomato_mosaic_virus/rw_041_Tomato_leaf_mosaic_virus.jpg,Tomato___Tomato_mosaic_virus,Tomato leaf mosaic virus,final
+images/Tomato___Tomato_mosaic_virus/rw_042_Tomato_leaf_mosaic_virus.jpg,Tomato___Tomato_mosaic_virus,Tomato leaf mosaic virus,tune
+images/Tomato___Tomato_Yellow_Leaf_Curl_Virus/rw_043_Tomato_leaf_yellow_virus.jpg,Tomato___Tomato_Yellow_Leaf_Curl_Virus,Tomato leaf yellow virus,tune
+images/Tomato___Tomato_Yellow_Leaf_Curl_Virus/rw_044_Tomato_leaf_yellow_virus.jpg,Tomato___Tomato_Yellow_Leaf_Curl_Virus,Tomato leaf yellow virus,final
+images/Tomato___Leaf_Mold/rw_045_Tomato_mold_leaf.jpg,Tomato___Leaf_Mold,Tomato mold leaf,tune
+images/Tomato___Leaf_Mold/rw_046_Tomato_mold_leaf.jpg,Tomato___Leaf_Mold,Tomato mold leaf,final
+images/Grape___healthy/rw_047_grape_leaf.jpg,Grape___healthy,grape leaf,tune
+images/Grape___healthy/rw_048_grape_leaf.jpg,Grape___healthy,grape leaf,final
+images/Grape___Black_rot/rw_049_grape_leaf_black_rot.jpg,Grape___Black_rot,grape leaf black rot,final
+images/Grape___Black_rot/rw_050_grape_leaf_black_rot.jpg,Grape___Black_rot,grape leaf black rot,tune

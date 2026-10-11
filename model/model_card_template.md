@@ -96,8 +96,8 @@ remaining images would be answered with "not sure". Recommended `CONFIDENCE_THRE
 <!-- REAL_WORLD_START -->
 ## Real-world images
 
-Not evaluated yet. Run `python model/real_world_eval.py` after collecting images under
-`model/data/real_world/`.
+Not evaluated yet. Run `python model/eval_real_world_set.py --set_dir model/data/real_world_set
+--split final --predictor app_predictor:diagnose --strategy B --threshold 0.85 --push` to fill this section.
 <!-- REAL_WORLD_END -->
 
 ## Limitations

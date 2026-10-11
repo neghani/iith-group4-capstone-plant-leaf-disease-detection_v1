@@ -3,7 +3,8 @@
 import { ImageUp } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
-const CROPS = ["", "Tomato", "Potato", "Apple", "Corn"];
+const CROPS = ["Tomato", "Potato", "Apple", "Corn"];
+const OTHER = "__other__";
 
 export function UploadStepCard({
   onAnalyze,
@@ -15,6 +16,7 @@ export function UploadStepCard({
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [crop, setCrop] = useState("");
+  const [otherCrop, setOtherCrop] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,13 +101,29 @@ export function UploadStepCard({
           className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm"
         >
           <option value="">Select crop…</option>
-          {CROPS.filter(Boolean).map((c) => (
+          {CROPS.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
           ))}
+          <option value={OTHER}>Other crop (not listed)</option>
         </select>
       </label>
+      {crop === OTHER && (
+        <label className="mt-4 block text-sm font-medium text-forest">
+          Which crop?
+          <input
+            value={otherCrop}
+            onChange={(e) => setOtherCrop(e.target.value)}
+            placeholder="e.g. hibiscus"
+            className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm"
+          />
+          <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
+            The disease model only knows crops like tomato, potato, apple and
+            corn. For other plants we will say so instead of guessing.
+          </span>
+        </label>
+      )}
 
       <label className="mt-4 block text-sm font-medium text-forest">
         Extra symptoms (optional)
@@ -121,7 +139,10 @@ export function UploadStepCard({
       <button
         type="button"
         disabled={!file || loading}
-        onClick={() => file && onAnalyze(file, crop, symptoms)}
+        onClick={() =>
+          file &&
+          onAnalyze(file, crop === OTHER ? otherCrop.trim() : crop, symptoms)
+        }
         className="mt-6 w-full rounded-xl bg-forest py-3 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
       >
         {loading ? "Analyzing…" : "Analyze leaf"}

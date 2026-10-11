@@ -28,11 +28,17 @@ Replace one file only (still from GitHub, still overwrite):
 Real-world photos are git-ignored. Put a zip on Drive *once*, then always replace:
 
     %run notebooks/colab_sync.py --real-world-from /content/drive/MyDrive/plant-disease/real_world.zip
+
+The labelled real-world test set (labels.csv + images/, see model/data/real_world_set/README.md)
+works the same way; a new or changed zip is what triggers a new Hub publish in the notebook:
+
+    %run notebooks/colab_sync.py --real-world-set-from /content/drive/MyDrive/plant-disease/real_world_set.zip
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 import shutil
 import subprocess
@@ -46,8 +52,9 @@ DEFAULT_REPO = (
 )
 DEFAULT_BRANCH = "main"
 REPO_NAME = "iiith-group4-capstone-plat-leaf-decease-detection"
-KEEP_UNTRACKED = ("model/outputs", "model/data/real_world")
+KEEP_UNTRACKED = ("model/outputs", "model/data/real_world", "model/data/real_world_set/images")
 DEFAULT_DRIVE_ZIP = "/content/drive/MyDrive/plant-disease/real_world.zip"
+DEFAULT_DRIVE_SET_ZIP = "/content/drive/MyDrive/plant-disease/real_world_set.zip"
 
 
 def in_colab() -> bool:
@@ -154,6 +161,45 @@ def replace_real_world(src: Path, dest: Path) -> None:
     print("Class folders:", [p.name for p in _class_folders(dest)] or "(none)")
 
 
+def _find_set_root(path: Path, depth: int = 3) -> Path | None:
+    if (path / "labels.csv").is_file():
+        return path
+    if depth == 0:
+        return None
+    for kid in _class_folders(path):
+        found = _find_set_root(kid, depth - 1)
+        if found:
+            return found
+    return None
+
+
+def replace_real_world_set(src: Path, dest: Path) -> None:
+    """Replace the labelled set (labels.csv, images/, sources.csv, ...) from a zip or folder."""
+    if not src.exists():
+        raise SystemExit(f"Real-world set source not found: {src}")
+    with tempfile.TemporaryDirectory() as tmp:
+        extracted = Path(tmp) / "src"
+        if src.is_file() and src.suffix.lower() == ".zip":
+            with zipfile.ZipFile(src) as zf:
+                zf.extractall(extracted)
+        elif src.is_dir():
+            shutil.copytree(src, extracted)
+        else:
+            raise SystemExit(f"Need a .zip or a folder, got {src}")
+        payload = _find_set_root(extracted)
+        if payload is None:
+            raise SystemExit(f"No labels.csv found in {src}")
+        with open(payload / "labels.csv", newline="") as f:
+            files = [row["file"] for row in csv.DictReader(f)]
+        missing = [p for p in files if not (payload / p).is_file()]
+        if missing:
+            raise SystemExit(f"{len(missing)} images listed in labels.csv are missing, e.g. {missing[:3]}")
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(payload, dest)
+    print(f"Replaced real_world_set from {src}: {len(files)} images")
+
+
 def maybe_mount_drive() -> None:
     if not in_colab():
         return
@@ -192,6 +238,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="",
         help=f"Zip or folder of class images. Default on Colab if present: {DEFAULT_DRIVE_ZIP}",
     )
+    p.add_argument(
+        "--real-world-set-from",
+        default="",
+        help=f"Zip or folder with labels.csv + images/. Default on Colab if present: {DEFAULT_DRIVE_SET_ZIP}",
+    )
     p.add_argument("--skip-install", action="store_true")
     p.add_argument(
         "--force",
@@ -210,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     colab = in_colab()
 
-    if not colab and not args.force and not args.file and not args.real_world_from:
+    if not colab and not args.force and not args.file and not args.real_world_from and not args.real_world_set_from:
         print("Local checkout detected. Edit files here, smoke-test, then git push.")
         print("In Colab, re-run this script to always replace tracked files from GitHub.")
         print("Refusing to reset your working tree. Pass --force only if you mean it.")
@@ -240,6 +291,11 @@ def main(argv: list[str] | None = None) -> int:
         src = DEFAULT_DRIVE_ZIP
     if src:
         replace_real_world(Path(src).expanduser(), root / "model" / "data" / "real_world")
+    set_src = args.real_world_set_from
+    if not set_src and Path(DEFAULT_DRIVE_SET_ZIP).exists():
+        set_src = DEFAULT_DRIVE_SET_ZIP
+    if set_src:
+        replace_real_world_set(Path(set_src).expanduser(), root / "model" / "data" / "real_world_set")
 
     if (colab or args.force) and not args.skip_install and not args.file:
         install_requirements(root)

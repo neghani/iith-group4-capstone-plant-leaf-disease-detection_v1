@@ -1,15 +1,21 @@
-import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-# Placeholder until Phase 5 Hugging Face model integration.
+from PIL import Image
 
-DEMO_CLASSES = [
-    "Tomato___Early_blight",
-    "Tomato___Late_blight",
-    "Potato___Early_blight",
-    "Apple___Apple_scab",
-    "Corn_(maize)___Common_rust_",
-]
+from app.config import get_settings
+from app.vision.hf_client import classify_image
+from app.vision.quality import PreparedImage
+from shared.vision.quality import encode_jpeg
+from shared.vision.strategies import run_strategy
+
+NUM_CLASSES = 38  # multi-crop strategies average full softmax vectors, so ask for every class
+
+
+@dataclass
+class TopKItem:
+    label: str
+    display_name: str
+    score: float
 
 
 @dataclass
@@ -17,28 +23,78 @@ class PredictionResult:
     disease_id: str
     confidence: float
     crop: str
+    status: str = "ok"  # "ok" | "not_sure" (low confidence, or the crops disagree)
+    top_k: list[TopKItem] = field(default_factory=list)
+    inference: dict = field(default_factory=dict)  # provenance of the HF call(s)
+    strategy: dict = field(default_factory=dict)  # crop strategy trace
 
 
-def placeholder_predict(image_bytes: bytes, crop_hint: str | None = None) -> PredictionResult:
-    digest = hashlib.sha256(image_bytes).hexdigest()
-    idx = int(digest[:8], 16) % len(DEMO_CLASSES)
-    disease_id = DEMO_CLASSES[idx]
+def crop_from_class(class_name: str) -> str:
+    """'Tomato___Early_blight' -> 'Tomato'; 'Corn_(maize)___Common_rust_' -> 'Corn (maize)'."""
+    crop = class_name.split("___")[0]
+    return crop.replace("_", " ").replace(",", "").strip()
 
-    # Slightly lower confidence for some hashes to exercise low-confidence UI.
-    conf_raw = (int(digest[8:16], 16) % 1000) / 1000.0
-    confidence = 0.55 + conf_raw * 0.4
 
-    if crop_hint:
-        crop_hint_l = crop_hint.strip().lower()
-        for cls in DEMO_CLASSES:
-            crop_part = cls.split("___")[0].replace("_", " ").lower()
-            if crop_hint_l in crop_part or crop_part.startswith(crop_hint_l):
-                disease_id = cls
-                confidence = min(0.92, confidence + 0.15)
-                break
+def display_name(class_name: str) -> str:
+    """'Tomato___Early_blight' -> 'Tomato - Early blight'."""
+    parts = class_name.split("___")
+    crop = crop_from_class(class_name)
+    if len(parts) == 1:
+        return crop
+    cond = parts[1].replace("_", " ").strip()
+    return f"{crop} - {cond}"
 
-    from app.services.knowledge import get_entry
 
-    entry = get_entry(disease_id)
-    crop = entry.get("crop", "Unknown") if entry else "Unknown"
-    return PredictionResult(disease_id=disease_id, confidence=confidence, crop=crop)
+def is_healthy(class_name: str) -> bool:
+    return class_name.lower().endswith("___healthy")
+
+
+class HFPredictor:
+    """shared.vision.strategies.Predictor over the remote classifier; one HTTP call per crop."""
+
+    def __init__(self):
+        self.calls: list[dict] = []
+
+    def predict_proba(self, images: list[Image.Image]) -> list[dict[str, float]]:
+        out = []
+        for img in images:
+            scores = classify_image(encode_jpeg(img), "image/jpeg", top_k=NUM_CLASSES)
+            self.calls.append(dict(getattr(scores, "meta", {})))
+            out.append({s.label: s.score for s in scores})
+        return out
+
+    def provenance(self) -> dict:
+        if not self.calls:
+            return {}
+        meta = dict(self.calls[0])
+        meta["latency_ms"] = sum(c.get("latency_ms", 0) for c in self.calls)
+        meta["model_verified"] = all(c.get("model_verified") for c in self.calls)
+        meta["calls"] = len(self.calls)
+        return meta
+
+
+def predict(prepared: PreparedImage) -> PredictionResult:
+    settings = get_settings()
+    hf = HFPredictor()
+    res = run_strategy(
+        prepared.image,
+        settings.crop_strategy,
+        hf,
+        threshold=settings.confidence_threshold,
+        top_k=settings.hf_top_k,
+        candidates=prepared.candidates,
+        gate=prepared.gate,
+        tta=settings.crop_tta,
+    )
+    return PredictionResult(
+        disease_id=res["disease"],
+        confidence=res["confidence"],
+        crop=crop_from_class(res["disease"]),
+        status=res["status"],
+        top_k=[
+            TopKItem(label=t["disease"], display_name=display_name(t["disease"]), score=round(t["confidence"], 4))
+            for t in res["top_k"]
+        ],
+        inference=hf.provenance(),
+        strategy={k: res[k] for k in ("strategy", "n_crops", "agreement", "crop_boxes", "crop_tops", "tta")},
+    )

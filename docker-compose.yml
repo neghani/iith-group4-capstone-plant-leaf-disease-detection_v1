@@ -1,11 +1,26 @@
 services:
+  inference-service:
+    build: ./hf_space
+    environment:
+      HF_MODEL_ID: ${HF_MODEL_ID:-neghani/plantvillage-mobilenetv2}
+      HF_MODEL_REVISION: ${HF_MODEL_REVISION:-v1.0}
+    ports:
+      - "7860:7860"
+
   api-service:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     env_file: .env
+    environment:
+      # Set HF_ENDPOINT_URL in .env to use a deployed Space / Inference Endpoint instead.
+      HF_ENDPOINT_URL: ${HF_ENDPOINT_URL:-http://inference-service:7860/}
     ports:
       - "8000:8000"
     volumes:
       - ./api/data:/app/data:ro
+    depends_on:
+      - inference-service
 
   ui-service:
     build:

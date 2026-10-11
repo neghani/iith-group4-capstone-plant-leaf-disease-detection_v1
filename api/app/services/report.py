@@ -8,6 +8,7 @@ from app.schemas import (
 )
 from app.services.knowledge import get_entry
 from app.llm.provider import generate_text
+from app.vision.predictor import crop_from_class, display_name, is_healthy
 
 
 def _confidence_category(confidence: float, threshold: float) -> ConfidenceCategory:
@@ -24,9 +25,20 @@ def _confidence_explanation(category: ConfidenceCategory) -> str:
     return {
         "high": "Visual pattern and model score align well; still confirm before major treatment spend.",
         "moderate": "Likely match, but similar diseases are possible—monitor and confirm if symptoms spread.",
-        "low": "Weak match from the placeholder model; treat this as a tentative guess.",
+        "low": "Weak match from the model; treat this as a tentative guess.",
         "inconclusive": "Not enough certainty for a firm diagnosis from this photo alone.",
     }[category]
+
+
+MIN_ALTERNATIVE_SCORE = 0.01
+
+
+def _alternatives_from_top_k(disease_id: str, top_k: list[dict]) -> list[str]:
+    return [
+        f"{t['display_name']} ({round(t['score'] * 100)}%)"
+        for t in top_k
+        if t["label"] != disease_id and t["score"] >= MIN_ALTERNATIVE_SCORE
+    ]
 
 
 def build_quality_report(message: str) -> DiagnosisReport:
@@ -50,33 +62,131 @@ def build_quality_report(message: str) -> DiagnosisReport:
     )
 
 
+def build_error_report() -> DiagnosisReport:
+    message = "The disease model is unavailable right now. Please try again in a minute."
+    return DiagnosisReport(
+        status="error",
+        status_label="Analysis unavailable",
+        diagnosis_name="Unable to analyze",
+        confidence=0.0,
+        confidence_category="inconclusive",
+        confidence_explanation="The disease model did not return a prediction.",
+        description=message,
+        expert_confirmation_required=True,
+        actions=[ActionItem(step="Upload the same photo again shortly.")],
+        diagnostic_limitations="No disease prediction was produced for this image.",
+        initial_message=message,
+    )
+
+
+def build_unsupported_crop_report(hint: str) -> DiagnosisReport:
+    """The farmer named a crop the classifier was never trained on: do not present a disease."""
+    from app.services.crops import supported_crops
+
+    crops = ", ".join(supported_crops())
+    message = (
+        f"The disease model was not trained on {hint.strip()}, so it cannot give a reliable "
+        "diagnosis for this plant, and any disease name it returned would be a guess."
+    )
+    return DiagnosisReport(
+        status="inconclusive",
+        status_label="Crop not supported",
+        diagnosis_name=f"{hint.strip().title()} is not covered by this model",
+        crop=hint.strip().title(),
+        confidence=0.0,
+        confidence_category="inconclusive",
+        confidence_explanation="The classifier has never seen this crop, so its score is not meaningful.",
+        description=message,
+        expert_confirmation_required=True,
+        actions=[
+            ActionItem(step="Ask a local agricultural extension officer or a plant clinic to look at the leaf."),
+            ActionItem(step="Isolate the plant and avoid spraying anything until the cause is confirmed."),
+        ],
+        monitoring_guidance="Photograph the same leaf every few days to see whether symptoms spread.",
+        diagnostic_limitations=f"Supported crops: {crops}.",
+        initial_message=message,
+    )
+
+
+def apply_crop_mismatch(report: DiagnosisReport, hint: str, predicted_crop: str) -> DiagnosisReport:
+    """Farmer's crop and predicted crop disagree: keep the result, but make it tentative."""
+    note = (
+        f"You said this is {hint.strip()}, but the model matched the photo to {predicted_crop}. "
+        "Treat this result as uncertain."
+    )
+    report.status, report.status_label = "possible", "Possible match"
+    if report.confidence_category in ("high", "moderate"):
+        report.confidence_category = "low"
+        report.confidence_explanation = _confidence_explanation("low")
+    report.expert_confirmation_required = True
+    report.description = f"{note} {report.description}"
+    report.initial_message = f"{note} {report.initial_message}".strip()
+    return report
+
+
+def _build_label_only_report(
+    disease_id: str,
+    confidence: float,
+    crop: str,
+    top_k: list[dict],
+    status: DiagnosisStatus,
+    status_label: str,
+    category: ConfidenceCategory,
+) -> DiagnosisReport:
+    healthy = is_healthy(disease_id)
+    return DiagnosisReport(
+        status=status,
+        status_label=status_label,
+        disease_id=disease_id,
+        diagnosis_name=display_name(disease_id),
+        crop=crop,
+        confidence=round(confidence, 3),
+        confidence_category=category,
+        confidence_explanation=_confidence_explanation(category),
+        description=(
+            f"The leaf looks healthy for {crop}."
+            if healthy
+            else f"The model matched this photo to {display_name(disease_id)}."
+        ),
+        alternatives=_alternatives_from_top_k(disease_id, top_k),
+        expert_confirmation_required=not healthy,
+        actions=[
+            ActionItem(step="Isolate or remove clearly affected leaves to slow spread.")
+            if not healthy
+            else ActionItem(step="Keep regular watering, spacing, and field hygiene."),
+            ActionItem(step="Confirm with your local agricultural extension office before any chemical treatment."),
+        ],
+        monitoring_guidance="Check the plant every few days and upload a new photo if symptoms change.",
+        diagnostic_limitations="No curated guidance for this class yet; advice is general.",
+    )
+
+
 def build_report_from_knowledge(
     disease_id: str,
     confidence: float,
     crop: str,
+    top_k: list[dict] | None = None,
 ) -> DiagnosisReport:
     settings = get_settings()
-    entry = get_entry(disease_id)
-    if not entry:
-        return DiagnosisReport(
-            status="inconclusive",
-            status_label="Unknown disease class",
-            disease_id=disease_id,
-            diagnosis_name=disease_id.replace("___", " — ").replace("_", " "),
-            crop=crop,
-            confidence=confidence,
-            confidence_category="inconclusive",
-            confidence_explanation=_confidence_explanation("inconclusive"),
-            description="No curated guidance found for this class in the demo knowledge base.",
-            expert_confirmation_required=True,
-            diagnostic_limitations="Demo knowledge file has limited entries.",
-            initial_message="We could not load detailed guidance for this prediction.",
-        )
-
+    top_k = top_k or []
     cat = _confidence_category(confidence, settings.confidence_threshold)
     low = confidence < settings.confidence_threshold
-    status: DiagnosisStatus = "possible" if low else "confirmed_likely"
-    status_label = "Possible disease" if low else "Likely disease"
+    healthy = is_healthy(disease_id)
+    if low:
+        status: DiagnosisStatus = "possible"
+        status_label = "Possible match"
+    elif healthy:
+        status, status_label = "healthy", "Looks healthy"
+    else:
+        status, status_label = "confirmed_likely", "Likely disease"
+
+    entry = get_entry(disease_id)
+    if not entry:
+        report = _build_label_only_report(
+            disease_id, confidence, crop or crop_from_class(disease_id), top_k, status, status_label, cat
+        )
+        report.initial_message = _compose_initial_message(report)
+        return report
 
     symptoms = [
         SymptomItem(name=s["name"], explanation=s["explanation"], evidence_source="reference")
@@ -98,8 +208,8 @@ def build_report_from_knowledge(
         confidence_explanation=_confidence_explanation(cat),
         description=entry["description"],
         symptoms=symptoms,
-        alternatives=entry.get("alternatives", []),
-        expert_confirmation_required=low or cat in ("low", "inconclusive"),
+        alternatives=_alternatives_from_top_k(disease_id, top_k) or entry.get("alternatives", []),
+        expert_confirmation_required=not healthy and (low or cat in ("low", "inconclusive")),
         actions=actions,
         monitoring_guidance=entry.get("monitoring", ""),
         diagnostic_limitations=entry.get("limitations", ""),
@@ -121,21 +231,74 @@ def _compose_initial_message(report: DiagnosisReport) -> str:
     return " ".join(lines)
 
 
-def enrich_report_with_llm(report: DiagnosisReport, reference: dict) -> DiagnosisReport:
-    """Optional polish of farmer-facing summary; keeps structured fields from knowledge."""
-    prompt = (
-        "Rewrite a short farmer-friendly summary (3-5 sentences) using ONLY the facts below. "
-        "Do not add new treatments or products.\n\n"
-        f"Disease: {report.diagnosis_name}\n"
-        f"Description: {report.description}\n"
-        f"Actions: {[a.step for a in report.actions]}\n"
-        f"Monitoring: {report.monitoring_guidance}\n"
-        f"Limitations: {report.diagnostic_limitations}\n"
+REPORT_SYSTEM = (
+    "You write plain-language agricultural guidance for smallholder farmers. "
+    "You receive a disease classifier's text output and curated reference notes; you never see the photo. "
+    "Use only the facts given. Do not name specific chemical products or doses. "
+    "If the model is not confident, say clearly that the result is uncertain and mention the other possibilities."
+)
+
+
+def build_report_prompt(
+    report: DiagnosisReport,
+    reference: dict,
+    top_k: list[dict],
+    low_confidence: bool,
+    crop_hint: str = "",
+    additional_symptoms: str = "",
+    crop_note: str = "",
+) -> str:
+    predictions = "\n".join(
+        f"- {t['display_name']}: {round(t['score'] * 100, 1)}%" for t in top_k
+    ) or f"- {report.diagnosis_name}: {round(report.confidence * 100, 1)}%"
+    lines = [
+        "Write a short farmer-friendly summary (3-5 sentences).",
+        "",
+        "Classifier output (top predictions):",
+        predictions,
+        f"Confidence level: {report.confidence_category}"
+        + (" (below the confidence threshold)" if low_confidence else ""),
+        f"Diagnosis shown to farmer: {report.diagnosis_name}",
+        f"Crop: {report.crop or 'unknown'}",
+    ]
+    if crop_hint.strip():
+        lines.append(f"Farmer says the crop is: {crop_hint.strip()}")
+    if crop_note:
+        lines.append(f"Warning: {crop_note}")
+    if additional_symptoms.strip():
+        lines.append(f"Farmer-reported symptoms: {additional_symptoms.strip()}")
+    if reference:
+        lines += [
+            "",
+            "Curated reference:",
+            f"Description: {report.description}",
+            f"Actions: {[a.step for a in report.actions]}",
+            f"Monitoring: {report.monitoring_guidance}",
+            f"Limitations: {report.diagnostic_limitations}",
+        ]
+    else:
+        lines += [
+            "",
+            "No curated reference exists for this class. Give only general, low-risk "
+            "integrated pest management or plant-care steps and advise confirming with a local expert.",
+        ]
+    return "\n".join(lines)
+
+
+def enrich_report_with_llm(
+    report: DiagnosisReport,
+    reference: dict,
+    top_k: list[dict] | None = None,
+    low_confidence: bool = False,
+    crop_hint: str = "",
+    additional_symptoms: str = "",
+    crop_note: str = "",
+) -> DiagnosisReport:
+    """Farmer-facing summary from the classifier output; structured fields stay as built."""
+    prompt = build_report_prompt(
+        report, reference, top_k or [], low_confidence, crop_hint, additional_symptoms, crop_note
     )
-    text = generate_text(
-        "You write plain-language agricultural guidance for smallholder farmers.",
-        prompt,
-    )
+    text = generate_text(REPORT_SYSTEM, prompt)
     if text:
         report.initial_message = text
     return report

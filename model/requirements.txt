@@ -14,3 +14,6 @@ huggingface_hub>=0.25.0
 kagglehub>=0.3.0
 pillow>=10.0.0
 numpy>=1.26.0
+# api/app/vision (leaf crop + quality gate) used by app_predictor.py for the real-world eval
+scipy>=1.13.0
+pydantic>=2.9.0

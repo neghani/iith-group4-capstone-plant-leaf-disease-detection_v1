@@ -61,10 +61,14 @@ export default function ResultsPage() {
         <DiagnosisCard
           report={session.report}
           lowConfidence={session.lowConfidence}
+          topK={session.topK}
+          inference={session.inference}
         />
       </div>
 
-      {session.qualityOk && session.report.status !== "quality_issue" && (
+      {session.qualityOk &&
+        session.report.status !== "quality_issue" &&
+        session.report.status !== "error" && (
         <div className="mt-8">
           <ChatPanel sessionContext={session.sessionContext} />
         </div>

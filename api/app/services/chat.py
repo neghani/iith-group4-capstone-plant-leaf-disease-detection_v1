@@ -15,6 +15,25 @@ AGRICULTURE_KEYWORDS = (
     "potato",
     "corn",
     "apple",
+    "grape",
+    "peach",
+    "pepper",
+    "strawberr",
+    "squash",
+    "soybean",
+    "cherry",
+    "orange",
+    "citrus",
+    "blueberr",
+    "raspberr",
+    "maize",
+    "mildew",
+    "mold",
+    "mite",
+    "virus",
+    "bacteri",
+    "spot",
+    "healthy",
     "spray",
     "fertil",
     "harvest",
@@ -26,6 +45,31 @@ AGRICULTURE_KEYWORDS = (
     "treatment",
     "symptom",
 )
+
+
+def format_session_context(session_context: dict) -> str:
+    """Plain-text diagnosis context for the LLM (classifier output only, never image data)."""
+    if not session_context:
+        return "No diagnosis yet."
+    lines = []
+    if session_context.get("diagnosis_name"):
+        lines.append(f"Diagnosis: {session_context['diagnosis_name']}")
+    if session_context.get("crop"):
+        lines.append(f"Crop: {session_context['crop']}")
+    if session_context.get("confidence") is not None:
+        conf = float(session_context["confidence"])
+        uncertain = " (low confidence, uncertain)" if session_context.get("low_confidence") else ""
+        lines.append(f"Model confidence: {round(conf * 100, 1)}%{uncertain}")
+    top_k = session_context.get("top_k") or []
+    if top_k:
+        preds = ", ".join(
+            f"{t.get('display_name', t.get('label'))} {round(float(t.get('score', 0)) * 100, 1)}%"
+            for t in top_k
+        )
+        lines.append(f"Top predictions: {preds}")
+    if session_context.get("summary"):
+        lines.append(f"Summary given to farmer: {session_context['summary']}")
+    return "\n".join(lines)
 
 
 def _is_agriculture_related(message: str) -> bool:
@@ -63,7 +107,7 @@ def handle_chat(message: str, session_context: dict) -> ChatResponse:
             declined=True,
         )
 
-    llm_reply = chat_with_context(msg, str(session_context))
+    llm_reply = chat_with_context(msg, format_session_context(session_context))
     if llm_reply:
         return ChatResponse(reply=llm_reply)
 

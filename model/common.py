@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,15 +90,14 @@ KAGGLE_DATASET = "abdallahalidev/plantvillage-dataset"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 # --------------------------------------------------------------------------------------
-# Image quality gate (same thresholds as api/app/vision/quality.py)
+# Image quality gate: the API's leaf-based, scale-normalised gate from shared/vision/quality.py
+# (docs/challenges-and-approach.md #1-3). The Phase 1 whole-frame Laplacian gate was removed
+# because it rejected large clean photos as blurry.
 # --------------------------------------------------------------------------------------
 
-MIN_WIDTH = 128
-MIN_HEIGHT = 128
-MAX_DIMENSION = 4096
-MIN_BRIGHTNESS = 35.0
-MAX_BRIGHTNESS = 230.0
-MIN_BLUR_VARIANCE = 80.0
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 @dataclass
@@ -106,39 +106,21 @@ class QualityResult:
     message: str | None = None
     brightness: float | None = None
     blur_score: float | None = None
-
-
-def laplacian_variance(gray: np.ndarray) -> float:
-    padded = np.pad(gray.astype(np.float32), 1, mode="edge")
-    lap = (
-        -4 * padded[1:-1, 1:-1]
-        + padded[:-2, 1:-1]
-        + padded[2:, 1:-1]
-        + padded[1:-1, :-2]
-        + padded[1:-1, 2:]
-    )
-    return float(lap.var())
+    reason: str | None = None
 
 
 def check_image_quality(img: Image.Image) -> QualityResult:
     """Return a farmer-facing message when the photo should be retaken."""
-    w, h = img.size
-    if w < MIN_WIDTH or h < MIN_HEIGHT:
-        return QualityResult(False, "Image is too small. Move closer so the leaf fills more of the frame.")
-    if w > MAX_DIMENSION or h > MAX_DIMENSION:
-        return QualityResult(False, "Image dimensions are too large.")
+    from shared.vision.candidates import find_candidates
+    from shared.vision.config import WORK_MAX_SIDE
+    from shared.vision.quality import check_gate
 
-    gray = np.array(img.convert("L"), dtype=np.float32)
-    brightness = float(gray.mean())
-    blur_score = laplacian_variance(gray)
-
-    if brightness < MIN_BRIGHTNESS:
-        return QualityResult(False, "Photo is too dark. Retake in better light without strong shadows.", brightness, blur_score)
-    if brightness > MAX_BRIGHTNESS:
-        return QualityResult(False, "Photo is overexposed. Avoid direct glare on the leaf.", brightness, blur_score)
-    if blur_score < MIN_BLUR_VARIANCE:
-        return QualityResult(False, "Photo looks blurry. Hold steady and focus on the leaf surface.", brightness, blur_score)
-    return QualityResult(True, None, brightness, blur_score)
+    size = img.size
+    if max(size) > WORK_MAX_SIDE:
+        img = img.copy()
+        img.thumbnail((WORK_MAX_SIDE, WORK_MAX_SIDE), Image.Resampling.LANCZOS)
+    gate = check_gate(img, find_candidates(img), size)
+    return QualityResult(gate.ok, gate.message, gate.brightness, gate.blur_score, gate.reason)
 
 
 def load_image(path: str | Path) -> Image.Image:
@@ -334,6 +316,11 @@ class Predictor:
         with torch.no_grad():
             logits = self.model(**inputs).logits
         return torch.softmax(logits.float(), dim=-1).cpu().numpy()
+
+    def predict_proba(self, images: list[Image.Image]) -> list[dict[str, float]]:
+        """shared.vision.strategies.Predictor: full softmax per image, one batch."""
+        probs = self.probabilities(list(images))
+        return [{self.id2label[i]: float(p[i]) for i in range(len(p))} for p in probs]
 
     def predict_topk(self, image: Image.Image, k: int = 3) -> TopK:
         probs = self.probabilities([image])[0]
