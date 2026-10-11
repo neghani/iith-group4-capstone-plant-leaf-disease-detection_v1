@@ -23,6 +23,7 @@ from common import (  # noqa: E402
     IMAGE_EXTS,
     Predictor,
     check_image_quality,
+    hf_api,
     load_image,
 )
 
@@ -187,9 +188,7 @@ Per-image predictions: [`reports/real_world_predictions.csv`](reports/real_world
         print(f"No model card at {card_path}; run evaluate.py first to generate it.")
 
     if args.push:
-        from huggingface_hub import HfApi
-
-        api = HfApi()
+        api = hf_api()
         for name in ("real_world_results.json", "real_world_predictions.csv"):
             api.upload_file(path_or_fileobj=str(reports_dir / name), path_in_repo=f"reports/{name}", repo_id=args.hub_model_id, commit_message="Add real-world results")
         if card_path.exists():

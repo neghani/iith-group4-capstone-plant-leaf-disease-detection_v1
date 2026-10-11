@@ -28,6 +28,7 @@ model/
 ├── train.py                  fine-tune (HF Trainer), writes splits.json + run_info.json, push_to_hub
 ├── evaluate.py               test-split metrics, confusion matrix, threshold sweep, model card
 ├── real_world_eval.py        internet-photo check against the 50% target
+├── publish.py                token check, upload model + reports to the Hub, tag v1.0
 ├── predict.py                Phase 5 reference inference (quality gate -> model -> not sure)
 ├── model_card_template.md    README pushed to the Hub, filled by evaluate.py
 ├── data/
@@ -141,6 +142,24 @@ python model/real_world_eval.py --model model/outputs/plantvillage-mobilenetv2 -
 | `--max_samples_per_class N` | cap per class for quick runs |
 | `--val_fraction 0.1 --test_fraction 0.1` | stratified per-class split, seed = `--seed`; saved to `outputs/<run>/splits.json` |
 | `--image_size` | override the 224 training crop |
+
+## Publish to Hugging Face (`publish.py`)
+
+Token lookup (`common.get_hf_token`): `HF_TOKEN` env var, then repo-root `.env` (local), then the
+Colab secret `HF_TOKEN` (turn on *Notebook access*), then a cached `hf auth login`. `.env` is git-ignored;
+never commit a token.
+
+```bash
+python model/publish.py --check      # token valid? right owner? read-only tokens are rejected
+python model/publish.py --dry_run    # list the files that would be uploaded
+python model/publish.py              # create repo if needed, upload model + reports + card, tag v1.0
+python model/publish.py --reports_only   # re-push README.md + reports/ without the weights
+```
+
+Uploads skip `checkpoint-*`, optimizer and scheduler state. The same token is used by
+`train.py --push_to_hub`, `evaluate.py --push` and `real_world_eval.py --push`.
+A fine-grained token must have **write** access to `neghani/plantvillage-mobilenetv2`
+(or repo-creation rights if the repo does not exist yet).
 
 ## Push to Hugging Face by hand
 

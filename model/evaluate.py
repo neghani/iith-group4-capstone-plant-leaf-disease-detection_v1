@@ -29,6 +29,7 @@ from common import (  # noqa: E402
     DEFAULT_HF_MODEL_ID,
     Predictor,
     crop_from_class,
+    hf_api,
     load_image,
     load_splits,
     resolve_data_dir,
@@ -298,9 +299,7 @@ def main() -> None:
     print(f"Reports written to {reports_dir}")
 
     if args.push:
-        from huggingface_hub import HfApi
-
-        api = HfApi()
+        api = hf_api()
         api.create_repo(args.hub_model_id, repo_type="model", exist_ok=True)
         api.upload_folder(folder_path=str(reports_dir), path_in_repo="reports", repo_id=args.hub_model_id, commit_message="Add evaluation reports")
         if card_out is not None:

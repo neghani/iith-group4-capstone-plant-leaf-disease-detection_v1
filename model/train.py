@@ -56,6 +56,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import (  # noqa: E402
     DEFAULT_BASE_MODEL,
     DEFAULT_HF_MODEL_ID,
+    get_hf_token,
     resolve_data_dir,
     save_splits,
     scan_imagefolder,
@@ -199,7 +200,7 @@ def main() -> None:
         training_args.metric_for_best_model = "macro_f1"
         training_args.greater_is_better = True
 
-    hf_token = os.environ.get("HF_TOKEN")
+    hf_token = get_hf_token()
     if training_args.push_to_hub:
         if hf_token and not training_args.hub_token:
             training_args.hub_token = hf_token

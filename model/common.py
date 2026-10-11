@@ -17,6 +17,65 @@ import numpy as np
 from PIL import Image, ImageOps
 
 # --------------------------------------------------------------------------------------
+# Environment / Hugging Face token
+# --------------------------------------------------------------------------------------
+
+
+def load_dotenv(path: str | Path | None = None) -> None:
+    """Load KEY=VALUE lines from the repo-root .env into os.environ (never overrides real env vars)."""
+    candidates = [Path(path)] if path else [Path(__file__).resolve().parent.parent / ".env", Path.cwd() / ".env"]
+    for env_file in candidates:
+        if not env_file.is_file():
+            continue
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            value = value.strip().strip("'\"")
+            if value:
+                os.environ.setdefault(key.strip(), value)
+
+
+load_dotenv()  # before the DEFAULT_* constants below so HF_MODEL_ID in .env is honoured
+
+
+def get_hf_token() -> str | None:
+    """HF token from, in order: HF_TOKEN env / .env, Colab secret HF_TOKEN, cached `hf auth login`."""
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token:
+        return token
+    try:
+        from google.colab import userdata  # type: ignore
+
+        token = userdata.get("HF_TOKEN")
+    except Exception:
+        token = None
+    if token:
+        os.environ["HF_TOKEN"] = token  # so train.py / Trainer / subprocesses see it too
+        return token
+    try:
+        from huggingface_hub import get_token
+
+        return get_token()
+    except Exception:
+        return None
+
+
+def hf_api():
+    """HfApi bound to the token above. Raises a clear error if there is none."""
+    from huggingface_hub import HfApi
+
+    token = get_hf_token()
+    if not token:
+        raise RuntimeError(
+            "No Hugging Face token. Set HF_TOKEN in .env (local), add the HF_TOKEN secret in Colab, "
+            "or run `hf auth login`. It must be a WRITE token."
+        )
+    return HfApi(token=token)
+
+
+# --------------------------------------------------------------------------------------
 # Hugging Face identifiers
 # --------------------------------------------------------------------------------------
 
@@ -253,6 +312,7 @@ class Predictor:
         from transformers import AutoImageProcessor, AutoModelForImageClassification
 
         kwargs = {"revision": revision} if revision else {}
+        token = token or get_hf_token()  # needed if the Hub repo is private
         if token:
             kwargs["token"] = token
         self.model_id = model_id
