@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     crop_strategy: str = "B"
     confidence_threshold: float = 0.85
     crop_tta: bool = False  # also classify each crop mirrored and average
+    # 1.0 until a published v1.1 ships calibration.json; then set to that T.
+    calibration_temperature: float = 1.0
     default_language: str = "en"
 
     # Phone photos are 3-15 MB; they are decoded with JPEG draft mode and downscaled.

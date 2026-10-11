@@ -52,7 +52,14 @@ DEFAULT_REPO = (
 )
 DEFAULT_BRANCH = "main"
 REPO_NAME = "iiith-group4-capstone-plat-leaf-decease-detection"
-KEEP_UNTRACKED = ("model/outputs", "model/data/real_world", "model/data/real_world_set/images")
+KEEP_UNTRACKED = (
+    "model/outputs",
+    "model/data/real_world",
+    "model/data/real_world_set/images",
+    "model/data/plantdoc_src",
+    "model/data/plantdoc_train",
+    "model/data/plantdoc_test",
+)
 DEFAULT_DRIVE_ZIP = "/content/drive/MyDrive/plant-disease/real_world.zip"
 DEFAULT_DRIVE_SET_ZIP = "/content/drive/MyDrive/plant-disease/real_world_set.zip"
 

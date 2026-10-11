@@ -17,6 +17,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageOps
 
+# CROP_MASK is off until diagnostics.py shows crop-masked top-1 is worth a required dropdown.
+CROP_MASK = os.environ.get("CROP_MASK", "").lower() in ("1", "true", "yes")
+
 # --------------------------------------------------------------------------------------
 # Environment / Hugging Face token
 # --------------------------------------------------------------------------------------
@@ -282,14 +285,36 @@ class TopK:
         return self.scores[0]
 
 
+def load_temperature(model_id: str, explicit: float | None = None) -> float:
+    """T from an argument, else <model>/calibration.json, else 1.0."""
+    if explicit is not None:
+        return float(explicit)
+    path = Path(model_id) / "calibration.json"
+    if path.exists():
+        return float(json.loads(path.read_text())["temperature"])
+    env = os.environ.get("CALIBRATION_TEMPERATURE")
+    return float(env) if env else 1.0
+
+
 class Predictor:
     """Loads a classifier from a local dir or the Hub and returns softmax top-k per image.
 
     Uses the model's own AutoImageProcessor (resize + center-crop + normalize), i.e. exactly
     what `transformers.pipeline("image-classification")` does, so Phase 5 can use either.
+    Logits are divided by `temperature` (calibration.json) before softmax. `crop_hint` plus
+    CROP_MASK (off by default) keeps only that crop's classes.
     """
 
-    def __init__(self, model_id: str = DEFAULT_HF_MODEL_ID, revision: str | None = None, device: str | None = None, token: str | None = None):
+    def __init__(
+        self,
+        model_id: str = DEFAULT_HF_MODEL_ID,
+        revision: str | None = None,
+        device: str | None = None,
+        token: str | None = None,
+        temperature: float | None = None,
+        crop_hint: str | None = None,
+        crop_mask: bool | None = None,
+    ):
         import torch
         from transformers import AutoImageProcessor, AutoModelForImageClassification
 
@@ -308,21 +333,38 @@ class Predictor:
         self.model.to(device)
         self.id2label = {int(k): v for k, v in self.model.config.id2label.items()}
         self.label_names = [self.id2label[i] for i in range(len(self.id2label))]
+        self.temperature = load_temperature(model_id, temperature)
+        self.crop_hint = crop_hint
+        self.crop_mask = CROP_MASK if crop_mask is None else crop_mask
 
-    def probabilities(self, images: list[Image.Image]) -> np.ndarray:
+    def logits(self, images: list[Image.Image]) -> np.ndarray:
         import torch
 
         inputs = self.processor(images=[im.convert("RGB") for im in images], return_tensors="pt").to(self.device)
         with torch.no_grad():
-            logits = self.model(**inputs).logits
-        return torch.softmax(logits.float(), dim=-1).cpu().numpy()
+            z = self.model(**inputs).logits
+        return z.float().cpu().numpy()
 
-    def predict_proba(self, images: list[Image.Image]) -> list[dict[str, float]]:
+    def probabilities(self, images: list[Image.Image], crop_hint: str | None = None) -> np.ndarray:
+        import torch
+        from shared.vision.calibration import crop_mask as mask_crop
+
+        z = self.logits(list(images))
+        t = self.temperature
+        if t != 1.0:
+            z = z / t
+        probs = torch.softmax(torch.from_numpy(z), dim=-1).numpy()
+        hint = crop_hint if crop_hint is not None else self.crop_hint
+        if self.crop_mask and hint:
+            probs = mask_crop(probs, self.label_names, hint)
+        return probs
+
+    def predict_proba(self, images: list[Image.Image], crop_hint: str | None = None) -> list[dict[str, float]]:
         """shared.vision.strategies.Predictor: full softmax per image, one batch."""
-        probs = self.probabilities(list(images))
+        probs = self.probabilities(list(images), crop_hint=crop_hint)
         return [{self.id2label[i]: float(p[i]) for i in range(len(p))} for p in probs]
 
-    def predict_topk(self, image: Image.Image, k: int = 3) -> TopK:
-        probs = self.probabilities([image])[0]
+    def predict_topk(self, image: Image.Image, k: int = 3, crop_hint: str | None = None) -> TopK:
+        probs = self.probabilities([image], crop_hint=crop_hint)[0]
         order = np.argsort(-probs)[:k]
         return TopK(labels=[self.id2label[int(i)] for i in order], scores=[float(probs[i]) for i in order])

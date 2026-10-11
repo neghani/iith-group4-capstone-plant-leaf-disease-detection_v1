@@ -111,6 +111,48 @@ Outputs in `model/outputs/`: `strategy_comparison.{csv,md}`, `strategy_threshold
 second time on the same final set. The chosen strategy and threshold go into
 `api/app/config.py` (`crop_strategy`, `confidence_threshold`).
 
+### Stage 2: fine-tune on field photos (PlantDoc), keep PlantVillage
+
+`v1.0` was trained on PlantVillage only (one leaf, plain background) and passes about 12% of the
+field-style real-world set. Stage 2 continues from the published `v1.0` weights on a mix of
+PlantVillage and **PlantDoc leaf crops**. It runs on Colab (notebook section 7b); the data prep is plain
+Python and also works locally:
+
+```bash
+python model/prepare_plantdoc.py          # clones PlantDoc into data/plantdoc_src if missing, writes the crops
+python model/train.py --model_name_or_path neghani/plantvillage-mobilenetv2 --model_revision v1.0 \
+  --data_dir "$DATA_DIR" --extra_data_dir model/data/plantdoc_train --extra_repeat 3 --replay_per_class 400 \
+  --output_dir model/outputs/plantvillage-plantdoc-mobilenetv2 --do_train --do_eval --num_train_epochs 6 \
+  --learning_rate 1e-4 --eval_strategy epoch --save_strategy epoch --load_best_model_at_end \
+  --metric_for_best_model plantdoc_macro_f1 --greater_is_better True --report_to none --seed 42
+```
+
+| Piece | What it does |
+|---|---|
+| [`prepare_plantdoc.py`](prepare_plantdoc.py) | Clones the full [PlantDoc object-detection set](https://github.com/pratikkayal/PlantDoc-Object-Detection-Dataset) (CC BY 4.0) if needed, cuts one crop per labelled leaf **the way the live app crops a leaf** (`shared/vision`, 256×256, leaf filling 90%), maps classes to the 38 PlantVillage labels ([`plantdoc_map.py`](plantdoc_map.py)), and writes `data/plantdoc_train/` (train + validation), `data/plantdoc_test/` (PlantDoc's own TEST split, held out) and `prep_report.md` |
+| `train.py --extra_data_dir` | adds the PlantDoc train crops (`--extra_repeat` copies per epoch) and a second validation set; `eval_plantvillage_*` and `eval_plantdoc_*` are logged separately |
+| `train.py --replay_per_class` | caps the PlantVillage **train** rows per class; validation and test are untouched, so the PlantVillage test split is identical to `v1.0`'s and `evaluate.py` shows whether anything was forgotten |
+| `train.py --model_revision` | starts from a Hub tag (`v1.0`); it refuses to continue if the 38-class label order differs from the training folders |
+
+**Leakage rules** (enforced in `prepare_plantdoc.py`, covered by `tests/test_prepare_plantdoc.py`):
+near-duplicate photos (PlantDoc has many web re-uploads) form groups, and a group is split or dropped as
+a unit; every photo behind `real_world_set` is traced by pixel hash (and file name) and its group is
+removed from training, and an untraceable one is an error; any group that holds a PlantDoc TEST photo is
+removed from training; validation is chosen by a hash of the group, not per crop.
+
+**How to judge it.** Tune on PlantDoc validation (and the real-world *tune* split for the confidence
+threshold), run real-world *final* once per set of weights (`eval_strategies.py --out model/outputs/stage2`
+keeps the `v1.0` report and lock separate), and compare against `v1.0` on `data/plantdoc_test`
+(`eval_real_world_set.py --set_dir model/data/plantdoc_test --split all`). Publish as `v1.1` only if it
+improves and PlantVillage stays within about 1 point; the API keeps using `v1.0` until
+`HF_MODEL_REVISION` is changed.
+
+**Limit to state.** The training crops, `real_world_set` and `plantdoc_test` are all web photos from
+PlantDoc, so gains on them overstate what a phone photo in a field will get. PlantDoc labels were not
+checked by a pathologist and some classes have few crops. Classes PlantDoc lacks (orange, tomato
+target spot and spider mites, grape esca and leaf blight, and others) only keep their PlantVillage training.
+The trainer's `full_photos` set is the test that matters for the demo.
+
 The older [`real_world_eval.py`](real_world_eval.py) (full frame, images under
 [`data/real_world/`](data/real_world/README.md)) still works for ad-hoc photo folders. See
 [`docs/challenges-and-approach.md`](../docs/challenges-and-approach.md) for the preprocessing.
@@ -218,6 +260,8 @@ model/
 ├── eval_real_world_set.py    PlantDoc real-world set: report, CIs, Hub card section (--push)
 ├── eval_strategies.py        Crop strategies A-E: comparison, threshold sweep, final report
 ├── app_predictor.py          Live-app chain (shared gate + crop strategy → model) for the evals
+├── prepare_plantdoc.py       Clone PlantDoc, cut leaf crops, exclude eval photos → data/plantdoc_{train,test}
+├── plantdoc_map.py           PlantDoc class → PlantVillage label (one copy)
 ├── build_real_world_set.py   Rebuild data/real_world_set from Cropped-PlantDoc (seed 42)
 ├── model_card_real_world_section.md  Template for the card's REAL_WORLD block
 ├── publish.py                Upload to Hub + tag v1.0
@@ -227,6 +271,9 @@ model/
 │   ├── plantvillage/         (git-ignored) optional local copy of Kaggle `color`
 │   ├── real_world_set/       50 labelled PlantDoc images, labels.csv, sources.csv
 │   ├── full_photos/          our own multi-leaf phone photos, labels.csv (images git-ignored)
+│   ├── plantdoc_src/         (git-ignored) clone of the full PlantDoc set, fetched by prepare_plantdoc.py
+│   ├── plantdoc_train/       (git-ignored) stage-2 training/validation crops + manifest.csv
+│   ├── plantdoc_test/        (git-ignored) PlantDoc TEST crops, held out
 │   └── real_world/           Ad-hoc field test images + sources.csv
 └── outputs/                  (git-ignored) checkpoints and reports
 ```

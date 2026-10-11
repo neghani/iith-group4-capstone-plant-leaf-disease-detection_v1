@@ -5,6 +5,7 @@ from PIL import Image
 from app.config import get_settings
 from app.vision.hf_client import classify_image
 from app.vision.quality import PreparedImage
+from shared.vision.calibration import apply_temperature_dict
 from shared.vision.quality import encode_jpeg
 from shared.vision.strategies import run_strategy
 
@@ -60,7 +61,9 @@ class HFPredictor:
         for img in images:
             scores = classify_image(encode_jpeg(img), "image/jpeg", top_k=NUM_CLASSES)
             self.calls.append(dict(getattr(scores, "meta", {})))
-            out.append({s.label: s.score for s in scores})
+            raw = {s.label: s.score for s in scores}
+            t = get_settings().calibration_temperature
+            out.append(apply_temperature_dict(raw, t) if t != 1.0 else raw)
         return out
 
     def provenance(self) -> dict:

@@ -130,7 +130,11 @@ def threshold_sweep(probs: np.ndarray, labels: np.ndarray, target_precision: flo
 
 
 def plot_confusion_matrix(cm: np.ndarray, label_names: list[str], out: Path) -> None:
-    import matplotlib
+    try:
+        import matplotlib
+    except ImportError:
+        print("matplotlib not installed; skipping confusion_matrix.png")
+        return
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt

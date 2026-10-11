@@ -47,18 +47,15 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 
-from eval_real_world_set import norm, wilson  # noqa: E402
+from eval_real_world_set import norm  # noqa: E402
 from shared.vision.strategies import DESCRIPTIONS, STRATEGY_IDS, decide_status  # noqa: E402
+from stats import MIN_PRECISION, N_BOOT, SEED, WIDE_CI_NOTE, ci, frac, paired_bootstrap, wilson  # noqa: E402,F401
+from stats import model_key as _model_key  # noqa: E402
 
 THRESHOLDS = [round(0.30 + 0.05 * i, 2) for i in range(13)]
-MIN_PRECISION = 0.70
 MIN_GAIN = 0.05
-N_BOOT = 1000
-SEED = 0
 REFERENCE = "B"
 DEFAULT_SETS = [HERE / "data" / "real_world_set", HERE / "data" / "full_photos"]
-WIDE_CI_NOTE = ("With under 100 images the 95% intervals are wide; differences of a few images "
-                "are within noise.")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -205,28 +202,9 @@ def sweep(results: list[dict], rows: list[dict]) -> tuple[list[dict], dict, bool
     return table, best, False
 
 
-def paired_bootstrap(a: list[bool], b: list[bool], n_boot: int = N_BOOT, seed: int = SEED) -> tuple[float, float, float]:
-    """Observed mean(a - b) and the 95% percentile interval over resampled images."""
-    d = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
-    if len(d) == 0:
-        return 0.0, 0.0, 0.0
-    rng = np.random.default_rng(seed)
-    idx = rng.integers(0, len(d), size=(n_boot, len(d)))
-    boots = d[idx].mean(axis=1)
-    return float(d.mean()), float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))
-
-
 # ---------------------------------------------------------------------------------------------
 # Formatting
 # ---------------------------------------------------------------------------------------------
-
-def frac(k: int, n: int) -> str:
-    return f"{k}/{n} ({100 * k / n:.1f}%)" if n else f"{k}/0 (n/a)"
-
-
-def ci(lo: float, hi: float) -> str:
-    return f"{100 * lo:.1f}-{100 * hi:.1f}%"
-
 
 def per_dataset(m: dict, rows: list[dict]) -> dict[str, tuple[int, int]]:
     out: dict[str, list[int]] = {}
@@ -424,6 +402,16 @@ def run_tune(a, rows, predictor, out: Path, leaks: list[str]) -> None:
     print(f"Wrote {out}/strategy_comparison.csv, strategy_comparison.md, per_image.csv")
 
 
+LEGACY_MODEL_KEY = "neghani/plantvillage-mobilenetv2@v1.0"  # locks written before model_key existed
+
+
+def model_key() -> str:
+    """Identity of the weights under test: the file hash for a local run dir, else id@revision."""
+    from app_predictor import MODEL, REVISION
+
+    return _model_key(MODEL, REVISION)
+
+
 def run_final(a, rows, predictor, out: Path, leaks: list[str]) -> None:
     if not a.strategy or len(a.strategy) != 1 or a.threshold is None:
         sys.exit("--split final needs exactly one --strategy and a --threshold (from the tune run).")
@@ -431,13 +419,17 @@ def run_final(a, rows, predictor, out: Path, leaks: list[str]) -> None:
         sys.exit("Leakage between tune and final; fix the split before running final:\n  " + "\n  ".join(leaks))
     s = a.strategy[0]
     fp = fingerprint(rows)
+    mk = model_key()
     lock = out / "final_run.json"
     if lock.exists() and not a.force:
         prev = json.loads(lock.read_text())
-        if prev.get("final_fingerprint") == fp:
-            sys.exit(f"The final split was already evaluated on {prev.get('date')} with strategy "
+        if prev.get("final_fingerprint") == fp and prev.get("model_key", LEGACY_MODEL_KEY) == mk:
+            sys.exit(f"The final split was already evaluated for this model on {prev.get('date')} with strategy "
                      f"{prev.get('strategy')} @ {prev.get('threshold')}; see {out / 'final_report.md'}. "
-                     "Final is run once. Use --force only to regenerate the same run.")
+                     "Final is run once per model. Use --force only to regenerate the same run.")
+        if prev.get("final_fingerprint") == fp:
+            print(f"[note] final was already used for another model ({prev.get('model_key', LEGACY_MODEL_KEY)}); "
+                  f"this is a different model ({mk}). Use a separate --out so the earlier report is kept.")
     sel_path = out / "selection.json"
     sel = json.loads(sel_path.read_text()) if sel_path.exists() else {}
     if sel and (sel.get("strategy") != s or abs(sel.get("threshold", -1) - a.threshold) > 1e-9):
@@ -455,7 +447,7 @@ def run_final(a, rows, predictor, out: Path, leaks: list[str]) -> None:
         + (f" (tune pass rate {100 * sel['tune_pass_rate']:.1f}% on {sel['n_tune']} images)" if sel else "")
         + ". This split was evaluated once and not used for any choice.", "",
         f"Images: {n} ({', '.join(f'{ds} {k}' for ds, k in sorted(counts.items()))}). "
-        f"Run {datetime.datetime.now().isoformat(timespec='seconds')}. Final fingerprint `{fp[:12]}`.", "",
+        f"Run {datetime.datetime.now().isoformat(timespec='seconds')}. Final fingerprint `{fp[:12]}`. Model `{mk}`.", "",
         "| Metric | Value |", "|---|---|", *metrics_rows(s, m, rows), "",
         WIDE_CI_NOTE + " Pass = correct disease and status 'ok'; gate rejections count as misses.", "",
     ]
@@ -469,6 +461,7 @@ def run_final(a, rows, predictor, out: Path, leaks: list[str]) -> None:
         lines += ["", "full_photos had no images, so this covers pre-cropped PlantDoc leaves only."]
     (out / "final_report.md").write_text("\n".join(lines) + "\n")
     lock.write_text(json.dumps({"strategy": s, "threshold": a.threshold, "tta": a.tta, "final_fingerprint": fp,
+                                "model_key": mk,
                                 "n": n, "pass_rate": m["pass_rate"], "date": datetime.date.today().isoformat()},
                                indent=2) + "\n")
     print("\n".join(lines))

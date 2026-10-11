@@ -47,6 +47,10 @@ model/data/real_world/**/*.PNG
 # Labelled real-world set: images come from Drive (real_world_set.zip); labels/sources are tracked
 model/data/real_world_set/images/
 model/data/full_photos/images/
+# Stage-2 data: PlantDoc clone and the crops prepare_plantdoc.py derives from it (rebuilt on demand)
+model/data/plantdoc_src/
+model/data/plantdoc_train/
+model/data/plantdoc_test/
 # ---- Logs ----
 *.log
 npm-debug.log*
