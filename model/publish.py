@@ -170,7 +170,9 @@ def main() -> None:
     files = api.list_repo_files(args.hub_model_id, revision=args.tag or None)
     print("Files on the Hub:", ", ".join(sorted(files)))
     print(f"Done: https://huggingface.co/{args.hub_model_id}" + (f"/tree/{args.tag}" if args.tag else ""))
-    print(f"Phase 5 .env: HF_MODEL_ID={args.hub_model_id}  HF_MODEL_REVISION={args.tag or 'main'}")
+    print(f"Phase 5 pin: shared/release.json (currently HF_MODEL_REVISION). "
+          f"If {args.tag or 'main'} should be the live API default, bump that file "
+          f"and copy it to hf_space/release.json.")
 
 
 if __name__ == "__main__":

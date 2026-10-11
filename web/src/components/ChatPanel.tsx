@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Send } from "lucide-react";
 import { sendChat } from "@/lib/api";
+import { predictionContextLabel } from "@/lib/chatContext";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -20,11 +21,12 @@ export function ChatPanel({
     const text = input.trim();
     if (!text || loading) return;
 
+    const history = messages;
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
     try {
-      const { reply } = await sendChat(text, sessionContext);
+      const { reply } = await sendChat(text, sessionContext, history);
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch {
       setMessages((m) => [
@@ -45,6 +47,11 @@ export function ChatPanel({
       <p className="mt-1 text-xs text-[var(--color-text-muted)]">
         Agriculture questions only · tied to this check in your browser session
       </p>
+      {predictionContextLabel(sessionContext) && (
+        <p className="mt-3 rounded-lg bg-sage/50 px-3 py-2 text-sm text-forest">
+          This check: {predictionContextLabel(sessionContext)}
+        </p>
+      )}
 
       <div className="mt-4 max-h-64 space-y-3 overflow-y-auto">
         {messages.length === 0 && (

@@ -13,7 +13,7 @@ Capstone Project 7, Group 4.
 | API and core logic | [FastAPI](https://fastapi.tiangolo.com/) | Endpoints for image upload, prediction and chat. Generates interactive API docs at `/docs`. |
 | Agent flow | [LangGraph](https://langchain-ai.github.io/langgraph/) | Pipeline of connected steps: image check, prediction, knowledge lookup, LLM explanation, optional translation. |
 | Data validation | [Pydantic](https://docs.pydantic.dev/) | Typed request, response and agent state models. |
-| User interface | [Streamlit](https://docs.streamlit.io/) | Image upload and chat window, built from the Figma design. |
+| User interface | [Next.js](https://nextjs.org/) | Image upload and chat window, built from the Figma design. |
 | Disease model | MobileNetV2 (hosted on [Hugging Face](https://huggingface.co/)) | Trained on PlantVillage. Called by the API service for predictions. |
 | LLM | Grok (free tier) first, other providers compared | Used behind a provider-independent interface. |
 | Translation (planned) | Multilingual BERT-based summariser, IndicTrans, LLM expansion | Hindi explanations. English uses the same pipeline with a language parameter. |
@@ -25,7 +25,7 @@ Capstone Project 7, Group 4.
 ```
 ┌──────────────┐  HTTP   ┌─────────────────────────────────────┐
 │  ui-service  │ ──────► │            api-service              │
-│  Streamlit   │         │  FastAPI + LangGraph agent          │
+│  Next.js     │         │  FastAPI + LangGraph agent          │
 └──────────────┘         │                                     │
                          │  1. image quality check             │
                          │  2. prediction ───────────────┐     │
@@ -65,10 +65,7 @@ The two services talk over the internal Docker network. The UI never calls the m
 │   │   └── knowledge/         # agricultural knowledge file, one entry per disease class
 │   ├── requirements.txt
 │   └── Dockerfile
-├── ui/
-│   ├── app.py                 # Streamlit app
-│   ├── requirements.txt
-│   └── Dockerfile
+├── web/                       # Next.js UI
 ├── notebooks/                 # Colab notebooks: training, evaluation, real-world tests
 ├── docs/                      # architecture, user flow, API notes
 ├── docker-compose.yml
@@ -113,7 +110,7 @@ API_URL=http://api-service:8000
 docker compose up --build
 ```
 
-- UI: http://localhost:8501
+- UI: http://localhost:3000
 - API: http://localhost:8000
 - API docs: http://localhost:8000/docs
 
@@ -127,10 +124,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
 # UI (in a second terminal)
-cd ui
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-API_URL=http://localhost:8000 streamlit run app.py
+cd web
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 ```
 
 ### docker-compose.yml (reference)
@@ -144,11 +140,9 @@ services:
       - "8000:8000"
 
   ui-service:
-    build: ./ui
-    environment:
-      - API_URL=http://api-service:8000
+    build: ./web
     ports:
-      - "8501:8501"
+      - "3000:3000"
     depends_on:
       - api-service
 ```
@@ -211,5 +205,5 @@ Treatment suggestions are for general guidance only and may be wrong. Farmers sh
 ## References
 
 - [PlantVillage dataset on Kaggle](https://www.kaggle.com/datasets/abdallahalidev/plantvillage-dataset/data)
-- [FastAPI](https://fastapi.tiangolo.com/), [LangGraph](https://langchain-ai.github.io/langgraph/), [Streamlit](https://docs.streamlit.io/)
+- [FastAPI](https://fastapi.tiangolo.com/), [LangGraph](https://langchain-ai.github.io/langgraph/), [Next.js](https://nextjs.org/)
 - IndicTrans translation models (optional, for Hindi)

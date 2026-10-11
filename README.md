@@ -44,7 +44,6 @@ Capstone Project 7, Group 4.
 .
 ├── api/
 ├── web/                 # Next.js CropCare AI UI
-├── ui/                  # legacy Streamlit (deprecated)
 ├── hf_space/            # inference server for the HF model (Space or local container)
 ├── model/               # Phase 1: train / evaluate / push MobileNetV2 to Hugging Face
 ├── notebooks/           # Colab notebook driving model/ scripts

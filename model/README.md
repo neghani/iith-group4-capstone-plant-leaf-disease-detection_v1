@@ -3,7 +3,7 @@
 Fine-tuned **MobileNetV2** on the **PlantVillage** dataset for 38 crop-disease classes. The release
 used in the API and Hugging Face Space is published at:
 
-**https://huggingface.co/neghani/plantvillage-mobilenetv2** (revision **`v1.0`**)
+**https://huggingface.co/neghani/plantvillage-mobilenetv2** — live tag is **`shared/release.json`** (`hf_model_revision`)
 
 | | |
 |---|---|
@@ -154,8 +154,9 @@ a pHash group cannot straddle train and val.
 
 **How to judge it.** Diagnostics, T and the threshold use PlantDoc **validation only**. The final test
 (PlantDoc `test/` plus the 50-image set) runs once per revision. Publish as `v1.1` only if PlantDoc
-val macro-F1 beats v1.0 **and** PlantVillage test accuracy drops by at most 2 points. The API stays
-on `v1.0` until `HF_MODEL_REVISION` is changed.
+val macro-F1 beats v1.0 **and** PlantVillage test accuracy drops by at most 2 points. The API and
+Space pin the live tag from [`shared/release.json`](../shared/release.json) (copy to
+`hf_space/release.json`). `.env` overrides that pin; do not scatter Hub tags in `config.py`.
 
 **Limit to state.** Training crops, `real_world_set` and `plantdoc_test` are web photos from PlantDoc,
 so gains overstate phone-photo performance. PlantDoc labels were not checked by a pathologist.
@@ -427,10 +428,11 @@ python model/predict.py leaf.jpg --model neghani/plantvillage-mobilenetv2 --revi
 
 | Item | Value |
 |---|---|
-| `HF_MODEL_ID` | `neghani/plantvillage-mobilenetv2` |
-| `HF_MODEL_REVISION` | `v1.0` |
+| `HF_MODEL_ID` | `shared/release.json` → `hf_model_id` |
+| `HF_MODEL_REVISION` | `shared/release.json` → `hf_model_revision` (currently `v1.1`) |
+| `CONFIDENCE_THRESHOLD` | `shared/release.json` → `confidence_threshold` (currently `0.5`) |
+| `CALIBRATION_TEMPERATURE` | `shared/release.json` → `calibration_temperature` |
 | Labels | `config.json` `id2label` ↔ `api/data/knowledge/diseases.json` (38 entries) |
-| Confidence | Start from Hub `reports/metrics.json` → `recommended_confidence_threshold`; tune on real-world data |
 | Reference logic | [`predict.py`](predict.py) `diagnose()` |
 | Vision preprocess | `shared/vision/` (used by both `api/` and `model/`); strategy via `CROP_STRATEGY` |
 

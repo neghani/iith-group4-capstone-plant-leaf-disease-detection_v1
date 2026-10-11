@@ -30,7 +30,9 @@ AGRICULTURE_SYSTEM = (
     "and invite an agriculture-related question. "
     "Do not invent chemical products; prefer general integrated pest management guidance "
     "and remind users to confirm with local extension services for critical decisions. "
-    "The diagnosis comes from an image classifier; if its confidence is low, say the result is uncertain."
+    "The diagnosis comes from an image classifier; if its confidence is low, say the result is uncertain. "
+    "Every question is about the same leaf check in Diagnosis context. "
+    "Use that crop and disease on follow-ups even when the farmer does not repeat those names."
 )
 
 
@@ -52,6 +54,11 @@ def generate_text(system: str, user: str) -> str | None:
         return None
 
 
-def chat_with_context(user_message: str, context_summary: str) -> str | None:
-    user = f"Diagnosis context:\n{context_summary}\n\nFarmer question:\n{user_message}"
-    return generate_text(AGRICULTURE_SYSTEM, user)
+def chat_with_context(
+    user_message: str, context_summary: str, history: str = ""
+) -> str | None:
+    parts = [f"Diagnosis context:\n{context_summary}"]
+    if history.strip():
+        parts.append(f"Recent conversation:\n{history.strip()}")
+    parts.append(f"Farmer question:\n{user_message}")
+    return generate_text(AGRICULTURE_SYSTEM, "\n\n".join(parts))

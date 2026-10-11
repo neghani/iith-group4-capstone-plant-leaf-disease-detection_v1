@@ -158,8 +158,10 @@ def test_predict_endpoint_with_large_photo(client, hf_calls, llm_prompts):
     assert body["quality"]["ok"] is True
     assert body["report"]["disease_id"] == "Tomato___Early_blight"
     info = body["inference"]
-    assert info["model_id"] == "neghani/plantvillage-mobilenetv2"
-    assert info["model_revision"] == "v1.0" and info["model_verified"] is True
+    from shared.release import HF_MODEL_ID, HF_MODEL_REVISION
+
+    assert info["model_id"] == HF_MODEL_ID
+    assert info["model_revision"] == HF_MODEL_REVISION and info["model_verified"] is True
     assert info["input_size"] == [256, 256]
     assert info["preprocessing"]["original_size"] == [4096, 3072]
     sent = Image.open(BytesIO(hf_calls[0]))

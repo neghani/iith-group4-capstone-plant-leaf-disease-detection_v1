@@ -137,17 +137,33 @@ def test_chat_context_includes_prediction(monkeypatch):
 
     captured = {}
 
-    def fake_chat(message, context):
+    def fake_chat(message, context, history=""):
+        captured["message"] = message
         captured["context"] = context
+        captured["history"] = history
         return "reply"
 
     monkeypatch.setattr(chat, "chat_with_context", fake_chat)
-    chat.handle_chat(
-        "Should I remove tomato leaves?",
-        {
-            "diagnosis_name": "Tomato Early Blight",
-            "confidence": 0.91,
-            "top_k": [{"label": "Tomato___Early_blight", "display_name": "Tomato - Early blight", "score": 0.91}],
-        },
-    )
+    ctx = {
+        "diagnosis_name": "Tomato Early Blight",
+        "crop": "tomato",
+        "confidence": 0.91,
+        "top_k": [{"label": "Tomato___Early_blight", "display_name": "Tomato - Early blight", "score": 0.91}],
+    }
+    chat.handle_chat("Should I remove tomato leaves?", ctx)
+    assert "Leaf check: tomato leaf — Tomato Early Blight (91.0%)" in captured["context"]
     assert "Top predictions: Tomato - Early blight 91.0%" in captured["context"]
+
+    captured.clear()
+    chat.handle_chat(
+        "Should I remove them?",
+        ctx,
+        history=[
+            {"role": "user", "content": "Should I remove tomato leaves?"},
+            {"role": "assistant", "content": "Remove badly spotted lower leaves and leave healthy ones."},
+        ],
+    )
+    assert captured["message"] == "Should I remove them?"
+    assert "Tomato Early Blight" in captured["context"]
+    assert "Farmer: Should I remove tomato leaves?" in captured["history"]
+    assert "Assistant: Remove badly spotted lower leaves" in captured["history"]

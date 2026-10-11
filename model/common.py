@@ -84,8 +84,18 @@ def hf_api():
 # --------------------------------------------------------------------------------------
 
 HF_USERNAME = "neghani"
-DEFAULT_HF_MODEL_ID = os.environ.get("HF_MODEL_ID", f"{HF_USERNAME}/plantvillage-mobilenetv2")
-DEFAULT_HF_REVISION = os.environ.get("HF_MODEL_REVISION", "main")
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from shared.release import (  # noqa: E402
+    CALIBRATION_TEMPERATURE as RELEASE_TEMPERATURE,
+    HF_MODEL_ID as RELEASE_MODEL_ID,
+    HF_MODEL_REVISION as RELEASE_REVISION,
+)
+
+DEFAULT_HF_MODEL_ID = os.environ.get("HF_MODEL_ID", RELEASE_MODEL_ID)
+DEFAULT_HF_REVISION = os.environ.get("HF_MODEL_REVISION", RELEASE_REVISION)
 DEFAULT_BASE_MODEL = "google/mobilenet_v2_1.0_224"
 FALLBACK_BASE_MODEL = "microsoft/resnet-50"
 KAGGLE_DATASET = "abdallahalidev/plantvillage-dataset"
@@ -97,10 +107,6 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 # (docs/challenges-and-approach.md #1-3). The Phase 1 whole-frame Laplacian gate was removed
 # because it rejected large clean photos as blurry.
 # --------------------------------------------------------------------------------------
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
 
 
 @dataclass
@@ -286,14 +292,14 @@ class TopK:
 
 
 def load_temperature(model_id: str, explicit: float | None = None) -> float:
-    """T from an argument, else <model>/calibration.json, else 1.0."""
+    """T from an argument, else <model>/calibration.json, else shared/release.json."""
     if explicit is not None:
         return float(explicit)
     path = Path(model_id) / "calibration.json"
     if path.exists():
         return float(json.loads(path.read_text())["temperature"])
     env = os.environ.get("CALIBRATION_TEMPERATURE")
-    return float(env) if env else 1.0
+    return float(env) if env else float(RELEASE_TEMPERATURE)
 
 
 class Predictor:

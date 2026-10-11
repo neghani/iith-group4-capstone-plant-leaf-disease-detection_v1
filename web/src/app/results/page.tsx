@@ -8,6 +8,7 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { CropPhotoCard } from "@/components/CropPhotoCard";
 import { DiagnosisCard } from "@/components/DiagnosisCard";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import { predictionChatContext } from "@/lib/chatContext";
 import { getCurrentCheck } from "@/lib/session";
 import type { CheckSession } from "@/lib/types";
 
@@ -70,7 +71,10 @@ export default function ResultsPage() {
         session.report.status !== "quality_issue" &&
         session.report.status !== "error" && (
         <div className="mt-8">
-          <ChatPanel sessionContext={session.sessionContext} />
+          <ChatPanel
+            key={session.id}
+            sessionContext={predictionChatContext(session)}
+          />
         </div>
       )}
 

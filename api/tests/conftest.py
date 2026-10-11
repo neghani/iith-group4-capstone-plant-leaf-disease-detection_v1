@@ -7,13 +7,17 @@ from PIL import Image
 
 from app.config import get_settings
 from app.vision.hf_client import Classification, LabelScore
+from shared.release import HF_MODEL_ID, HF_MODEL_REVISION
 
 
 @pytest.fixture(autouse=True)
 def _isolated_settings(monkeypatch):
-    for key in ("LLM_API_KEY", "HF_ENDPOINT_URL", "HF_TOKEN", "CONFIDENCE_THRESHOLD"):
+    for key in ("LLM_API_KEY", "HF_ENDPOINT_URL", "HF_TOKEN", "CONFIDENCE_THRESHOLD",
+                "CALIBRATION_TEMPERATURE"):
         monkeypatch.setenv(key, "")
     monkeypatch.setenv("CONFIDENCE_THRESHOLD", "0.5")
+    # Fakes already return probabilities; do not apply the live T on top of them.
+    monkeypatch.setenv("CALIBRATION_TEMPERATURE", "1.0")
     monkeypatch.setenv("HF_ENDPOINT_URL", "http://hf.test/")
     get_settings.cache_clear()
     yield
@@ -70,8 +74,8 @@ class FakeClassifier(list):
         meta = {
             "source": "endpoint",
             "endpoint_host": "hf.test",
-            "model_id": "neghani/plantvillage-mobilenetv2",
-            "model_revision": "v1.0",
+            "model_id": HF_MODEL_ID,
+            "model_revision": HF_MODEL_REVISION,
             "model_verified": True,
             "latency_ms": 12,
             "input_bytes": len(image_bytes),

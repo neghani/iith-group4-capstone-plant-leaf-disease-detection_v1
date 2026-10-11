@@ -11,7 +11,8 @@ license: apache-2.0
 # PlantVillage MobileNetV2 inference server
 
 Serves [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2)
-(tag `v1.0`) for the CropCare API. Hugging Face serverless inference does not host this
+at the tag in `release.json` (copied from `shared/release.json`, the repo-wide live pin).
+Hugging Face serverless inference does not host this
 fine-tune ("Model not supported by provider hf-inference"), so the API calls this Space or a
 dedicated Inference Endpoint through `HF_ENDPOINT_URL`.
 

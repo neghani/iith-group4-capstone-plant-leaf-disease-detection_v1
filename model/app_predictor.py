@@ -24,14 +24,16 @@ sys.path.insert(0, str(HERE.parent))
 
 from common import DEFAULT_HF_MODEL_ID, DEFAULT_HF_REVISION  # noqa: E402
 from predict import get_predictor  # noqa: E402
+from shared.release import CONFIDENCE_THRESHOLD as PINNED_THRESHOLD  # noqa: E402
+from shared.release import CROP_STRATEGY as PINNED_STRATEGY  # noqa: E402
 from shared.vision.quality import encode_jpeg, load_working_copy, rejected  # noqa: E402
 from shared.vision.strategies import retake_result, run_strategy  # noqa: E402
 
 # Set by eval_real_world_set.py --model / --revision / --strategy / --threshold; a local run dir works too.
 MODEL = os.environ.get("EVAL_MODEL", DEFAULT_HF_MODEL_ID)
 REVISION = None if Path(MODEL).exists() else os.environ.get("EVAL_REVISION", DEFAULT_HF_REVISION)
-STRATEGY = os.environ.get("CROP_STRATEGY", "B")
-THRESHOLD = float(os.environ.get("CONFIDENCE_THRESHOLD", "0.5"))
+STRATEGY = os.environ.get("CROP_STRATEGY", PINNED_STRATEGY)
+THRESHOLD = float(os.environ.get("CONFIDENCE_THRESHOLD", str(PINNED_THRESHOLD)))
 TTA = os.environ.get("CROP_TTA", "").lower() in ("1", "true", "yes")
 TOP_K = 3
 

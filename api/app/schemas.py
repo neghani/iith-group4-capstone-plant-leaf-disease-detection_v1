@@ -84,9 +84,16 @@ class PredictResponse(BaseModel):
     inference: InferenceInfo | None = None
 
 
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str
     session_context: dict = Field(default_factory=dict)
+    # Prior turns only. The current question is `message`, sent again with the leaf check.
+    history: list[ChatTurn] = Field(default_factory=list)
 
 
 class ChatResponse(BaseModel):

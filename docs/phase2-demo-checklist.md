@@ -5,7 +5,7 @@
 - [ ] Copy `.env.example` to `.env` (optional `LLM_API_KEY` for richer text)
 - [ ] Set `HF_ENDPOINT_URL` to the deployed Space, or leave it empty to use the local `inference-service`
 - [ ] Run `docker compose up --build`
-- [ ] `GET /health?probe=true` shows `hf_model_id: neghani/plantvillage-mobilenetv2`, `hf_model_revision: v1.0`, `hf_reachable: true` and `hf_served_model: neghani/plantvillage-mobilenetv2@v1.0`
+- [ ] `GET /health?probe=true` shows `hf_model_id` / `hf_model_revision` matching `shared/release.json` (currently `neghani/plantvillage-mobilenetv2@v1.1`), `hf_reachable: true` and `hf_served_model` the same pin
 - [ ] Open UI at http://localhost:3000/check
 - [ ] Open API docs at http://localhost:8000/docs
 

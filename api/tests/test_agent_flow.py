@@ -14,7 +14,7 @@ from app.services.crops import resolve_hint, same_crop
 from app.services.knowledge import list_disease_ids
 from app.vision.hf_client import LabelScore
 
-# id2label of neghani/plantvillage-mobilenetv2@v1.0 (config.json on the Hub)
+# id2label of the Hub classifier (config.json; 38 classes, unchanged across v1.0/v1.1)
 MODEL_LABELS = json.loads(
     (Path(__file__).parent / "model_labels.json").read_text(encoding="utf-8")
 )
@@ -63,8 +63,10 @@ def test_different_predictions_produce_different_guidance(client, good_leaf, hf_
 
 def test_response_proves_which_hf_model_answered(client, good_leaf, hf_calls, llm_prompts):
     info = client.post("/predict", files=_upload(good_leaf)).json()["inference"]
-    assert info["model_id"] == "neghani/plantvillage-mobilenetv2"
-    assert info["model_revision"] == "v1.0"
+    from shared.release import HF_MODEL_ID, HF_MODEL_REVISION
+
+    assert info["model_id"] == HF_MODEL_ID
+    assert info["model_revision"] == HF_MODEL_REVISION
     assert info["model_verified"] is True  # reported by the serving side, not just our config
     assert info["input_bytes"] == len(hf_calls[0])
 

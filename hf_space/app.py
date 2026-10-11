@@ -5,14 +5,26 @@ Same contract as a HF Inference Endpoint for image-classification:
 """
 
 import io
+import json
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from PIL import Image, ImageOps
 from transformers import pipeline
 
-MODEL_ID = os.environ.get("HF_MODEL_ID", "neghani/plantvillage-mobilenetv2")
-REVISION = os.environ.get("HF_MODEL_REVISION", "v1.0")
+
+def _release_pin() -> dict:
+    here = Path(__file__).resolve().parent
+    for path in (here / "release.json", here.parent / "shared" / "release.json"):
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+    raise FileNotFoundError("shared/release.json missing (live Hub pin)")
+
+
+_PIN = _release_pin()
+MODEL_ID = os.environ.get("HF_MODEL_ID") or _PIN["hf_model_id"]
+REVISION = os.environ.get("HF_MODEL_REVISION") or _PIN["hf_model_revision"]
 
 classifier = pipeline("image-classification", model=MODEL_ID, revision=REVISION, device="cpu")
 app = FastAPI(title="PlantVillage MobileNetV2 inference")

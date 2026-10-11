@@ -63,12 +63,20 @@ export async function predictLeaf(
 
 export async function sendChat(
   message: string,
-  sessionContext: Record<string, unknown>
+  sessionContext: Record<string, unknown>,
+  history: { role: "user" | "assistant"; content: string }[] = []
 ): Promise<{ reply: string; declined: boolean }> {
   const res = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, session_context: sessionContext }),
+    body: JSON.stringify({
+      message,
+      session_context: sessionContext,
+      history: history.slice(-6).map((turn) => ({
+        role: turn.role,
+        content: turn.content.slice(0, 400),
+      })),
+    }),
   });
 
   if (!res.ok) throw new Error("Chat request failed");

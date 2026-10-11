@@ -149,4 +149,8 @@ async def predict(
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(body: ChatRequest) -> ChatResponse:
-    return handle_chat(body.message, body.session_context)
+    return handle_chat(
+        body.message,
+        body.session_context,
+        [turn.model_dump() for turn in body.history],
+    )

@@ -1,9 +1,11 @@
 services:
   inference-service:
     build: ./hf_space
+    # Hub id/revision default from shared/release.json (copied to hf_space/release.json).
+    # Set HF_MODEL_ID / HF_MODEL_REVISION only to override that pin.
     environment:
-      HF_MODEL_ID: ${HF_MODEL_ID:-neghani/plantvillage-mobilenetv2}
-      HF_MODEL_REVISION: ${HF_MODEL_REVISION:-v1.0}
+      HF_MODEL_ID: ${HF_MODEL_ID:-}
+      HF_MODEL_REVISION: ${HF_MODEL_REVISION:-}
     ports:
       - "7860:7860"
 
