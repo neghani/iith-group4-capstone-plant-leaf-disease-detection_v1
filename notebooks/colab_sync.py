@@ -297,6 +297,9 @@ def main(argv: list[str] | None = None) -> int:
     os.chdir(root)
     # Visible to `%run` callers so later notebook cells share the same cwd.
     os.environ["REPO_ROOT"] = str(root)
+    os.environ["PYTHONPATH"] = str(root) + os.pathsep + os.environ.get("PYTHONPATH", "")
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
 
     if args.file:
         replace_files(root, args.branch, args.file)
