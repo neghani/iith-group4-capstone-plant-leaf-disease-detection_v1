@@ -72,7 +72,7 @@ def test_exclusions_logged(prepared):
     p, summary = prepared
     excluded = _csv(p.pd_train / "excluded.csv")
     reasons = {e["reason"] for e in excluded}
-    assert {"real_world_set_path", "skip_class"} <= reasons
+    assert {"path_in_real_world_set", "spider_mites_class"} <= reasons
     assert any("near_dup" in e["reason"] for e in excluded)
     first = sorted(MAP)[0]
     assert any(e["path"] == f"train/{first}/reupload.jpg" for e in excluded)

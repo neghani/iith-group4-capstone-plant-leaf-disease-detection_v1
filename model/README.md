@@ -111,47 +111,56 @@ Outputs in `model/outputs/`: `strategy_comparison.{csv,md}`, `strategy_threshold
 second time on the same final set. The chosen strategy and threshold go into
 `api/app/config.py` (`crop_strategy`, `confidence_threshold`).
 
-### Stage 2: fine-tune on field photos (PlantDoc), keep PlantVillage
+### Stage 2: fine-tune on Cropped-PlantDoc, keep PlantVillage
 
-`v1.0` was trained on PlantVillage only (one leaf, plain background) and passes about 12% of the
-field-style real-world set. Stage 2 continues from the published `v1.0` weights on a mix of
-PlantVillage and **PlantDoc leaf crops**. It runs on Colab (notebook section 7b); the data prep is plain
-Python and also works locally:
+`v1.0` was trained on PlantVillage only and passes about 12% (3/25) of the field-style real-world
+set. Stage 2 continues from the published `v1.0` weights on a **50/50 mix** of PlantVillage and
+[Cropped-PlantDoc](https://github.com/pratikkayal/PlantDoc-Dataset) (Singh et al. 2020, CC BY 4.0),
+pinned at `5467f6012d78d1c446145d5f582da6096f852ae8`. 27 of 38 PlantVillage classes appear in
+PlantDoc; the other 11 stay lab-only. Real training runs on Colab (notebook section 7b).
+
+Locally, do **not** train on the real data. Run the whole chain on synthetic images:
 
 ```bash
-python model/prepare_plantdoc.py          # clones PlantDoc into data/plantdoc_src if missing, writes the crops
-python model/train.py --model_name_or_path neghani/plantvillage-mobilenetv2 --model_revision v1.0 \
-  --data_dir "$DATA_DIR" --extra_data_dir model/data/plantdoc_train --extra_repeat 3 --replay_per_class 400 \
-  --output_dir model/outputs/plantvillage-plantdoc-mobilenetv2 --do_train --do_eval --num_train_epochs 6 \
-  --learning_rate 1e-4 --eval_strategy epoch --save_strategy epoch --load_best_model_at_end \
-  --metric_for_best_model plantdoc_macro_f1 --greater_is_better True --report_to none --seed 42
+python -m model.train --smoke     # CPU, a couple of minutes, writes only model/outputs/smoke/
+```
+
+Colab (after pinning `REPO_COMMIT` in the notebook):
+
+```bash
+python -m model.prepare_plantdoc
+python -m model.diagnostics --model neghani/plantvillage-mobilenetv2 --revision v1.0
+python -m model.train --init_from neghani/plantvillage-mobilenetv2 --model_revision v1.0 \
+  --data_dir "$DATA_DIR" --extra_data plantdoc --plantdoc_fraction 0.5 --epoch_samples 4000 \
+  --learning_rate 1e-4 --num_train_epochs 8 --label_smoothing_factor 0.1 \
+  --output_dir /content/drive/MyDrive/plant-disease/stage2/lr1e-4 \
+  --resume_from_checkpoint auto --load_best_model_at_end --metric_for_best_model plantdoc_macro_f1
+python -m model.calibrate --model "$STAGE2_DIR"
+python -m model.final_test --v11 "$STAGE2_DIR" --revision_name v1.1 --guard hub:$HF_MODEL_ID
+python -m model.artifacts --step prep --run stage2 --hub $HF_MODEL_ID --drive ...  # after each step
 ```
 
 | Piece | What it does |
 |---|---|
-| [`prepare_plantdoc.py`](prepare_plantdoc.py) | Clones the full [PlantDoc object-detection set](https://github.com/pratikkayal/PlantDoc-Object-Detection-Dataset) (CC BY 4.0) if needed, cuts one crop per labelled leaf **the way the live app crops a leaf** (`shared/vision`, 256×256, leaf filling 90%), maps classes to the 38 PlantVillage labels ([`plantdoc_map.py`](plantdoc_map.py)), and writes `data/plantdoc_train/` (train + validation), `data/plantdoc_test/` (PlantDoc's own TEST split, held out) and `prep_report.md` |
-| `train.py --extra_data_dir` | adds the PlantDoc train crops (`--extra_repeat` copies per epoch) and a second validation set; `eval_plantvillage_*` and `eval_plantdoc_*` are logged separately |
-| `train.py --replay_per_class` | caps the PlantVillage **train** rows per class; validation and test are untouched, so the PlantVillage test split is identical to `v1.0`'s and `evaluate.py` shows whether anything was forgotten |
-| `train.py --model_revision` | starts from a Hub tag (`v1.0`); it refuses to continue if the 38-class label order differs from the training folders |
+| [`prepare_plantdoc.py`](prepare_plantdoc.py) | Clones Cropped-PlantDoc if needed, excludes `real_world_set` paths, pHash near-dups (Hamming ≤6) of test/ and the 50-image set, and spider-mites; clusters remaining train images and holds out 12% of clusters as validation; renders strategy-B 256×256 crops |
+| [`sampling.py`](sampling.py) / `train.py --extra_data plantdoc` | 50/50 mixed epoch (PlantDoc classes weighted `1/sqrt(freq)`), PlantDoc RRC (0.5, 1.0), checkpoint by PlantDoc val macro-F1 |
+| [`calibrate.py`](calibrate.py) | Fits T on validation logits; threshold sweep 0.30–0.95 with a 70% precision rule (provisional if nothing qualifies) |
+| [`final_test.py`](final_test.py) | One shot of v1.0 vs v1.1. Guard JSON is named by revision and lives on the Hub (`stage2-runs`) or Drive, not in local `outputs/` |
+| [`smoke.py`](smoke.py) | Synthetic data + tiny random MobileNetV2; `--smoke` never reads or writes the guard |
 
-**Leakage rules** (enforced in `prepare_plantdoc.py`, covered by `tests/test_prepare_plantdoc.py`):
-near-duplicate photos (PlantDoc has many web re-uploads) form groups, and a group is split or dropped as
-a unit; every photo behind `real_world_set` is traced by pixel hash (and file name) and its group is
-removed from training, and an untraceable one is an error; any group that holds a PlantDoc TEST photo is
-removed from training; validation is chosen by a hash of the group, not per crop.
+**Leakage rules** (asserted in [`data_protocol.py`](data_protocol.py), tested in `tests/test_prepare_plantdoc.py`):
+no shared path or pHash near-dup between train/val and the final test, or between train and val;
+a pHash group cannot straddle train and val.
 
-**How to judge it.** Tune on PlantDoc validation (and the real-world *tune* split for the confidence
-threshold), run real-world *final* once per set of weights (`eval_strategies.py --out model/outputs/stage2`
-keeps the `v1.0` report and lock separate), and compare against `v1.0` on `data/plantdoc_test`
-(`eval_real_world_set.py --set_dir model/data/plantdoc_test --split all`). Publish as `v1.1` only if it
-improves and PlantVillage stays within about 1 point; the API keeps using `v1.0` until
-`HF_MODEL_REVISION` is changed.
+**How to judge it.** Diagnostics, T and the threshold use PlantDoc **validation only**. The final test
+(PlantDoc `test/` plus the 50-image set) runs once per revision. Publish as `v1.1` only if PlantDoc
+val macro-F1 beats v1.0 **and** PlantVillage test accuracy drops by at most 2 points. The API stays
+on `v1.0` until `HF_MODEL_REVISION` is changed.
 
-**Limit to state.** The training crops, `real_world_set` and `plantdoc_test` are all web photos from
-PlantDoc, so gains on them overstate what a phone photo in a field will get. PlantDoc labels were not
-checked by a pathologist and some classes have few crops. Classes PlantDoc lacks (orange, tomato
-target spot and spider mites, grape esca and leaf blight, and others) only keep their PlantVillage training.
-The trainer's `full_photos` set is the test that matters for the demo.
+**Limit to state.** Training crops, `real_world_set` and `plantdoc_test` are web photos from PlantDoc,
+so gains overstate phone-photo performance. PlantDoc labels were not checked by a pathologist.
+Classes PlantDoc lacks only keep their PlantVillage training. If the final pass rate is still below
+50%, report it honestly; do not change the threshold or the data after seeing that number.
 
 The older [`real_world_eval.py`](real_world_eval.py) (full frame, images under
 [`data/real_world/`](data/real_world/README.md)) still works for ad-hoc photo folders. See

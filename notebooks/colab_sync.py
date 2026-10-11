@@ -11,15 +11,14 @@ Do this instead
 ---------------
 Local (CPU, iterate on code):
 
-    python model/train.py --data_dir "$DATA_DIR" --crop_filter Tomato \\
-      --max_samples_per_class 40 --output_dir model/outputs/smoke \\
-      --do_train --do_eval --num_train_epochs 1 --save_strategy no --report_to none
+    python -m model.train --smoke
     git add model && git commit && git push
 
 Colab (GPU, full run). After every local push, re-run this helper -- it hard-resets
-tracked files to origin/main and leaves `model/outputs/` and real-world images alone:
+tracked files to a pinned commit (or origin/main) and leaves `model/outputs/` and
+real-world images alone. It prints CODE_COMMIT (the full SHA) for run_info.json:
 
-    %run notebooks/colab_sync.py
+    %run notebooks/colab_sync.py --commit <sha>
 
 Replace one file only (still from GitHub, still overwrite):
 
@@ -100,13 +99,21 @@ def clone_or_find(repo: str, dest_parent: Path) -> Path:
     return dest.resolve()
 
 
-def reset_to_origin(root: Path, branch: str) -> str:
-    """Always replace tracked files with origin/<branch>. Keep outputs and images."""
+def reset_to_origin(root: Path, branch: str, commit: str = "") -> str:
+    """Replace tracked files with `commit` (a SHA) or origin/<branch>. Keep outputs and images."""
     run(["git", "fetch", "origin", branch], cwd=root)
-    # reset --hard even if Colab has leftover uploads or local edits
-    run(["git", "reset", "--hard", f"origin/{branch}"], cwd=root)
-    sha = run(["git", "rev-parse", "--short", "HEAD"], cwd=root)
-    print(f"Replaced tracked files with origin/{branch} @ {sha}")
+    target = commit.strip() if commit else f"origin/{branch}"
+    if commit and commit not in (branch, f"origin/{branch}"):
+        # SHA or other ref: fetch it so reset can see it even if it is not the branch tip.
+        fetched = subprocess.run(["git", "fetch", "origin", commit], cwd=root, text=True, capture_output=True)
+        if fetched.returncode != 0:
+            print(f"[warn] git fetch origin {commit} failed; trying reset anyway.\n{fetched.stderr}")
+    run(["git", "reset", "--hard", target], cwd=root)
+    sha = run(["git", "rev-parse", "HEAD"], cwd=root)
+    short = run(["git", "rev-parse", "--short", "HEAD"], cwd=root)
+    os.environ["CODE_COMMIT"] = sha
+    print(f"Replaced tracked files with {target} @ {short}")
+    print(f"CODE_COMMIT {sha}")
     print(f"Left untracked: {', '.join(KEEP_UNTRACKED)}")
     return sha
 
@@ -234,6 +241,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--repo", default=os.environ.get("REPO_URL", DEFAULT_REPO))
     p.add_argument("--branch", default=os.environ.get("REPO_BRANCH", DEFAULT_BRANCH))
     p.add_argument(
+        "--commit",
+        default=os.environ.get("REPO_COMMIT", ""),
+        help="Checkout this SHA (or other git ref). Default: origin/<branch>. Printed as CODE_COMMIT.",
+    )
+    p.add_argument(
         "--file",
         action="append",
         default=[],
@@ -288,8 +300,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.file:
         replace_files(root, args.branch, args.file)
+        sha = run(["git", "rev-parse", "HEAD"], cwd=root)
+        os.environ["CODE_COMMIT"] = sha
+        print(f"CODE_COMMIT {sha} (working tree not reset; --file only)")
     elif colab or args.force:
-        reset_to_origin(root, args.branch)
+        reset_to_origin(root, args.branch, args.commit)
+    else:
+        sha = run(["git", "rev-parse", "HEAD"], cwd=root)
+        os.environ["CODE_COMMIT"] = sha
+        print(f"CODE_COMMIT {sha}")
 
     if colab:
         maybe_mount_drive()

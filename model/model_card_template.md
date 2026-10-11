@@ -62,8 +62,11 @@ result and suggests treatment from a curated agricultural knowledge base.
 - [PlantVillage](https://www.kaggle.com/datasets/abdallahalidev/plantvillage-dataset) `color`
   images, stratified per-class split with seed {{seed}}:
   train {{num_train}} · validation {{num_val}} · test {{num_test}}.
-- Augmentation (phone-photo robustness): random resized crop (70-100%), horizontal and vertical
-  flip, rotation up to 180°, brightness/contrast/saturation jitter, random Gaussian blur.
+- Stage 2 (tag `v1.1` and later) also uses [Cropped-PlantDoc](https://github.com/pratikkayal/PlantDoc-Dataset)
+  (Singh et al. 2020, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)): 27 of 38 classes;
+  the other 11 stay lab-only. See `run_info.json` for the PlantDoc commit and data manifest.
+- Augmentation (phone-photo robustness): random resized crop (70-100% PlantVillage, 50-100% PlantDoc),
+  horizontal and vertical flip, rotation up to 180°, brightness/contrast/saturation jitter, random Gaussian blur.
 - Evaluation preprocessing: resize shortest edge, centre crop 224, normalise (same as the bundled
   `preprocessor_config.json`).
 
@@ -108,7 +111,10 @@ Not evaluated yet. Run `python model/eval_real_world_set.py --set_dir model/data
   deficiencies and pest damage will be forced into the nearest known class; rely on the threshold
   and the "not sure" path.
 - One leaf per photo. Mixed infections and whole-plant shots are out of scope.
-- Confidence is a softmax probability, not a calibrated likelihood.
+- Confidence is a softmax probability. Stage 2 ships a fitted temperature in `calibration.json`
+  (NLL on PlantDoc validation). Treat remaining overconfidence as a limitation.
+- PlantDoc and the 50-image real-world set are web photos; they overstate phone-photo performance.
+  The one-shot comparison is `final_report_v1_1.md` (not used for any choice).
 
 ## Training details
 

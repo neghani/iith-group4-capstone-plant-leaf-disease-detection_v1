@@ -25,6 +25,8 @@ crop). The strategy and threshold were chosen on the tune split with `model/eval
 
 Project target for the end-to-end pass rate: {{target}}. The point estimate {{target_status}} the
 target. With few images the confidence interval is wide, so treat the figure as indicative.
+Stage 2 (`v1.1`) reports the 50-image set as one stratum of the one-shot final test
+(`final_report_v1_1.md`); it is not used to choose the threshold.
 
 Confidence threshold used: {{threshold}}. It was fixed on the tuning split only; the final split
 is reported once.
