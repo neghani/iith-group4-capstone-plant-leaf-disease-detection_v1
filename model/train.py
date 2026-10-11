@@ -260,7 +260,8 @@ def assert_training_protocol(data_dir: Path, pv_train: list[tuple[str, int]], ex
     extra_items = []
     for rel, _ in pv_train:
         path = data_dir / rel
-        extra_items.append(Item(path=str(path), split="train", label="", phash=phash_cached(path, cache),
+        extra_items.append(Item(path=str(path), split="train", label=Path(rel).parts[0],
+                                phash=phash_cached(path, cache),
                                 group=f"pv:{rel}", source="plantvillage"))
     save_hash_cache(cache_path, cache)
     assert_protocol(prepared["train"], prepared["validation"], prepared["final_test"], extra_items)

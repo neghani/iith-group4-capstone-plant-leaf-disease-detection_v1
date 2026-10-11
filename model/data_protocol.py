@@ -19,7 +19,10 @@ from scipy.fftpack import dct
 
 PINNED_COMMIT = "5467f6012d78d1c446145d5f582da6096f852ae8"
 REPO_URL = "https://github.com/pratikkayal/PlantDoc-Dataset"
-MATCH_DIST = 6  # pHash Hamming distance at or below which two images are near-duplicates
+MATCH_DIST = 6  # pHash Hamming distance at or below which two PlantDoc images are near-duplicates
+# PlantVillage vs PlantDoc: tens of thousands of leaf photos; dist 6 across crops is a hash collision,
+# not leakage. True clones (recompress/resize) sit at 0–3. See assert_protocol(extra=...).
+MATCH_DIST_CROSS = 3
 VAL_PCT = 12
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
@@ -173,15 +176,26 @@ class ProtocolError(SystemExit):
     """Raised when a leakage rule is broken. SystemExit so training scripts stop."""
 
 
-def _pairs_across(a: list[Item], b: list[Item], max_dist: int = MATCH_DIST) -> list[str]:
+def crop_prefix(name: str) -> str:
+    return (name or "").split("___")[0]
+
+
+def _pairs_across(a: list[Item], b: list[Item], max_dist: int = MATCH_DIST,
+                  same_crop: bool = False) -> list[str]:
     problems = []
     paths_a = {norm_path(x.path) for x in a}
+    by_path_a = {x.path: x for x in a}
+    by_path_b = {x.path: x for x in b}
     for x in b:
         if norm_path(x.path) in paths_a:
             problems.append(f"shared path {x.path}")
     ha = {x.path: x.phash for x in a}
     hb = {x.path: x.phash for x in b}
     for qa, qb, d in near_dups(ha, hb, max_dist):
+        if same_crop:
+            ca, cb = crop_prefix(by_path_a[qa].label), crop_prefix(by_path_b[qb].label)
+            if ca and cb and ca != cb:
+                continue  # different crops: hash collision, not a leaked photo
         problems.append(f"pHash dist {d}: {qa} ~ {qb}")
     return problems
 
@@ -194,7 +208,8 @@ def assert_protocol(train: list[Item], val: list[Item], test: list[Item], extra:
     problems += [f"train/val vs test: {p}" for p in _pairs_across(train + val, test)]
     problems += [f"train vs val: {p}" for p in _pairs_across(train, val)]
     if extra:
-        problems += [f"extra (PlantVillage) vs test: {p}" for p in _pairs_across(extra, test)]
+        problems += [f"extra (PlantVillage) vs test: {p}" for p in _pairs_across(
+            extra, test, max_dist=MATCH_DIST_CROSS, same_crop=True)]
     groups_tv = defaultdict(set)
     for x in train:
         groups_tv[x.group].add("train")
