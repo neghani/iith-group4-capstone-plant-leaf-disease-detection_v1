@@ -1,0 +1,92 @@
+{
+  "Tomato___Early_blight": {
+    "display_name": "Tomato Early Blight",
+    "crop": "Tomato",
+    "category": "fungal",
+    "description": "Early blight is a common fungal disease that causes dark spots with concentric rings on lower leaves, often spreading upward in warm, humid weather.",
+    "symptoms": [
+      {"name": "Target-like spots", "explanation": "Brown lesions with rings on older leaves."},
+      {"name": "Yellowing", "explanation": "Leaves may yellow around spots and drop early."}
+    ],
+    "alternatives": ["Septoria leaf spot", "Nutrient deficiency"],
+    "actions": [
+      {"step": "Remove heavily infected lower leaves and destroy them (do not compost).", "safety_note": "Wash hands and tools after handling infected plants."},
+      {"step": "Improve airflow by spacing plants and avoiding overhead watering.", "safety_note": null},
+      {"step": "Apply a fungicide labeled for early blight only if local extension guidance recommends it.", "safety_note": "Follow label rates and pre-harvest intervals."}
+    ],
+    "monitoring": "Check lower leaves every few days; watch for new spots after rain.",
+    "limitations": "Similar spots can come from other fungi or physical damage; confirm with an expert if unsure."
+  },
+  "Tomato___Late_blight": {
+    "display_name": "Tomato Late Blight",
+    "crop": "Tomato",
+    "category": "fungal",
+    "description": "Late blight spreads quickly in cool, wet conditions and can destroy foliage and fruit within days if not managed.",
+    "symptoms": [
+      {"name": "Water-soaked patches", "explanation": "Large irregular gray-green areas on leaves."},
+      {"name": "White growth", "explanation": "Fuzzy growth may appear on undersides in humid weather."}
+    ],
+    "alternatives": ["Bacterial spot", "Sunscald on fruit"],
+    "actions": [
+      {"step": "Isolate affected plants if possible; remove severely infected plants.", "safety_note": "Dispose away from the field; do not leave debris on soil."},
+      {"step": "Avoid working in wet fields to limit spread.", "safety_note": null},
+      {"step": "Use protectant fungicides per local agricultural extension advice.", "safety_note": "Wear protective equipment as required on the label."}
+    ],
+    "monitoring": "Inspect daily during cool, rainy periods; act at first signs.",
+    "limitations": "Requires prompt action; photo-only diagnosis may miss early or mixed infections."
+  },
+  "Potato___Early_blight": {
+    "display_name": "Potato Early Blight",
+    "crop": "Potato",
+    "category": "fungal",
+    "description": "Early blight on potato causes dark lesions on leaves and can reduce tuber yield if left unmanaged.",
+    "symptoms": [
+      {"name": "Dark leaf spots", "explanation": "Angular to circular brown spots, often with rings."},
+      {"name": "Defoliation", "explanation": "Severe infection causes premature leaf drop."}
+    ],
+    "alternatives": ["Late blight", "Brown spot"],
+    "actions": [
+      {"step": "Rotate crops and use certified seed where available.", "safety_note": null},
+      {"step": "Maintain balanced fertility; avoid excess nitrogen that favors lush, susceptible foliage.", "safety_note": null},
+      {"step": "Consider fungicide programs aligned with local recommendations.", "safety_note": "Follow label restrictions for food crops."}
+    ],
+    "monitoring": "Scout from tuber initiation through canopy closure.",
+    "limitations": "Field history and weather strongly affect risk; confirm critical decisions locally."
+  },
+  "Apple___Apple_scab": {
+    "display_name": "Apple Scab",
+    "crop": "Apple",
+    "category": "fungal",
+    "description": "Apple scab causes olive-green to dark scabby lesions on leaves and fruit, favored by spring moisture.",
+    "symptoms": [
+      {"name": "Velvety spots", "explanation": "Olive lesions on young leaves and fruit."},
+      {"name": "Leaf curl", "explanation": "Infected leaves may distort and fall."}
+    ],
+    "alternatives": ["Flyspeck", "Sooty blotch"],
+    "actions": [
+      {"step": "Remove fallen leaves in autumn to reduce overwintering spores.", "safety_note": null},
+      {"step": "Prune for light penetration and faster leaf drying.", "safety_note": null},
+      {"step": "Apply scab-targeted sprays per regional orchard calendar.", "safety_note": "Respect re-entry and harvest intervals."}
+    ],
+    "monitoring": "Watch new growth in wet springs; track weather-based infection periods if available.",
+    "limitations": "Fruit and leaf symptoms differ by variety; expert verification helps before spray decisions."
+  },
+  "Corn_(maize)___Common_rust_": {
+    "display_name": "Corn Common Rust",
+    "crop": "Corn",
+    "category": "fungal",
+    "description": "Common rust produces reddish-brown pustules on leaves, usually mid to late season depending on hybrid susceptibility.",
+    "symptoms": [
+      {"name": "Rust pustules", "explanation": "Small raised reddish-brown spots on both leaf surfaces."},
+      {"name": "Yellow halos", "explanation": "Chlorosis may surround heavy infections." }
+    ],
+    "alternatives": ["Southern rust", "Physiological leaf streak"],
+    "actions": [
+      {"step": "Choose resistant hybrids for future plantings if rust is recurring.", "safety_note": null},
+      {"step": "Scout fields to distinguish common vs southern rust.", "safety_note": "Misidentification changes urgency of control."},
+      {"step": "Treat only when thresholds and economics justify it locally.", "safety_note": "Follow label directions for grain crops."}
+    ],
+    "monitoring": "Check mid-canopy leaves weekly in humid seasons.",
+    "limitations": "Rust species look similar in photos; lab or expert ID may be needed."
+  }
+}

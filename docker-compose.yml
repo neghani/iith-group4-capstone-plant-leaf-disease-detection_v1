@@ -1,0 +1,18 @@
+services:
+  api-service:
+    build: ./api
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api/data:/app/data:ro
+
+  ui-service:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-service
