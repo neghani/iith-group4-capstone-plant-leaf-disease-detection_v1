@@ -174,6 +174,17 @@ def main():
     rows = list(csv.DictReader(open(root / "labels.csv")))
     if a.split != "all":
         rows = [r for r in rows if r["split"] == a.split]
+    missing = [r["file"] for r in rows if not (root / r["file"]).is_file()]
+    if missing:
+        raise SystemExit(
+            f"{len(missing)} image(s) listed in {root}/labels.csv are missing "
+            f"(images/ is git-ignored). e.g. {missing[0]}\n"
+            "On Colab, copy the zip from Drive:\n"
+            "  python notebooks/colab_sync.py --real-world-set-from "
+            "/content/drive/MyDrive/plant-disease/real_world_set.zip\n"
+            "Or rebuild the same 50 images (seed 42) from Cropped-PlantDoc:\n"
+            "  python model/build_real_world_set.py model/data/plantdoc_src model/data/real_world_set"
+        )
     labels_all = sorted({r["label"] for r in rows})
 
     run = None
