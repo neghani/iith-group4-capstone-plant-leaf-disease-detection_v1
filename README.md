@@ -11,8 +11,9 @@ Capstone Project 7, Group 4.
 
 ## Project Status
 
+- **Phase 1 (model):** MobileNetV2 on PlantVillage — training/evaluation/real-world scripts and Colab notebook ready, publishes to [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2); see [model/README.md](model/README.md)
 - **Phase 2 (demo):** FastAPI + LangGraph agent, **Next.js (CropCare AI) UI**, Docker Compose — implemented
-- **Phase 5:** Replace placeholder prediction with Hugging Face MobileNetV2 — planned
+- **Phase 5:** Replace placeholder prediction with the Phase 1 Hugging Face model — planned
 - **Hindi UI / translation:** planned
 - **Out of scope for demo:** authentication, persistent image storage, server-side history
 
@@ -24,7 +25,7 @@ Capstone Project 7, Group 4.
 | Agent flow | [LangGraph](https://langchain-ai.github.io/langgraph/) | Quality → predict → knowledge → report → safety |
 | Data validation | [Pydantic](https://docs.pydantic.dev/) | API and diagnosis report schemas |
 | User interface | [Next.js](https://nextjs.org/) + Tailwind | Figma-aligned CropCare AI shell |
-| Disease model | Placeholder (hash-based demo classes) | Until Phase 5 HF model |
+| Disease model | MobileNetV2 fine-tuned on PlantVillage, hosted on [Hugging Face](https://huggingface.co/neghani/plantvillage-mobilenetv2) (Phase 1, `model/`) | API still uses a hash-based placeholder until the Phase 5 swap |
 | LLM | OpenAI ChatGPT API (optional) | Summary polish and chat; template fallback without key |
 | Containers | Docker Compose | `api-service` + `ui-service` |
 
@@ -44,6 +45,8 @@ Capstone Project 7, Group 4.
 ├── api/
 ├── web/                 # Next.js CropCare AI UI
 ├── ui/                  # legacy Streamlit (deprecated)
+├── model/               # Phase 1: train / evaluate / push MobileNetV2 to Hugging Face
+├── notebooks/           # Colab notebook driving model/ scripts
 ├── docs/
 ├── docker-compose.yml
 ├── .env.example

@@ -34,6 +34,17 @@ out/
 web/out/
 coverage/
 
+# ---- Phase 1 model artifacts ----
+model/outputs/
+model/data/plantvillage/
+model/data/real_world/**/*.jpg
+model/data/real_world/**/*.jpeg
+model/data/real_world/**/*.png
+model/data/real_world/**/*.webp
+model/data/real_world/**/*.JPG
+model/data/real_world/**/*.JPEG
+model/data/real_world/**/*.PNG
+model 
 # ---- Logs ----
 *.log
 npm-debug.log*
