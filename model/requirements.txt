@@ -1,0 +1,16 @@
+# Phase 1: MobileNetV2 training / evaluation / Hugging Face push.
+# Install with: pip install -r model/requirements.txt
+# (In Colab, torch and torchvision are preinstalled with CUDA; pip will keep them.)
+torch>=2.2.0
+torchvision>=0.17.0
+# v5 flag names are used in the docs (--warmup_steps as a ratio, no --overwrite_output_dir)
+transformers>=5.0.0,<6
+datasets>=2.20.0
+evaluate>=0.4.2
+accelerate>=0.33.0
+scikit-learn>=1.4.0
+matplotlib>=3.8.0
+huggingface_hub>=0.25.0
+kagglehub>=0.3.0
+pillow>=10.0.0
+numpy>=1.26.0
