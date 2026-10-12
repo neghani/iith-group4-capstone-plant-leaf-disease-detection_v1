@@ -7,6 +7,7 @@ implementation Phase 5 copies into the API service.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import sys
@@ -19,6 +20,38 @@ from PIL import Image, ImageOps
 
 # CROP_MASK is off until diagnostics.py shows crop-masked top-1 is worth a required dropdown.
 CROP_MASK = os.environ.get("CROP_MASK", "").lower() in ("1", "true", "yes")
+_log = logging.getLogger("phase1.train")
+
+
+def checkpoint_code_commit(output_dir: Path) -> str | None:
+    """code_commit recorded when this output_dir last finished a train.py run."""
+    info = output_dir / "run_info.json"
+    if not info.is_file():
+        return None
+    try:
+        saved = json.loads(info.read_text()).get("code_commit")
+    except json.JSONDecodeError:
+        return None
+    return str(saved) if saved else None
+
+
+def refuse_stale_resume(output_dir: Path, current_sha: str | None) -> None:
+    """Refuse auto-resume when Drive checkpoints were trained from a different CODE_COMMIT.
+
+    Mid-run disconnects often have checkpoints but no run_info.json yet; those are allowed.
+    Set FORCE_RESUME=1 to continue a mismatched run, or pass --overwrite_output_dir to start over.
+    """
+    if str(os.environ.get("FORCE_RESUME", "")).strip().lower() in ("1", "true", "yes"):
+        _log.warning("FORCE_RESUME=1: continuing checkpoints in %s despite a code_commit mismatch.", output_dir)
+        return
+    saved = checkpoint_code_commit(output_dir)
+    if not saved or not current_sha or saved == current_sha:
+        return
+    raise SystemExit(
+        f"Checkpoints in {output_dir} were trained from code_commit {saved}, "
+        f"but this session is {current_sha}. Pass --overwrite_output_dir to start over, "
+        "or set FORCE_RESUME=1 to continue the old run."
+    )
 
 # --------------------------------------------------------------------------------------
 # Environment / Hugging Face token

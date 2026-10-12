@@ -32,15 +32,24 @@ class Classification(list):
 
 
 def hf_configured() -> bool:
-    settings = get_settings()
-    return bool(settings.hf_endpoint_url.strip() or settings.hf_model_id.strip())
+    """True only when a dedicated Space / Inference Endpoint is set.
+
+    Serverless HF inference does not host this fine-tune; an empty URL used to
+    look healthy while predict failed against the router.
+    """
+    return bool(get_settings().hf_endpoint_url.strip())
 
 
 def _target_url() -> str:
     settings = get_settings()
-    if settings.hf_endpoint_url.strip():
-        return settings.hf_endpoint_url.strip()
-    return f"https://router.huggingface.co/hf-inference/models/{settings.hf_model_id}"
+    endpoint = settings.hf_endpoint_url.strip()
+    if not endpoint:
+        raise HFInferenceError(
+            "HF_ENDPOINT_URL is empty. Point it at hf_space "
+            "(Docker: http://inference-service:7860/; local: http://localhost:7860/). "
+            "Serverless HF inference does not host this fine-tune."
+        )
+    return endpoint
 
 
 def _provenance(response: httpx.Response, latency_ms: int, image_bytes: int) -> dict:

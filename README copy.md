@@ -1,3 +1,5 @@
+> **Obsolete planning draft.** Do not use this file to run the app. Two-service Compose, threshold 0.6, and `API_URL` are out of date. The current runbook is [README.md](README.md) (three services, live pin `shared/release.json` / `v1.1`, threshold 0.5).
+
 # AI-Powered Plant Disease Detection and Farmer Assistance
 
 A farmer uploads a photo of a crop. The system identifies the disease with a MobileNetV2 model, then uses an LLM agent to explain the disease and suggest treatment in plain language. The farmer can ask follow-up questions in a chat. Hindi support is planned.

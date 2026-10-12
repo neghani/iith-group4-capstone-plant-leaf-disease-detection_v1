@@ -2,8 +2,8 @@
 
 Engineering log for the capstone write-up. Each entry: what went wrong, the evidence, the root
 cause, what we changed, and what it cost or left open. Numbers come from runs on 2026-10-11
-against the real `neghani/plantvillage-mobilenetv2@v1.0` model (served by `hf_space/`) unless
-stated otherwise.
+against `neghani/plantvillage-mobilenetv2@v1.0` (served by `hf_space/`) unless
+stated otherwise. The live app pin is `shared/release.json` (`@v1.1`).
 
 ## Summary
 
@@ -171,11 +171,10 @@ everything. Verified: TypeScript + `next build`. **Not yet exercised in a real b
 LangGraph `predict` node -> `hf_client.classify_image` -> `HF_ENDPOINT_URL`.
 
 - With Docker Compose, `HF_ENDPOINT_URL` defaults to `inference-service` (`hf_space/`), which loads
-  `neghani/plantvillage-mobilenetv2` revision `v1.0` from the Hub with `transformers.pipeline`.
-- If `HF_ENDPOINT_URL` is empty the API falls back to the serverless router
-  (`router.huggingface.co/hf-inference/models/<id>`). That does **not** serve this fine-tune (a test
-  call returns 401, and the repo notes "model not supported"), so the user gets an honest "Analysis
-  unavailable" report. There is no mock/placeholder path left in the API; nothing invents a
+  `neghani/plantvillage-mobilenetv2` revision `v1.1` from `shared/release.json` with `transformers.pipeline`.
+- If `HF_ENDPOINT_URL` is empty the API is not configured (serverless HF inference does not host this
+  fine-tune). `/health` reports `hf_model_configured: false` and `/predict` returns an honest
+  "Analysis unavailable" report. There is no mock/placeholder path left in the API; nothing invents a
   diagnosis when the model is down (`test_no_hf_means_no_fabricated_diagnosis`).
 - Gap found: nothing *proved* which model answered. A misconfigured URL pointing at a different
   model would look identical. Fixes:
@@ -184,8 +183,9 @@ LangGraph `predict` node -> `hf_client.classify_image` -> `HF_ENDPOINT_URL`.
     bytes, and the preprocessing trace), and the results page shows it.
   - `GET /health?probe=true` calls the Space's `/health` and reports the model actually served.
   - Structured logs (`leafcheck.hf`, `leafcheck.vision`) for every call.
-- Run on 2026-10-11: Space on the real Hub model, API pointed at it. `/health?probe=true` ->
-  `hf_served_model: neghani/plantvillage-mobilenetv2@v1.0`; `/predict` -> `model_verified: true`.
+- Run on 2026-10-11 (then still `@v1.0`): Space on the real Hub model, API pointed at it.
+  `/health?probe=true` -> `hf_served_model: neghani/plantvillage-mobilenetv2@v1.0`;
+  `/predict` -> `model_verified: true`. Live health now expects `@v1.1`.
 
 ## 8. Is the prediction really used in the agentic flow?
 
@@ -259,11 +259,11 @@ below 50% and is left as-is; the threshold and the data were not changed after s
 ## How to reproduce
 
 ```bash
-# API tests (47): preprocessing, agent flow, HF provenance
-cd api && .venv/bin/python -m pytest -q
+# API tests: preprocessing, agent flow, HF provenance
+cd api && PYTHONPATH=..:. .venv/bin/python -m pytest -q
 
-# Real model end to end
-cd hf_space && uvicorn app:app --port 7860          # loads neghani/plantvillage-mobilenetv2@v1.0
+# Real model end to end (live pin is @v1.1 from shared/release.json)
+cd hf_space && uvicorn app:app --port 7860          # loads neghani/plantvillage-mobilenetv2@v1.1
 cd api && HF_ENDPOINT_URL=http://127.0.0.1:7860/ uvicorn app.main:app --port 8000
 curl "localhost:8000/health?probe=true"
 curl -F file=@leaf.jpg localhost:8000/predict | jq '.inference, .quality'

@@ -13,7 +13,12 @@ import pytest
 from common import gpu_train_flags
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "notebooks"))
-from colab_sync import stage_zip_locally  # noqa: E402
+from colab_sync import (  # noqa: E402
+    DEFAULT_BRANCH,
+    DEFAULT_DRIVE_PV_ZIP,
+    assert_pv_staging_helper,
+    stage_zip_locally,
+)
 
 
 def _flag_value(flags: list[str], name: str) -> str:
@@ -109,3 +114,22 @@ def test_stage_zip_locally_rejects_non_zip(tmp_path):
     src.write_text("nope")
     with pytest.raises(SystemExit):
         stage_zip_locally(src, tmp_path / "dest")
+
+
+def test_default_branch_matches_notebook():
+    assert DEFAULT_BRANCH == "main"
+    assert DEFAULT_DRIVE_PV_ZIP.endswith("plantvillage.zip")
+
+
+def test_assert_pv_staging_helper_rejects_stale_module():
+    class Stale:
+        pass
+
+    with pytest.raises(SystemExit, match="Re-run section 1"):
+        assert_pv_staging_helper(Stale())
+
+
+def test_assert_pv_staging_helper_accepts_current_module():
+    import colab_sync
+
+    assert_pv_staging_helper(colab_sync)

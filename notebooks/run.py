@@ -26,7 +26,7 @@ def ensure_repo() -> Path:
             root = here.parent
     if not (root / "model" / "train.py").exists():
         raise SystemExit(
-            f"Repo not found at {root}. Re-run section 1 with REPO_BRANCH=Phase4-integration-path."
+            f"Repo not found at {root}. Re-run section 1 with REPO_BRANCH=main."
         )
     os.chdir(root)
     os.environ["REPO_ROOT"] = str(root)
@@ -54,3 +54,8 @@ def require_env(*names: str) -> None:
     missing = [n for n in names if not os.environ.get(n)]
     if missing:
         raise SystemExit(f"Missing env {missing}. Re-run the cells that set them (section 2/3).")
+
+
+def flag_on(name: str) -> bool:
+    """True when the notebook or env set this to 1/true/yes."""
+    return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes")

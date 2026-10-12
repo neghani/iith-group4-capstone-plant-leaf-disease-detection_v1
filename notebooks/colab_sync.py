@@ -68,6 +68,26 @@ DEFAULT_DRIVE_SET_ZIP = "/content/drive/MyDrive/plant-disease/real_world_set.zip
 DEFAULT_DRIVE_PV_ZIP = "/content/drive/MyDrive/plant-disease/plantvillage.zip"
 DEFAULT_LOCAL_PV_ZIP = "/content/plantvillage.zip"
 DEFAULT_LOCAL_PV_DIR = "/content/plantvillage"
+PV_STAGING_NAMES = (
+    "DEFAULT_DRIVE_PV_ZIP",
+    "DEFAULT_LOCAL_PV_DIR",
+    "DEFAULT_LOCAL_PV_ZIP",
+    "stage_zip_locally",
+    "maybe_mount_drive",
+)
+
+
+def assert_pv_staging_helper(module=None) -> None:
+    """Fail if this helper predates Drive-zip PlantVillage staging. Re-run notebook section 1."""
+    mod = module if module is not None else sys.modules[__name__]
+    missing = [name for name in PV_STAGING_NAMES if not hasattr(mod, name)]
+    if missing:
+        raise SystemExit(
+            "colab_sync.py on disk is missing "
+            + ", ".join(missing)
+            + ". Re-run section 1 only (git fetch + reset --hard). "
+            "Do not git pull in another cell. Do not paste files."
+        )
 
 
 def in_colab() -> bool:
@@ -108,6 +128,8 @@ def clone_or_find(repo: str, dest_parent: Path) -> Path:
 
 def reset_to_origin(root: Path, branch: str, commit: str = "") -> str:
     """Replace tracked files with `commit` (a SHA) or origin/<branch>. Keep outputs and images."""
+    print("Updating clone with git fetch + git reset --hard (not git pull).")
+    print(f"$ git fetch origin {branch}")
     run(["git", "fetch", "origin", branch], cwd=root)
     target = commit.strip() if commit else f"origin/{branch}"
     if commit and commit not in (branch, f"origin/{branch}"):
@@ -115,6 +137,7 @@ def reset_to_origin(root: Path, branch: str, commit: str = "") -> str:
         fetched = subprocess.run(["git", "fetch", "origin", commit], cwd=root, text=True, capture_output=True)
         if fetched.returncode != 0:
             print(f"[warn] git fetch origin {commit} failed; trying reset anyway.\n{fetched.stderr}")
+    print(f"$ git reset --hard {target}")
     run(["git", "reset", "--hard", target], cwd=root)
     sha = run(["git", "rev-parse", "HEAD"], cwd=root)
     short = run(["git", "rev-parse", "--short", "HEAD"], cwd=root)
@@ -316,6 +339,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--skip-install", action="store_true")
     p.add_argument(
+        "--no-reset",
+        action="store_true",
+        help="Copy Drive zips only. Do not git reset --hard (a leftover REPO_BRANCH must not rewind the clone).",
+    )
+    p.add_argument(
         "--force",
         action="store_true",
         help="Allow a hard reset outside Colab (destructive to local edits).",
@@ -358,12 +386,13 @@ def main(argv: list[str] | None = None) -> int:
         sha = run(["git", "rev-parse", "HEAD"], cwd=root)
         os.environ["CODE_COMMIT"] = sha
         print(f"CODE_COMMIT {sha} (working tree not reset; --file only)")
-    elif colab or args.force:
+    elif (colab or args.force) and not args.no_reset:
         reset_to_origin(root, args.branch, args.commit)
     else:
         sha = run(["git", "rev-parse", "HEAD"], cwd=root)
         os.environ["CODE_COMMIT"] = sha
-        print(f"CODE_COMMIT {sha}")
+        note = " (no reset)" if args.no_reset else ""
+        print(f"CODE_COMMIT {sha}{note}")
 
     if colab:
         maybe_mount_drive()

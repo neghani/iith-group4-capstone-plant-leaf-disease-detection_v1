@@ -11,8 +11,9 @@ import pytest
 from conftest import _upload
 
 from app.services.crops import resolve_hint, same_crop
-from app.services.knowledge import list_disease_ids
+from app.services.knowledge import get_entry, list_disease_ids
 from app.vision.hf_client import LabelScore
+from app.vision.predictor import crop_from_class
 
 # id2label of the Hub classifier (config.json; 38 classes, unchanged across v1.0/v1.1)
 MODEL_LABELS = json.loads(
@@ -23,6 +24,15 @@ MODEL_LABELS = json.loads(
 def test_every_model_label_has_curated_knowledge():
     assert len(MODEL_LABELS) == 38
     assert sorted(MODEL_LABELS) == sorted(list_disease_ids())
+
+
+def test_knowledge_crop_matches_class_name():
+    mismatches = {
+        label: (get_entry(label)["crop"], crop_from_class(label))
+        for label in MODEL_LABELS
+        if get_entry(label)["crop"] != crop_from_class(label)
+    }
+    assert mismatches == {}
 
 
 @pytest.mark.parametrize(

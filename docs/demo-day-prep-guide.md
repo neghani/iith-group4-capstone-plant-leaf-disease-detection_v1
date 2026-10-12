@@ -16,7 +16,7 @@ Everything below is grounded in the repository as it stands today (code in `mode
 
 ## 0. The 60-second pitch (memorise this)
 
-> A farmer photographs a leaf. A **quality gate** first checks the photo (dark, blurry, tiny, no leaf?) and asks for a retake instead of guessing. A **MobileNetV2** that we fine-tuned on PlantVillage (38 classes, 14 crops) predicts the disease: 99.1% accuracy and 98.6% macro-F1 on the held-out split. A **LangGraph** pipeline then looks the disease up in a curated knowledge base and an LLM writes a plain-language explanation. **The LLM never decides the disease and never sees the image**; it only rewrites what the classifier and knowledge base already say. Low confidence, wrong crop, or off-topic questions are handled explicitly. The model is versioned on Hugging Face (tag `v1.0`), served from a container, and the whole system runs with `docker compose up`.
+> A farmer photographs a leaf. A **quality gate** first checks the photo (dark, blurry, tiny, no leaf?) and asks for a retake instead of guessing. A **MobileNetV2** that we fine-tuned on PlantVillage (38 classes, 14 crops) and then on Cropped-PlantDoc predicts the disease: 99.1% on the lab held-out split, **137/284 (48.2%)** on the one-shot field-style test. A **LangGraph** pipeline then looks the disease up in a curated knowledge base and an LLM writes a plain-language explanation. **The LLM never decides the disease and never sees the image**; it only rewrites what the classifier and knowledge base already say. Low confidence, wrong crop, or off-topic questions are handled explicitly. The live model is versioned on Hugging Face as tag **`v1.1`** (`shared/release.json`; `v1.0` is the PlantVillage-only baseline), served from a container, and the whole system runs with `docker compose up`.
 
 If you can say that cleanly and then show it working, you have already covered the rubric.
 
@@ -30,7 +30,7 @@ If you can say that cleanly and then show it working, you have already covered t
 |---|---|---|
 | Training pipeline | Done | `model/train.py` (HF Trainer, augmentations, stratified split, seed, `splits.json`) |
 | Evaluation | Done | `model/evaluate.py` (accuracy, macro-F1, top-3, confusion matrix, threshold sweep, model card) |
-| Publishing | Done | `model/publish.py`, model live at `neghani/plantvillage-mobilenetv2`, tag `v1.0` |
+| Publishing | Done | `model/publish.py`, model live at `neghani/plantvillage-mobilenetv2`, live tag `v1.1` (`v1.0` is the baseline) |
 | Inference server | Done | `hf_space/app.py` (FastAPI + `transformers.pipeline`, stamps `x-model-id` / `x-model-revision`) |
 | Quality gate | Done (leaf-aware) | `api/app/vision/quality.py`, `leaf.py` |
 | Agent (LangGraph) | Done | `api/app/agent/graph.py` (predict, knowledge, report, safety, with 2 side exits) |
@@ -53,7 +53,7 @@ Published numbers (from the Hugging Face model card, held-out PlantVillage test 
 
 | # | Gap | Why it matters | What to do |
 |---|---|---|---|
-| 1 | **Real-world evaluation has not been run.** `model/data/real_world/` has only a README and an empty `sources.csv`. The Hub model card literally says "Not evaluated yet". | The proposal's headline success criterion is "at least 50% of real-world images correct, reported next to dataset results". This is the single biggest risk. | Collect 40-60 internet/phone photos (see 6.5), run `real_world_eval.py --push`. Present the number whatever it is. A 45% result you explain well beats a missing result. |
+| 1 | **Real-world one-shot is 137/284 (48.2%), below the 50% goal.** Data is `model/data/real_world_set/`; report is `model/final_report.md`. | The proposal's headline success criterion is "at least 50% of real-world images correct, reported next to dataset results". | Quote 48.2% and the paired gain over `v1.0` (18.7%). Do not re-run `final_test.py` (guarded) or treat empty `model/data/real_world/` + `real_world_eval.py --revision v1.0` as the demo metric. |
 | 2 | **99% is probably optimistic.** PlantVillage has many near-duplicate shots of the same leaf (different angle/rotation). A random per-image split puts siblings in train and test. | Trainers who know PlantVillage will ask about leakage. | Say it yourself: "99% is the in-distribution ceiling; the real-world number is the honest one." |
 | 3 | **Hindi / regional language is not built.** The proposal promises glossary, mBERT summariser, IndicTrans, LLM expansion. README says "planned". | The coordinator said regional language contributes to full marks. | Build the cheap MVP in section 9.4 (glossary + LLM translate + back-translation check). |
 | 4 | **Proposal vs implementation drift:** the proposal's Streamlit UI was replaced by Next.js in `web/` and the Streamlit app was removed; Grok became OpenAI-by-default (Grok still works via `LLM_BASE_URL=https://api.x.ai/v1`); the proposal says "two services", compose has three. | A trainer comparing proposal to demo will notice. | Have the one-line justification ready (section 8, decisions D12-D14). |
@@ -62,7 +62,7 @@ Published numbers (from the Hugging Face model card, held-out PlantVillage test 
 | 7 | **Chat topic guard is a keyword list** (`AGRICULTURE_KEYWORDS` in `services/chat.py`). | Easy to bypass and gives false refusals ("how do I stop the bugs eating my cabbage?" has no keyword). | Mention the LLM system prompt is the second layer; propose a classifier/LLM-based guard as future work. |
 | 8 | `quality.py` docstring cites `docs/challenges-and-approach.md`, which does not exist. | Dangling reference. | Section 5 of this guide can be copied there. |
 | 9 | Knowledge base entries carry no source citations (in the entry inspected: description, symptoms, actions, monitoring, limitations, no URLs). | Proposal says "assembled from reliable agricultural sources". | Add a `sources` field per entry (ICAR / state agri university / extension pages) before demo. |
-| 10 | Local Python test run failed in my check because dependencies were not installed in system Python (`ModuleNotFoundError`). | Not a project bug, but I could not confirm the suite is green. | Run `cd api && python -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt && PYTHONPATH=. pytest -q` before demo. |
+| 10 | Local Python test run failed in my check because dependencies were not installed in system Python (`ModuleNotFoundError`). | Not a project bug, but I could not confirm the suite is green. | Run `cd api && python -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt && PYTHONPATH=..:. pytest -q` before demo. |
 
 Also: `.env` is git-ignored (good), but it holds your real LLM/HF keys. **Never open it on a shared screen.**
 
@@ -85,7 +85,7 @@ flowchart LR
             P -. crop not supported .-> X[unsupported crop] --> S
         end
     end
-    P -->|image bytes| I[inference-service :7860<br/>transformers pipeline<br/>MobileNetV2 v1.0]
+    P -->|image bytes| I[inference-service :7860<br/>transformers pipeline<br/>MobileNetV2 v1.1]
     I -. weights pulled once .-> H[(Hugging Face Hub<br/>neghani/plantvillage-mobilenetv2)]
     R -->|text only| L[LLM provider<br/>OpenAI / Grok via base_url]
 ```
@@ -95,7 +95,7 @@ Design rules worth stating out loud:
 - **The image never goes to the LLM.** Vision decides; language explains.
 - **Two-step UX.** `/quality-check` is cheap and local; `/predict` re-runs the gate server-side (never trust the client).
 - **Provider independence.** One OpenAI-compatible client with `LLM_BASE_URL`; swap OpenAI/Grok by env var.
-- **Pinned model revision.** `HF_MODEL_REVISION=v1.0` so a retrain cannot silently change behaviour.
+- **Pinned model revision.** Live pin is `shared/release.json` (`v1.1`). Env `HF_MODEL_REVISION` only overrides that file.
 - **Fail soft.** Model down gives an "Analysis unavailable" report, LLM down gives template text from the knowledge base.
 
 ---
@@ -245,7 +245,7 @@ See decision D4. What `publish.py` guards against:
 | Read-only token | `verify_access` rejects `role == "read"` |
 | Pushing to someone else's namespace | Owner/org check against `whoami()` |
 | Uploading optimizer state and checkpoints (GBs) | `IGNORE` patterns (`checkpoint-*`, `optimizer.pt`, `scheduler.pt`, ...) |
-| API silently changes after a retrain | Tag `v1.0`, API pins `HF_MODEL_REVISION=v1.0` |
+| API silently changes after a retrain | Hub tags + live pin in `shared/release.json` (`v1.1`) |
 | No documentation of what the model does | Model card generated from `model_card_template.md` with real metrics |
 | Cannot reproduce | `splits.json`, `run_info.json` uploaded with the weights |
 | "Why not use HF's free hosted inference?" | **It does not host custom fine-tunes** ("Model not supported by provider hf-inference", noted in `hf_space/README.md`), so we serve our own container |
@@ -353,7 +353,7 @@ See section 7 for the exact commands.
 | 13 | Train | LR / epochs not tuned | Medium | **No** (no sweep recorded) |
 | 14 | Train | Train/serve preprocessing skew | **High** | Yes (256 then crop 224) |
 | 15 | Eval | Accuracy misleading | High | Yes (macro-F1, per-class, confusion matrix) |
-| 16 | Eval | Real-world gap | **Critical** | **Not measured yet** |
+| 16 | Eval | Real-world gap | **Critical** | Yes — 137/284 (48.2%), below 50% |
 | 17 | Eval | Softmax overconfidence / OOD inputs | High | Partly (threshold, crop hint, "no green" fallback) |
 | 18 | Gate | Resolution-dependent blur metric | High | Yes (re-blur ratio) |
 | 19 | Gate | Portrait-mode background blur | High | Yes (focus filter + leaf-only metric) |
@@ -362,7 +362,7 @@ See section 7 for the exact commands.
 | 22 | Gate | Diseased (non-green) leaves fool colour mask | Medium | Partly (whole-frame fallback) |
 | 23 | Publish | Token scope/owner errors | Medium | Yes (`publish.py --check`) |
 | 24 | Publish | Huge checkpoint uploads | Medium | Yes (ignore patterns) |
-| 25 | Publish | Version pinning | High | Yes (tag `v1.0`) |
+| 25 | Publish | Version pinning | High | Yes (`shared/release.json` → `v1.1`) |
 | 26 | Serve | HF serverless does not host fine-tunes | High | Yes (own Space/container) |
 | 27 | Serve | Cold start 503 | Medium | Yes (retry) |
 | 28 | Serve | Provenance of predictions | Low | Yes (headers + `inference` block) |
@@ -479,7 +479,7 @@ from transformers import pipeline
 from PIL import Image
 import io, json
 
-clf = pipeline("image-classification", model="neghani/plantvillage-mobilenetv2", revision="v1.0")
+clf = pipeline("image-classification", model="neghani/plantvillage-mobilenetv2", revision="v1.1")
 KB = json.load(open("api/data/knowledge/diseases.json"))
 app = FastAPI()
 
@@ -496,15 +496,9 @@ async def predict(file: UploadFile = File(...)):
 
 Then add the LLM as a *separate* function that takes only text. That is your whole project in ~20 lines; everything else in the repo is robustness.
 
-### 6.5 Collecting real-world images (do this first)
+### 6.5 Real-world images (already collected)
 
-1. Target **>= 5 images per class for at least tomato + potato + one more crop; 40-60 images total**. Quality over quantity.
-2. Sources: university extension pages, ICAR/agri-university fact sheets, Wikimedia Commons, your own phone photos of plants (healthy ones are easy to get).
-3. Save under `model/data/real_world/<exact PlantVillage class>/01.jpg`. Run `python model/real_world_eval.py --list-classes` for valid folder names.
-4. Record every image in `sources.csv` (file, class, URL, notes). Do not reuse PlantVillage images.
-5. Zip to `MyDrive/plant-disease/real_world.zip` for Colab.
-6. Run `python model/real_world_eval.py --model neghani/plantvillage-mobilenetv2 --revision v1.0 --push`.
-7. Present: dataset accuracy next to real-world top-1 and top-3, per-class, plus 2-3 failures with an explanation.
+The one-shot set is `model/data/real_world_set/` (`labels.csv` + `images/`). Quote **137/284 (48.2%)** from `model/final_report.md`. Do not treat empty `model/data/real_world/` or `real_world_eval.py --revision v1.0` as the demo metric, and do not re-run `final_test.py` for `v1.1` unless `--force`.
 
 ### 6.6 A realistic fresher timeline (my estimate, not from the repo)
 
@@ -600,7 +594,7 @@ python model/predict.py some_leaf.jpg --model model/outputs/smoke --revision mai
 | D16 | Knowledge source | LLM memory / curated JSON / RAG over docs | Curated JSON (38 entries) | Deterministic, auditable | No citations yet; not scalable |
 | D17 | State | Server DB / client storage | Client `sessionStorage` | No auth/PII needed for demo | History lost on tab close |
 | D18 | Packaging | Compose / single container | Compose (3 services) | Separation, same on laptop and server | Some free hosts allow one container only |
-| D19 | Versioning | `main` / tags | Pinned tag `v1.0` | Reproducible API behaviour | Must remember to bump |
+| D19 | Versioning | `main` / tags | Live pin `shared/release.json` (`v1.1`; `v1.0` is baseline) | Reproducible API behaviour | Must remember to bump |
 
 ### D3 in detail: Kaggle vs Colab vs local (training environment)
 
@@ -729,7 +723,7 @@ The client check is for fast feedback; the server re-check is for correctness si
 See D4. Versioned weights via tags, one-line loading, Spaces for free container hosting, model card with metrics. Kaggle supplied the data.
 
 **Q21. How do you version and reproduce?**
-Seed, `splits.json`, `run_info.json`, model card with metrics, git tag `v1.0` on the Hub, and the API pins `HF_MODEL_REVISION`.
+Seed, `splits.json`, `run_info.json`, model card with metrics, Hub tags `v1.0` (baseline) and `v1.1` (live), and the API reads `shared/release.json`.
 
 **Q22. Why not use Hugging Face serverless inference?**
 It reported "Model not supported by provider hf-inference" for custom fine-tunes, so we serve the same weights from our own container.
@@ -830,7 +824,7 @@ Test accuracy/F1 for in-distribution; the real-world top-1/top-3 for deployment 
 
 | Step | Input | Expected | Teaches |
 |---|---|---|---|
-| 1 | Open `/health?probe=true` in a tab | `hf_reachable: true`, `v1.0` | The model is pinned and live |
+| 1 | Open `/health?probe=true` in a tab | `hf_reachable: true`, `v1.1` | The model is pinned and live |
 | 2 | Clear tomato early/late blight leaf | Diagnosis, top-3, actions, monitoring | Core flow |
 | 3 | Healthy leaf | "Looks healthy", no expert warning | Positive class |
 | 4 | Dark or blurred photo | Retake message, **no model call** | Quality gate |
@@ -858,7 +852,7 @@ Test accuracy/F1 for in-distribution; the real-world top-1/top-3 for deployment 
 - [ ] Real-world evaluation done; numbers on a slide
 - [ ] `pytest` green in a venv
 - [ ] `docker compose up --build` from a clean state works
-- [ ] `/health?probe=true` shows model `neghani/plantvillage-mobilenetv2@v1.0`
+- [ ] `/health?probe=true` shows model `neghani/plantvillage-mobilenetv2@v1.1`
 - [ ] All demo images tested; backup video recorded
 - [ ] Slides include: pitch, architecture, data, model, confusion matrix, real-world result, gate, agent, decisions, limitations, next steps
 - [ ] You can answer the self-test in 6.1 without notes

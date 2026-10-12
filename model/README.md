@@ -39,8 +39,8 @@ From [`reports/metrics.json`](https://huggingface.co/neghani/plantvillage-mobile
 | **Weighted F1** | 99.12% |
 
 **Recommended confidence threshold** (from test-split sweep): **0.50** — lowest threshold where
-accuracy on covered images is ≥97% while keeping ≥50% coverage. The API may use a different value
-after field tuning; see `api/app/config.py`.
+accuracy on covered images is ≥97% while keeping ≥50% coverage. The live API value is in
+`shared/release.json` (`confidence_threshold`); `api/app/config.py` reads that pin.
 
 **How to read these numbers:** Test metrics are **in-distribution** on PlantVillage-style photos.
 The Kaggle release includes many near-duplicate shots of the same leaf; our split is **random per
@@ -91,13 +91,14 @@ that excludes 0).
 
 ```bash
 python model/eval_strategies.py --split tune                                 # A-E comparison
-python model/eval_strategies.py --split final --strategy B --threshold 0.85  # once, chosen values
+python model/eval_strategies.py --split final --strategy B --threshold 0.5   # once, live values
 ```
 
 Outputs in `model/outputs/`: `strategy_comparison.{csv,md}`, `strategy_threshold_sweep.csv`,
 `per_image.csv`, `selection.json`; the final run writes `final_report.md` and refuses to run a
 second time on the same final set. The chosen strategy and threshold go into
-`api/app/config.py` (`crop_strategy`, `confidence_threshold`).
+`shared/release.json` (`crop_strategy`, `confidence_threshold`). Copy that file to
+`hf_space/release.json` when the pin changes.
 
 ### Stage 2: fine-tune on Cropped-PlantDoc, keep PlantVillage
 

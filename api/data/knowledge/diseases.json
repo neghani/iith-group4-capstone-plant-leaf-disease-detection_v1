@@ -145,7 +145,7 @@
   },
   "Corn_(maize)___Common_rust_": {
     "display_name": "Corn Common Rust",
-    "crop": "Corn",
+    "crop": "Corn (maize)",
     "category": "fungal",
     "description": "Common rust produces reddish-brown pustules on leaves, usually mid to late season depending on hybrid susceptibility.",
     "symptoms": [
@@ -253,7 +253,7 @@
   },
   "Cherry_(including_sour)___Powdery_mildew": {
     "display_name": "Cherry Powdery Mildew",
-    "crop": "Cherry",
+    "crop": "Cherry (including sour)",
     "category": "fungal",
     "description": "Powdery mildew is a fungal disease that coats young leaves and shoots with white powder, favoured by humid nights and dry days.",
     "symptoms": [
@@ -1001,7 +1001,7 @@
   },
   "Cherry_(including_sour)___healthy": {
     "display_name": "Cherry — Healthy",
-    "crop": "Cherry",
+    "crop": "Cherry (including sour)",
     "category": "healthy",
     "description": "No disease signs were detected on this cherry leaf. Keep up good field practices to keep the crop healthy.",
     "symptoms": [

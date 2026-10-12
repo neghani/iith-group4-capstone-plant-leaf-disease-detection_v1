@@ -50,6 +50,7 @@ from common import (  # noqa: E402
     DEFAULT_BASE_MODEL,
     DEFAULT_HF_MODEL_ID,
     get_hf_token,
+    refuse_stale_resume,
     resolve_data_dir,
     save_splits,
     scan_imagefolder,
@@ -178,7 +179,7 @@ def training_finished(output_dir: Path, num_epochs: float, max_steps: int | None
     return epoch + 1e-6 >= float(num_epochs)
 
 
-def load_extra(extra_dir: Path, label_names: list[str]) -> tuple[list[tuple[str, int]], list[tuple[str, int]], dict):
+def load_extra(extra_dir: Path, label_names: list[str]) -> tuple[list[tuple[str, int]], list[tuple[str, int]], dict]:
     manifest = extra_dir / "manifest.csv"
     if not manifest.exists():
         raise SystemExit(f"{manifest} not found; run `python model/prepare_plantdoc.py` first.")
@@ -367,6 +368,16 @@ def main(argv: list[str] | None = None) -> None:
         model_args.model_name_or_path = str(output_dir)
         model_args.init_from = None
         model_args.model_revision = None
+
+    reusing = (
+        not overwrite
+        and (
+            bool(training_args.resume_from_checkpoint)
+            or (not training_args.do_train and has_weights(output_dir))
+        )
+    )
+    if reusing:
+        refuse_stale_resume(output_dir, code_commit().get("code_commit"))
 
     training_args.remove_unused_columns = False
     resuming = bool(training_args.resume_from_checkpoint)

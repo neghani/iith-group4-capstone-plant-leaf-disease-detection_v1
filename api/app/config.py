@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,9 +11,13 @@ from shared.release import (
     HF_MODEL_REVISION,
 )
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_ENV_FILE = _REPO_ROOT / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Always the repo-root .env, even when the process cwd is api/.
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), extra="ignore")
 
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o-mini"

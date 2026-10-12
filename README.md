@@ -109,7 +109,7 @@ Open http://localhost:3000
 
 ```bash
 cd api && pip install -r requirements-dev.txt
-PYTHONPATH=. pytest -q
+PYTHONPATH=..:. pytest -q
 ```
 
 ## Design notes

@@ -12,6 +12,17 @@ def test_health_reports_model(client):
     body = client.get("/health").json()
     assert body["hf_model_id"] == "neghani/plantvillage-mobilenetv2"
     assert body["hf_endpoint_configured"] is True
+    assert body["hf_model_configured"] is True
+
+
+def test_health_requires_endpoint(client, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("HF_ENDPOINT_URL", "")
+    get_settings.cache_clear()
+    body = client.get("/health").json()
+    assert body["hf_model_configured"] is False
+    assert body["hf_endpoint_configured"] is False
 
 
 def test_quality_check_pass(client, good_leaf, hf_calls):
