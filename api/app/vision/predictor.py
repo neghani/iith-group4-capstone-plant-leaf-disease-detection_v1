@@ -89,15 +89,21 @@ def predict(prepared: PreparedImage) -> PredictionResult:
         gate=prepared.gate,
         tta=settings.crop_tta,
     )
+    disease = res.get("disease") or ""
+    trace = {k: res[k] for k in ("strategy", "n_crops", "agreement", "crop_boxes", "crop_tops", "tta") if k in res}
+    if res.get("message"):
+        trace["message"] = res["message"]
+    if res.get("gate_reason"):
+        trace["gate_reason"] = res["gate_reason"]
     return PredictionResult(
-        disease_id=res["disease"],
-        confidence=res["confidence"],
-        crop=crop_from_class(res["disease"]),
+        disease_id=disease,
+        confidence=float(res["confidence"] or 0.0),
+        crop=crop_from_class(disease) if disease else "",
         status=res["status"],
         top_k=[
             TopKItem(label=t["disease"], display_name=display_name(t["disease"]), score=round(t["confidence"], 4))
-            for t in res["top_k"]
+            for t in res.get("top_k") or []
         ],
         inference=hf.provenance(),
-        strategy={k: res[k] for k in ("strategy", "n_crops", "agreement", "crop_boxes", "crop_tops", "tta")},
+        strategy=trace,
     )

@@ -1,0 +1,6 @@
+{
+  "model_forward_ms": 52.6,
+  "predict_warm_s": 1.5,
+  "predict_warm_label": "about 1.5 s",
+  "note": "The gap is the app path (quality gate, crop, HTTP), not the forward pass."
+}

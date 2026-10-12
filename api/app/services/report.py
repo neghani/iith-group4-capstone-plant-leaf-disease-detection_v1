@@ -62,6 +62,51 @@ def build_quality_report(message: str) -> DiagnosisReport:
     )
 
 
+def build_not_sure_report(
+    top_k: list[dict] | None = None,
+    confidence: float = 0.0,
+    crop: str = "",
+) -> DiagnosisReport:
+    """Low-confidence classifier output: do not write up a disease as if it were chosen."""
+    top_k = top_k or []
+    alternatives = [
+        f"{t['display_name']} ({round(t['score'] * 100)}%)"
+        for t in top_k
+        if t.get("score", 0) >= MIN_ALTERNATIVE_SCORE
+    ]
+    message = (
+        "I'm not confident — please retake the photo. "
+        "The score is below the threshold, so this is not a diagnosis."
+    )
+    return DiagnosisReport(
+        status="not_sure",
+        status_label="Not sure",
+        diagnosis_name="I'm not confident — please retake the photo.",
+        crop=crop or None,
+        confidence=round(confidence or 0.0, 3),
+        confidence_category="inconclusive",
+        confidence_explanation="The model score is below the confidence threshold.",
+        description=(
+            "The photo was readable, but the model is not sure enough to name a disease. "
+            "Retake in daylight with one leaf filling the frame, or ask a local expert. "
+            "The matches below are possibilities only."
+        ),
+        alternatives=alternatives,
+        expert_confirmation_required=True,
+        actions=[
+            ActionItem(
+                step="Retake the photo with the leaf centered, in daylight, and in focus.",
+            ),
+            ActionItem(
+                step="If a clearer photo still comes back unsure, ask a local agricultural officer.",
+            ),
+        ],
+        monitoring_guidance="Photograph the same leaf every few days if symptoms spread.",
+        diagnostic_limitations="No disease was chosen; treatment steps for a guessed class are omitted.",
+        initial_message=message,
+    )
+
+
 def build_error_report() -> DiagnosisReport:
     message = "The disease model is unavailable right now. Please try again in a minute."
     return DiagnosisReport(

@@ -34,20 +34,6 @@ import torch
 from datasets import Dataset, Features, Image as HFImage, Value
 from sklearn.metrics import accuracy_score, f1_score
 from torch.utils.data import Sampler
-from torchvision.transforms import (
-    CenterCrop,
-    ColorJitter,
-    Compose,
-    GaussianBlur,
-    Normalize,
-    RandomApply,
-    RandomHorizontalFlip,
-    RandomResizedCrop,
-    RandomRotation,
-    RandomVerticalFlip,
-    Resize,
-    ToTensor,
-)
 from transformers import (
     AutoConfig,
     AutoImageProcessor,
@@ -79,6 +65,7 @@ from data_protocol import (  # noqa: E402
     save_hash_cache,
     write_manifest,
 )
+from aug import augmentation_record, build_transforms, _norm_aug_policy  # noqa: E402
 from sampling import plan_global  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -130,6 +117,13 @@ class DataArguments:
     artifacts_dir: str = field(
         default=str(Path(__file__).resolve().parent / "outputs"),
         metadata={"help": "Where data_manifest.json and the PlantVillage pHash cache are written."},
+    )
+    aug_policy: str = field(
+        default="default",
+        metadata={
+            "help": "Training augmentation: 'default' (current stack) or 'robust' (adds RandomErasing). "
+            "Changing this on a resumed run is a new experiment, not a resume."
+        },
     )
 
 
@@ -184,50 +178,7 @@ def training_finished(output_dir: Path, num_epochs: float, max_steps: int | None
     return epoch + 1e-6 >= float(num_epochs)
 
 
-def _size_value(size, *keys: str) -> int | None:
-    if size is None:
-        return None
-    if isinstance(size, (int, float)):
-        return int(size)
-    for key in keys:
-        val = size.get(key) if isinstance(size, dict) else getattr(size, key, None)
-        if val:
-            return int(val)
-    return None
-
-
-def _processor_sizes(image_processor) -> tuple[int, int]:
-    crop = _size_value(getattr(image_processor, "crop_size", None), "height", "shortest_edge") or _size_value(
-        getattr(image_processor, "size", None), "height", "shortest_edge"
-    ) or 224
-    resize = _size_value(getattr(image_processor, "size", None), "shortest_edge", "height") or crop
-    return int(resize), int(crop)
-
-
-def build_transforms(image_processor, crop_size: int | None, is_training: bool,
-                     rrc_scale: tuple[float, float] = (0.7, 1.0)) -> Compose:
-    resize_size, proc_crop = _processor_sizes(image_processor)
-    crop = crop_size or proc_crop
-    mean = getattr(image_processor, "image_mean", None) or [0.485, 0.456, 0.406]
-    std = getattr(image_processor, "image_std", None) or [0.229, 0.224, 0.225]
-    normalize = Normalize(mean=mean, std=std)
-    if is_training:
-        return Compose(
-            [
-                RandomResizedCrop(crop, scale=rrc_scale, ratio=(0.8, 1.25)),
-                RandomHorizontalFlip(),
-                RandomVerticalFlip(),
-                RandomRotation(degrees=180),
-                ColorJitter(brightness=0.4, contrast=0.3, saturation=0.3, hue=0.03),
-                RandomApply([GaussianBlur(kernel_size=5, sigma=(0.1, 1.5))], p=0.25),
-                ToTensor(),
-                normalize,
-            ]
-        )
-    return Compose([Resize(resize_size), CenterCrop(crop), ToTensor(), normalize])
-
-
-def load_extra(extra_dir: Path, label_names: list[str]) -> tuple[list[tuple[str, int]], list[tuple[str, int]], dict]:
+def load_extra(extra_dir: Path, label_names: list[str]) -> tuple[list[tuple[str, int]], list[tuple[str, int]], dict):
     manifest = extra_dir / "manifest.csv"
     if not manifest.exists():
         raise SystemExit(f"{manifest} not found; run `python model/prepare_plantdoc.py` first.")
@@ -375,6 +326,7 @@ def main(argv: list[str] | None = None) -> None:
         return
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses(args=argv)
+    data_args.aug_policy = _norm_aug_policy(data_args.aug_policy)
     artifacts = Path(data_args.artifacts_dir)
     if os.environ.get("MODEL_SMOKE"):
         from smoke import assert_smoke_paths
@@ -438,6 +390,12 @@ def main(argv: list[str] | None = None) -> None:
 
     data_dir = resolve_data_dir(data_args.data_dir)
     logger.info("Data dir: %s", data_dir)
+    if "/content/drive/" in str(data_dir.resolve()).replace("\\", "/"):
+        logger.warning(
+            "data_dir is on Google Drive (%s). Loading many small images through the Drive "
+            "mount is slow. Zip the dataset, copy it to the Colab SSD, and unzip locally.",
+            data_dir,
+        )
 
     label_names, splits, datasets, extra_info, extra_dir, sampler_spec = build_datasets(
         data_dir, data_args, training_args.seed
@@ -515,8 +473,14 @@ def main(argv: list[str] | None = None) -> None:
     )
     image_processor = AutoImageProcessor.from_pretrained(model_args.model_name_or_path, **pretrained_kwargs)
 
-    pv_tf = build_transforms(image_processor, data_args.image_size, is_training=True, rrc_scale=(0.7, 1.0))
-    pd_tf = build_transforms(image_processor, data_args.image_size, is_training=True, rrc_scale=(0.5, 1.0))
+    pv_tf = build_transforms(
+        image_processor, data_args.image_size, is_training=True, rrc_scale=(0.7, 1.0),
+        aug_policy=data_args.aug_policy,
+    )
+    pd_tf = build_transforms(
+        image_processor, data_args.image_size, is_training=True, rrc_scale=(0.5, 1.0),
+        aug_policy=data_args.aug_policy,
+    )
     eval_tf = build_transforms(image_processor, data_args.image_size, is_training=False)
 
     def preprocess_train(examples):
@@ -595,6 +559,7 @@ def main(argv: list[str] | None = None) -> None:
         "data_manifest": (json.loads((artifacts / "data_manifest.json").read_text())
                           if extra_info and (artifacts / "data_manifest.json").exists() else None),
         **code_commit(),
+        "augmentation": augmentation_record(data_args.aug_policy),
         "label_smoothing_factor": training_args.label_smoothing_factor,
         "train_rows": len(datasets["train"]),
         "num_labels": num_labels,
@@ -608,6 +573,9 @@ def main(argv: list[str] | None = None) -> None:
         "warmup_steps": training_args.warmup_steps,
         "lr_scheduler_type": str(training_args.lr_scheduler_type),
         "fp16": training_args.fp16,
+        "bf16": getattr(training_args, "bf16", False),
+        "dataloader_num_workers": training_args.dataloader_num_workers,
+        "dataloader_pin_memory": training_args.dataloader_pin_memory,
         "seed": training_args.seed,
         "wall_time_sec": round(time.time() - started, 1),
         "device": str(training_args.device),

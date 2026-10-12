@@ -174,6 +174,50 @@ def _has_class_folders(root: Path) -> bool:
     return False
 
 
+def gpu_train_flags(
+    *,
+    cpu_count: int | None = None,
+    cuda_available: bool | None = None,
+    compute_capability: tuple[int, int] | None = None,
+) -> list[str]:
+    """DataLoader + AMP flags for a Colab GPU run.
+
+    Workers: 8 when the machine has at least 8 CPUs, else 4 (High-RAM Colab).
+    pin_memory and persistent_workers are always on so page-locked host tensors
+    reach the GPU without restarting workers every epoch.
+    AMP: ``--bf16`` on compute capability 8+ (A100 / L4), else ``--fp16`` (T4).
+    CPU callers get the DataLoader flags only (no AMP).
+    """
+    n = cpu_count if cpu_count is not None else (os.cpu_count() or 1)
+    workers = 8 if n >= 8 else 4
+    flags = [
+        "--dataloader_num_workers",
+        str(workers),
+        "--dataloader_pin_memory",
+        "true",
+        "--dataloader_persistent_workers",
+        "true",
+    ]
+    if cuda_available is None:
+        try:
+            import torch
+
+            cuda_available = bool(torch.cuda.is_available())
+        except Exception:
+            cuda_available = False
+    if not cuda_available:
+        return flags
+    if compute_capability is None:
+        try:
+            import torch
+
+            compute_capability = torch.cuda.get_device_capability()
+        except Exception:
+            compute_capability = (7, 5)
+    flags.append("--bf16" if compute_capability[0] >= 8 else "--fp16")
+    return flags
+
+
 def resolve_data_dir(path: str | Path) -> Path:
     """Accept the kagglehub download root or any parent and find the `color` imagefolder."""
     root = Path(path).expanduser().resolve()

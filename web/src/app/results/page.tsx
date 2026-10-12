@@ -36,6 +36,24 @@ export default function ResultsPage() {
   const cropWord = session.cropLabel.toLowerCase().includes("tomato")
     ? "tomato"
     : session.cropLabel.toLowerCase();
+  const status = session.report.status;
+  const heading =
+    status === "quality_issue"
+      ? "This photo needs a retake"
+      : status === "not_sure"
+        ? "I'm not confident yet"
+        : `Your ${cropWord} leaf check`;
+  const sub =
+    status === "quality_issue"
+      ? "The quality gate stopped before the disease model. Retake so the leaf is clear."
+      : status === "not_sure"
+        ? "The model saw the leaf but the score is too low to name a disease."
+        : "Understand the signs. Start with safer, practical care.";
+  const showChat =
+    session.qualityOk &&
+    status !== "quality_issue" &&
+    status !== "error" &&
+    status !== "not_sure";
 
   return (
     <AppShell breadcrumb="Check a crop / Your results">
@@ -47,11 +65,9 @@ export default function ResultsPage() {
       </Link>
 
       <h1 className="mt-4 font-serif text-4xl font-semibold text-forest">
-        Your {cropWord} leaf check
+        {heading}
       </h1>
-      <p className="mt-2 text-[var(--color-text-muted)]">
-        Understand the signs. Start with safer, practical care.
-      </p>
+      <p className="mt-2 text-[var(--color-text-muted)]">{sub}</p>
 
       <div className="mt-6">
         <DisclaimerBanner extra={session.report.diagnostic_limitations} />
@@ -67,9 +83,7 @@ export default function ResultsPage() {
         />
       </div>
 
-      {session.qualityOk &&
-        session.report.status !== "quality_issue" &&
-        session.report.status !== "error" && (
+      {showChat && (
         <div className="mt-8">
           <ChatPanel
             key={session.id}

@@ -214,8 +214,8 @@ Traced and now covered by `tests/test_agent_flow.py`, which changes only the cla
 
 ## 9. Stage 2: lab photos vs field photos (PlantDoc)
 
-**Symptom.** `v1.0` (PlantVillage only) passes 3/25 of the field-style real-world set at threshold
-0.85. Softmax is overconfident on the wrong class.
+**Symptom.** `v1.0` (PlantVillage only) passed 53/284 (18.7%) of the one-shot field-style final
+test at threshold 0.85, with 146/284 "not sure". Softmax is overconfident on the wrong class.
 
 **Approach.** Continue from the published `v1.0` weights on a 50/50 mix of PlantVillage and
 Cropped-PlantDoc (Singh et al. 2020, CC BY 4.0; 27 of 38 classes). Split by pHash cluster, exclude
@@ -223,10 +223,14 @@ every `real_world_set` original path and near-duplicates of the held-out test, f
 the threshold on **validation only**, and run the final test once per revision (guard JSON on the
 Hub `stage2-runs` branch or Drive, never local `outputs/`).
 
-**How we keep ourselves honest.** Sample sizes sit next to every percentage. If the final pass rate
-is still below 50%, it is reported as-is; the threshold and the data are not changed after seeing
-it. Publish `v1.1` only if PlantDoc val macro-F1 beats v1.0 and PlantVillage accuracy drops by at
-most 2 points.
+**Result (`v1.1`, from `model/final_report.md`).** End-to-end pass rate **137/284 (48.2%)**, 95% CI
+42.5–54.0%. Pristine `plantdoc_test`: 116/236 (49.2%). `real_world_set` stratum: 21/48 (43.8%, wide).
+Not sure 91/284; quality-gate retakes 5/284. Below the 50% target; reported as-is. Paired gain over
+`v1.0` on the same 284 images: +29.6 points.
+
+**How we keep ourselves honest.** Sample sizes sit next to every percentage. The final pass rate is
+below 50% and is left as-is; the threshold and the data were not changed after seeing it. Publish
+`v1.1` only if PlantDoc val macro-F1 beats v1.0 and PlantVillage accuracy drops by at most 2 points.
 
 **Limit.** All of PlantDoc is web-sourced, so a gain overstates a farmer's phone photo.
 

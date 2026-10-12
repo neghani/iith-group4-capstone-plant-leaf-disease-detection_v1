@@ -75,10 +75,17 @@ def test_predict_low_confidence(client, good_leaf, hf_calls, llm_prompts):
         LabelScore("Potato___Early_blight", 0.38),
     ]
     body = client.post("/predict", files=_upload(good_leaf)).json()
+    report = body["report"]
     assert body["low_confidence"] is True
-    assert body["report"]["status"] == "possible"
-    assert body["report"]["expert_confirmation_required"] is True
-    assert "below the confidence threshold" in llm_prompts[0][1]
+    assert report["status"] == "not_sure"
+    assert report["status_label"] == "Not sure"
+    assert report["disease_id"] is None
+    assert "not confident" in report["diagnosis_name"].lower()
+    assert report["expert_confirmation_required"] is True
+    assert report["actions"]
+    assert "retake" in report["actions"][0]["step"].lower()
+    assert body["top_k"][0]["label"] == "Potato___Late_blight"
+    assert llm_prompts == []
 
 
 def test_predict_healthy(client, good_leaf, hf_calls, llm_prompts):

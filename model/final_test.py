@@ -149,6 +149,38 @@ def stratum_table(m: dict, rows: list[dict]) -> dict[str, tuple[int, int]]:
     return {k: (a, b) for k, (a, b) in out.items()}
 
 
+def stratum_payload(m: dict, rows: list[dict], name: str = "real_world_set") -> dict:
+    """Passes, n and Wilson interval for one stratum — what the Hub card before/after row needs."""
+    k, n = stratum_table(m, rows).get(name, (0, 0))
+    lo, hi = wilson(k, n)
+    return {
+        "passes": k,
+        "n": n,
+        "rate": (k / n) if n else 0.0,
+        "ci_low": lo,
+        "ci_high": hi,
+        "label": frac_ci(k, n),
+    }
+
+
+def write_final_summary(path: Path, m10: dict, m11: dict, rows: list[dict],
+                        v11_thr: float, temperature: float) -> dict:
+    summary = {
+        "date": datetime.date.today().isoformat(),
+        "v1.0": {
+            "threshold": V10_THRESHOLD,
+            "real_world_set": stratum_payload(m10, rows),
+        },
+        "v1.1": {
+            "threshold": float(v11_thr),
+            "temperature": float(temperature),
+            "real_world_set": stratum_payload(m11, rows),
+        },
+    }
+    path.write_text(json.dumps(summary, indent=2) + "\n")
+    return summary
+
+
 def per_class_md(results: list[dict], rows: list[dict]) -> list[str]:
     by = defaultdict(lambda: [0, 0, 0])  # n, top1, pass
     for res, r in zip(results, rows):
@@ -294,6 +326,10 @@ def main(argv: list[str] | None = None) -> None:
         "",
     ]
     (out / "final_report_v1_1.md").write_text("\n".join(lines))
+    summary = write_final_summary(out / "final_summary.json", m10, m11, rows, float(v11_thr),
+                                  float(calib["temperature"]))
+    write_final_summary(v11 / "final_summary.json", m10, m11, rows, float(v11_thr),
+                        float(calib["temperature"]))
     with open(out / "final_test_per_image.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["file", "stratum", "true", "v10_pred", "v10_status",
                                           "v10_conf", "v11_pred", "v11_status", "v11_conf"])
@@ -315,7 +351,9 @@ def main(argv: list[str] | None = None) -> None:
         })
         print(f"[final] guard written: {guard.describe(a.revision_name)}")
     print("\n".join(lines[:30]))
-    print(f"Wrote {out}/final_report_v1_1.md")
+    rw = summary["v1.1"]["real_world_set"]
+    print(f"Wrote {out}/final_report_v1_1.md, final_summary.json "
+          f"(real_world_set {rw['label']})")
 
 
 if __name__ == "__main__":

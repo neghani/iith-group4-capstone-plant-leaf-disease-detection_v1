@@ -37,6 +37,44 @@ from stats import (  # noqa: E402
 )
 
 
+def plot_reliability(before: list[dict], after: list[dict], out: Path) -> Path | None:
+    """One diagram: before and after temperature scaling on the same axes."""
+    try:
+        import matplotlib
+    except ImportError:
+        print("matplotlib not installed; skipping reliability.png")
+        return None
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    def pts(rows: list[dict]) -> tuple[list[float], list[float]]:
+        xs = [r["confidence"] for r in rows if r["n"] and r["confidence"] is not None]
+        ys = [r["accuracy"] for r in rows if r["n"] and r["accuracy"] is not None]
+        return xs, ys
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.plot([0, 1], [0, 1], "--", color="0.6", label="perfect calibration")
+    xb, yb = pts(before)
+    xa, ya = pts(after)
+    if xb:
+        ax.plot(xb, yb, "o-", label="before")
+    if xa:
+        ax.plot(xa, ya, "s-", label="after")
+    ax.set_xlabel("Confidence")
+    ax.set_ylabel("Accuracy")
+    ax.set_title("Reliability")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_aspect("equal")
+    ax.legend(loc="upper left")
+    fig.tight_layout()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
 def load_val(manifest: Path, extra_dir: Path) -> tuple[list, list[str]]:
     rows = [r for r in csv.DictReader(open(manifest, newline="", encoding="utf-8")) if r["split"] == "validation"]
     images, labels = [], []
@@ -107,9 +145,16 @@ def main(argv: list[str] | None = None) -> None:
         "bins": 15,
     }
     (out / "calibration.json").write_text(json.dumps(calib, indent=2) + "\n")
+    plot = plot_reliability(reliability(conf_b, correct_b), reliability(conf_a, correct_a),
+                            out / "reports" / "reliability.png")
     # Also copy next to the weights so Predictor picks T up automatically.
-    if Path(a.model).is_dir() and Path(a.model).resolve() != out.resolve():
-        (Path(a.model) / "calibration.json").write_text(json.dumps(calib, indent=2) + "\n")
+    model_dir = Path(a.model)
+    if model_dir.is_dir() and model_dir.resolve() != out.resolve():
+        (model_dir / "calibration.json").write_text(json.dumps(calib, indent=2) + "\n")
+        if plot is not None:
+            dest = model_dir / "reports" / "reliability.png"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(plot.read_bytes())
 
     # Threshold sweep on the live chain (gate + strategy B crop of the uncropped photo) with T applied.
     from app_predictor import WirePredictor, diagnose_bytes
@@ -185,10 +230,12 @@ def main(argv: list[str] | None = None) -> None:
         p = "-" if row["precision"] is None else f"{100 * row['precision']:.1f}%"
         lines.append(f"| {row['threshold']:.2f} | {row['passes']}/{row['n']} | {row['ok_n']} | {p} | "
                      f"{frac(row['ok_n'], row['n'])} |")
-    lines += ["", "Files: `calibration.json`, `threshold.json`."]
+    lines += ["", "Files: `calibration.json`, `threshold.json`"
+              + (", `reports/reliability.png`." if plot is not None else ".")]
     (out / "calibration_report.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines[:16]))
-    print(f"Wrote {out}/calibration.json, threshold.json, calibration_report.md")
+    print(f"Wrote {out}/calibration.json, threshold.json, calibration_report.md"
+          + (f", {plot}" if plot is not None else ""))
 
 
 if __name__ == "__main__":

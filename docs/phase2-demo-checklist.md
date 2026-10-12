@@ -15,9 +15,11 @@
 - [ ] Upload a large phone photo (10+ MB, 12 MP or more) of a clear leaf → accepted; results page footer shows the model id/revision ("verified by server")
 - [ ] Pick "Other crop" and type a plant the model does not know (e.g. hibiscus) → "Crop not supported", no disease name
 - [ ] Pick a crop that differs from the leaf (e.g. Potato for a tomato leaf) → "Possible match" with a mismatch note
-- [ ] Upload a very dark, tiny or genuinely blurry image → retake message from `/quality-check`; `/predict` is never called
+- [ ] Upload a very dark, tiny or genuinely blurry image → results page “Please retake the photo”; `/predict` is never called
+- [ ] On `/check`, **Show a retake** → dark demo photo through `/quality-check` → retake screen, no disease name
+- [ ] On `/check`, **Show “I'm not sure”** → `/demo/not-sure.jpg` through `/predict` → “I'm not confident — please retake the photo.”, top matches as possibilities, no chat
 - [ ] Healthy leaf → “Looks healthy”, no expert-confirmation warning
-- [ ] Low-confidence case (confidence below 0.5, e.g. a non-PlantVillage crop) → “Possible match” / confirmation warning
+- [ ] Low-confidence case (confidence below 0.5) → status `not_sure`, not a disease write-up
 - [ ] Stop the inference service → “Analysis unavailable”, no crash
 - [ ] Follow-up chat with agriculture question → contextual reply
 - [ ] Follow-up chat with non-agriculture question → polite decline
@@ -32,4 +34,5 @@
 1. Show Figma alignment: upload panel + diagnosis panel + chat.
 2. Analyze a tomato leaf sample; walk through signs, actions, limitations.
 3. Ask one follow-up (“Should I remove lower leaves?”).
-4. Explain the flow: quality gate → Hugging Face MobileNetV2 (99.1% test accuracy) → text-only LLM summary grounded in the prediction.
+4. Click **Show a retake**, then go back and click **Show “I'm not sure”** — abstaining is a feature.
+5. Explain the flow: quality gate → Hugging Face MobileNetV2 (`v1.1`, 137/284 = 48.2% real-photo pass rate) → text-only LLM summary grounded in the prediction.

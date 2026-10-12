@@ -9,6 +9,7 @@ DiagnosisStatus = Literal[
     "healthy",
     "possible",
     "inconclusive",
+    "not_sure",
     "quality_issue",
     "error",
 ]

@@ -45,50 +45,38 @@ after field tuning; see `api/app/config.py`.
 **How to read these numbers:** Test metrics are **in-distribution** on PlantVillage-style photos.
 The Kaggle release includes many near-duplicate shots of the same leaf; our split is **random per
 image** (not grouped by leaf), so test accuracy can be **optimistic**. Treat **real-world
-evaluation** as the honest demo metric (target ≥50% top-1 on internet field photos). See
-[Limitations](#limitations).
+evaluation** as the honest demo metric. The one-shot `v1.1` result is **137/284 (48.2%)**, below
+the 50% goal; see [final_report.md](final_report.md). See [Limitations](#limitations).
 
 **Weaker classes on test** (lowest macro-F1 contributors): corn gray leaf spot / northern leaf
 blight (~0.91–0.95 F1). Full per-class table: Hub `reports/classification_report.txt` and
 `reports/confusion_matrix.png`.
 
-### Real-world score (Cropped-PlantDoc, published on the Hub card)
+### Real-world score (one-shot `v1.1` final test)
 
-Evaluated on 2026-10-11 on the 50-image [real-world set](data/real_world_set/README.md) through the
-**live-app chain** (shared gate + crop strategy B → `v1.0` on the 256×256 crop, threshold 0.85,
-both chosen on tune with [`eval_strategies.py`](eval_strategies.py)) with
-[`eval_real_world_set.py`](eval_real_world_set.py) and [`app_predictor.py`](app_predictor.py):
+The only real-photo figures to quote are in [`final_report.md`](final_report.md) (Hub
+`stage2-runs/runs/stage2/final_test/final_report_v1_1.md`). Tag **`v1.1`**, strategy B, T=0.885,
+threshold **0.50**, 284 images. Do not mix these with the older 25-image `v1.0` evals (12% or 16%).
 
-| Split | Images | Gate rejects | Top-1 (reached model) | Top-3 | End-to-end pass rate (95% CI) |
-|---|---|---|---|---|---|
-| tune | 25 | 0 | 4/25 (16.0%) | 7/25 (28.0%) | 2/25 (8.0%, 2.2–25.0%) |
-| **final** (reported) | 25 | 0 | **3/25 (12.0%)** | 5/25 (20.0%) | **3/25 (12.0%, 4.2–30.0%)** |
-| all | 50 | 0 | 7/50 (14.0%) | 12/50 (24.0%) | 5/50 (10.0%, 4.3–21.4%) |
+| Metric | `v1.0` (thr 0.85, T=1) | **`v1.1` (thr 0.50, T=0.885)** |
+|---|---|---|
+| Images | 284 | **284** |
+| Gate rejects (retake) | 5/284 | **5/284** |
+| Not sure | 146/284 (51.4%) | **91/284 (32.0%)** |
+| Top-1 (reached model) | 75/279 (26.9%) | **159/279 (57.0%)** |
+| Top-3 (reached model) | 137/279 (49.1%) | **219/279 (78.5%)** |
+| **End-to-end pass rate** | 53/284 (18.7%, 14.6–23.6%) | **137/284 (48.2%, 42.5–54.0%)** |
+| `plantdoc_test` (pristine) | 48/236 (20.3%) | **116/236 (49.2%)** |
+| `real_world_set` (wide) | 5/48 (10.4%) | **21/48 (43.8%)** |
 
-With 25 images per split the intervals are wide. Raising the threshold from 0.5 to 0.85 kept the
-pass rate and cut confident-but-wrong answers on final from 14 to 8; no threshold reached 70%
-correct "ok" answers on tune (best 25%).
+The 50% goal is not met; **48.2% is reported as-is**. Paired gain over `v1.0`: +29.6 points
+(95% bootstrap +23.9 to +35.2). Weakest classes (0 passes): cherry healthy 0/12, tomato bacterial
+spot 0/11, tomato mosaic 0/12.
 
-This is **well below the 50% target**. It is the model, not the preprocessing: classifying the
-full frame instead of the leaf crop gives 7/50 top-1 vs 6/50. Typical errors: healthy leaves of
-one crop predicted as another crop (often strawberry or tomato), and corn rust / northern leaf
-blight predicted as gray leaf spot. Thresholds 0.5 and 0.6 gave the same tune-split pass rate.
+PlantVillage held-out accuracy on `v1.1` is 98.23% (macro-F1 97.27%), within the 2-point publish
+gate of `v1.0`'s 99.12%.
 
-Hub files: card section "Real-world images", `reports/real_world_set/{tune,final,all}/`, and
-`real_world_set/` (labels, sources, build script; images are not redistributed).
-
-```bash
-python model/eval_real_world_set.py --set_dir model/data/real_world_set --split final \
-  --predictor app_predictor:diagnose --strategy B --threshold 0.85 --push   # --push rewrites the Hub card (final only)
-```
-
-**On Colab** this is notebook section 7 (also runnable without training: sections 1, 2, 7). The set
-comes from `MyDrive/plant-disease/real_world_set.zip`; with `--only_if_changed` the card is
-regenerated only when the set fingerprint (labels.csv + every image), the weights (sha256 of
-`model.safetensors`) or the threshold differ from `reports/real_world_set/<split>/run.json` on the
-Hub, or when the card no longer shows the current fingerprint (e.g. `evaluate.py --push` or
-`publish.py` uploaded a fresh template). When testing a local run dir, the updated card is also
-written to `<run>/README.md` so `publish.py` uploads it.
+Do **not** re-run `final_test.py` for this revision. The guard is already written.
 
 ### Crop strategy comparison
 
@@ -113,8 +101,8 @@ second time on the same final set. The chosen strategy and threshold go into
 
 ### Stage 2: fine-tune on Cropped-PlantDoc, keep PlantVillage
 
-`v1.0` was trained on PlantVillage only and passes about 12% (3/25) of the field-style real-world
-set. Stage 2 continues from the published `v1.0` weights on a **50/50 mix** of PlantVillage and
+`v1.0` was trained on PlantVillage only and passed 53/284 (18.7%) of the one-shot field-style
+final test. Stage 2 continues from the published `v1.0` weights on a **50/50 mix** of PlantVillage and
 [Cropped-PlantDoc](https://github.com/pratikkayal/PlantDoc-Dataset) (Singh et al. 2020, CC BY 4.0),
 pinned at `5467f6012d78d1c446145d5f582da6096f852ae8`. 27 of 38 PlantVillage classes appear in
 PlantDoc; the other 11 stay lab-only. Real training runs on Colab (notebook section 7b).
@@ -160,8 +148,9 @@ Space pin the live tag from [`shared/release.json`](../shared/release.json) (cop
 
 **Limit to state.** Training crops, `real_world_set` and `plantdoc_test` are web photos from PlantDoc,
 so gains overstate phone-photo performance. PlantDoc labels were not checked by a pathologist.
-Classes PlantDoc lacks only keep their PlantVillage training. If the final pass rate is still below
-50%, report it honestly; do not change the threshold or the data after seeing that number.
+Classes PlantDoc lacks only keep their PlantVillage training. The final pass rate is
+**137/284 (48.2%)**, below 50%; it is reported honestly in [`final_report.md`](final_report.md).
+Do not change the threshold or the data after seeing that number.
 
 The older [`real_world_eval.py`](real_world_eval.py) (full frame, images under
 [`data/real_world/`](data/real_world/README.md)) still works for ad-hoc photo folders. See
@@ -212,8 +201,10 @@ Reproducibility: exact file lists live in `splits.json` on the Hub next to the w
   (Singh et al., 2020, CC BY 4.0), 27 classes mapped to PlantVillage labels, `labels.csv` with a
   `tune` / `final` split (25 / 25), `sources.csv` for attribution. Rebuilt deterministically by
   [`build_real_world_set.py`](build_real_world_set.py).
-- **Purpose:** Field-style photos; proposal target **≥50%** end-to-end pass rate. Fix thresholds
-  on `tune`, report `final` once.
+- **Purpose:** Field-style photos; proposal target **≥50%** end-to-end pass rate. The measured
+  `v1.1` pass rate on the 284-image one-shot test is **137/284 (48.2%)** — see
+  [`final_report.md`](final_report.md). The 50-image set is one stratum of that test, not a
+  separate headline number.
 - **Licence:** some images carry stock-photo watermarks; keep them in coursework / private repos.
   Only labels, sources and results are on the public Hub repo.
 - **Ad-hoc photos:** [`data/real_world/`](data/real_world/README.md) (one folder per class, images
@@ -234,7 +225,7 @@ Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-mo
 | Weight decay | 0.01 |
 | LR schedule | Cosine |
 | Warmup | 0.05 (ratio of steps) |
-| Mixed precision | fp16 |
+| Mixed precision | fp16 on T4; bf16 on Ampere+ (A100 / L4) |
 | Best checkpoint | Selected by **macro F1** on validation |
 | Wall time (Colab T4) | ~493 s for full run |
 | Backbone | **Not frozen** — end-to-end fine-tune |
@@ -341,6 +332,10 @@ EOF
 export DATA_DIR=<printed path>
 ```
 
+On Colab, zip the dataset once, put `MyDrive/plant-disease/plantvillage.zip` on Drive, and let the
+notebook copy it to `/content/plantvillage.zip` then unzip onto the instance SSD. Do not train from
+the Drive mount (thousands of small files). Checkpoints can still live on Drive so a disconnect can resume.
+
 ### Smoke test (CPU-friendly)
 
 ```bash
@@ -364,7 +359,9 @@ python model/train.py \
   --do_train --do_eval --num_train_epochs 5 \
   --per_device_train_batch_size 64 --learning_rate 5e-4 \
   --weight_decay 0.01 --warmup_steps 0.05 --lr_scheduler_type cosine \
-  --fp16 --eval_strategy epoch --save_strategy epoch --save_total_limit 2 \
+  --fp16 --dataloader_num_workers 8 --dataloader_pin_memory true \
+  --dataloader_persistent_workers true \
+  --eval_strategy epoch --save_strategy epoch --save_total_limit 2 \
   --load_best_model_at_end --metric_for_best_model macro_f1 \
   --seed 42 --push_to_hub --hub_model_id neghani/plantvillage-mobilenetv2
 
@@ -443,7 +440,9 @@ python model/predict.py leaf.jpg --model neghani/plantvillage-mobilenetv2 --revi
 - **Lab vs field:** PlantVillage uses plain backgrounds; field photos need leaf cropping and often score lower.
 - **Split leakage:** Random per-image splits can place near-duplicate leaves in both train and test.
 - **Closed set:** The model always outputs one of 38 classes; unknown plants or non-leaves can get high-confidence wrong answers (mitigated partly by crop hint and “unsupported crop” in the agent — see `docs/challenges-and-approach.md`).
-- **Softmax confidence** is not calibrated out-of-distribution.
+- **Softmax confidence** is temperature-scaled on PlantDoc validation (T=0.885); remaining
+  overconfidence out-of-distribution is a limitation. The live app treats low confidence as
+  "not sure" and asks for a retake.
 
 ---
 

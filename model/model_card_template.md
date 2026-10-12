@@ -84,6 +84,12 @@ result and suggests treatment from a curated agricultural knowledge base.
 Confusion matrix: [`reports/confusion_matrix.png`](reports/confusion_matrix.png) ·
 Full per-class report: [`reports/classification_report.txt`](reports/classification_report.txt)
 
+### Weaker classes
+
+<!-- WEAK_CLASSES_START -->
+Not recorded.
+<!-- WEAK_CLASSES_END -->
+
 ### Per-class precision / recall / F1
 
 {{per_class_table}}
@@ -97,11 +103,59 @@ remaining images would be answered with "not sure". Recommended `CONFIDENCE_THRE
 {{threshold_table}}
 
 <!-- REAL_WORLD_START -->
-## Real-world images
+## Real-world images (field and web photos)
 
-Not evaluated yet. Run `python model/eval_real_world_set.py --set_dir model/data/real_world_set
---split final --predictor app_predictor:diagnose --strategy B --threshold 0.85 --push` to fill this section.
+### How to read the numbers
+
+PlantVillage photos are taken under controlled conditions: one leaf, plain background. Accuracy on
+the held-out PlantVillage split above is therefore an **upper bound**, not what a farmer should
+expect from a phone photo. Images of the same leaf can appear in both the training and test splits,
+which inflates it further. The real-world figures below are the more honest ones.
+
+### Result
+
+One-shot final test of tag **`v1.1`** on 2026-10-11: **284** images (236 Cropped-PlantDoc `test/`
+plus 48 from the 50-image real-world set after de-dup), 27 classes. Same chain as the live app
+(quality gate, crop strategy **B**, T=0.885, threshold **0.50**). Copied from `model/final_report.md`;
+the threshold and the split are frozen. Do not re-run `final_test.py` for this revision.
+
+| Metric | Value |
+|---|---|
+| Rejected by the quality gate (retake photo) | 5 of 284 |
+| Top-1 on images that reached the model | 159/279 (57.0%) |
+| Top-3 on images that reached the model | 219/279 (78.5%) |
+| "Not sure" answers | 91 of 284 |
+| **End-to-end pass rate** (correct and confident, out of all images) | **137/284 (48.2%)** (95% CI 42.5% to 54.0%) |
+| Pass rate, plantdoc_test (pristine held-out) | 116/236 (49.2%), 95% CI 42.8–55.5% |
+| Pass rate, real_world_set | 21/48 (43.8%), 95% CI 30.7–57.7% (wide) |
+
+Project target for the end-to-end pass rate: 50.0%. The point estimate is below the
+target. Reported as-is. v1.0 on the same 284 images: 53/284 (18.7%), not sure 146/284.
 <!-- REAL_WORLD_END -->
+
+## Real-world results before and after fine-tuning
+
+<!-- BEFORE_AFTER_START -->
+Not recorded.
+<!-- BEFORE_AFTER_END -->
+
+## Calibration
+
+<!-- CALIBRATION_START -->
+Not recorded.
+<!-- CALIBRATION_END -->
+
+## Latency
+
+<!-- LATENCY_START -->
+Not recorded.
+<!-- LATENCY_END -->
+
+## Crop strategy comparison (A–E)
+
+<!-- STRATEGIES_START -->
+Not recorded.
+<!-- STRATEGIES_END -->
 
 ## Limitations
 
@@ -114,11 +168,17 @@ Not evaluated yet. Run `python model/eval_real_world_set.py --set_dir model/data
 - Confidence is a softmax probability. Stage 2 ships a fitted temperature in `calibration.json`
   (NLL on PlantDoc validation). Treat remaining overconfidence as a limitation.
 - PlantDoc and the 50-image real-world set are web photos; they overstate phone-photo performance.
-  The one-shot comparison is `final_report_v1_1.md` (not used for any choice).
+  The one-shot comparison is `model/final_report.md` (not used for any choice).
 
 ## Training details
 
 {{training_details}}
+
+### Validation by epoch
+
+<!-- EPOCHS_START -->
+Not recorded.
+<!-- EPOCHS_END -->
 
 ## Use in the API (Phase 5)
 

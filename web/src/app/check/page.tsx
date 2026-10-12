@@ -7,6 +7,7 @@ import { UploadGuidelinesCard } from "@/components/UploadGuidelinesCard";
 import { UploadStepCard } from "@/components/UploadStepCard";
 import { checkQuality, predictLeaf } from "@/lib/api";
 import { prepareUpload } from "@/lib/image";
+import { qualityReportFromCheck } from "@/lib/qualityReport";
 import { saveCheckSession } from "@/lib/session";
 import type { CheckSession } from "@/lib/types";
 
@@ -16,27 +17,35 @@ export default function CheckPage() {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [retakeMessage, setRetakeMessage] = useState<string | null>(null);
 
   async function handleAnalyze(file: File, crop: string, symptoms: string) {
     setError(null);
-    setRetakeMessage(null);
     try {
       setStage("checking");
       // Shrink big phone photos once; both API calls and the saved preview reuse the result.
       const { file: upload, previewDataUrl } = await prepareUpload(file);
       const quality = await checkQuality(upload);
       if (!quality.ok) {
-        setRetakeMessage(
-          quality.message || "Please retake the photo with the leaf in focus."
-        );
+        const report = qualityReportFromCheck(quality);
+        const session: CheckSession = {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          cropLabel: crop || "crop",
+          previewDataUrl,
+          report,
+          sessionContext: {},
+          topK: [],
+          lowConfidence: true,
+          qualityOk: false,
+        };
+        saveCheckSession(session);
+        router.push("/results");
         return;
       }
 
       setStage("analyzing");
       const data = await predictLeaf(upload, crop, symptoms);
-      const cropLabel =
-        data.report.crop || crop || "crop";
+      const cropLabel = data.report.crop || crop || "crop";
 
       const session: CheckSession = {
         id: crypto.randomUUID(),
@@ -82,15 +91,6 @@ export default function CheckPage() {
                 ? "Checking photo quality…"
                 : "Photo looks good. Analyzing the leaf…"}
             </p>
-          )}
-          {retakeMessage && (
-            <div className="mt-4 rounded-card border border-sage bg-sage/40 p-4 text-sm text-forest">
-              <p className="font-semibold">Photo needs improvement</p>
-              <p className="mt-1">{retakeMessage}</p>
-              <p className="mt-1 text-[var(--color-text-muted)]">
-                Retake the photo with the leaf centered, in daylight, and in focus.
-              </p>
-            </div>
           )}
           {error && (
             <p className="mt-4 text-center text-sm text-red-700">{error}</p>

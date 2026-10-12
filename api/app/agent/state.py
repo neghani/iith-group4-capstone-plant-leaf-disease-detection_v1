@@ -17,6 +17,7 @@ class DiagnosisState(TypedDict, total=False):
     crop_flag: str
     crop_note: str
     low_confidence: bool
+    model_status: str  # "ok" | "not_sure" | "retake_photo"
     knowledge_entry: dict[str, Any]
     report: dict[str, Any]
     session_context: dict[str, Any]

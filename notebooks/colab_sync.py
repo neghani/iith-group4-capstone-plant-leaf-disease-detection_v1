@@ -32,12 +32,16 @@ The labelled real-world test set (labels.csv + images/, see model/data/real_worl
 works the same way; a new or changed zip is what triggers a new Hub publish in the notebook:
 
     %run notebooks/colab_sync.py --real-world-set-from /content/drive/MyDrive/plant-disease/real_world_set.zip
+
+PlantVillage training images: put one zip on Drive, then copy+unzip onto the Colab SSD
+(do not train from the Drive mount). The notebook section 3 cell calls stage_zip_locally().
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import shutil
 import subprocess
@@ -61,6 +65,9 @@ KEEP_UNTRACKED = (
 )
 DEFAULT_DRIVE_ZIP = "/content/drive/MyDrive/plant-disease/real_world.zip"
 DEFAULT_DRIVE_SET_ZIP = "/content/drive/MyDrive/plant-disease/real_world_set.zip"
+DEFAULT_DRIVE_PV_ZIP = "/content/drive/MyDrive/plant-disease/plantvillage.zip"
+DEFAULT_LOCAL_PV_ZIP = "/content/plantvillage.zip"
+DEFAULT_LOCAL_PV_DIR = "/content/plantvillage"
 
 
 def in_colab() -> bool:
@@ -212,6 +219,51 @@ def replace_real_world_set(src: Path, dest: Path) -> None:
             shutil.rmtree(dest)
         shutil.copytree(payload, dest)
     print(f"Replaced real_world_set from {src}: {len(files)} images")
+
+
+def _zip_stamp(path: Path) -> dict[str, int]:
+    st = path.stat()
+    return {"size": st.st_size, "mtime_ns": st.st_mtime_ns}
+
+
+def stage_zip_locally(src: Path, dest: Path, local_zip: Path | None = None) -> Path:
+    """Copy a Drive zip onto local disk, then unzip that copy. Skip when size+mtime match.
+
+    Reading tens of thousands of small files through the Drive mount is slow. The zip is
+    copied to `local_zip` (default: dest.parent / dest.name.zip) and extracted from there.
+    """
+    src = Path(src)
+    dest = Path(dest)
+    if not src.exists():
+        raise FileNotFoundError(f"Dataset zip not found: {src}")
+    if not src.is_file() or src.suffix.lower() != ".zip":
+        raise SystemExit(f"Need a .zip file, got {src}")
+    local_zip = Path(local_zip) if local_zip is not None else dest.parent / f"{dest.name}.zip"
+    stamp_path = dest / ".zip_stamp.json"
+    src_stamp = _zip_stamp(src)
+
+    already = False
+    if dest.exists() and local_zip.exists() and stamp_path.exists():
+        try:
+            already = json.loads(stamp_path.read_text()) == src_stamp
+        except (OSError, json.JSONDecodeError):
+            already = False
+    if already:
+        print(f"Local copy of {src} already staged at {dest}; skipping copy and unzip")
+        return dest
+
+    if src.resolve() != local_zip.resolve():
+        local_zip.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, local_zip)
+        print(f"Copied {src} -> {local_zip}")
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(local_zip) as zf:
+        zf.extractall(dest)
+    stamp_path.write_text(json.dumps(src_stamp))
+    print(f"Unzipped {local_zip} -> {dest}")
+    return dest
 
 
 def maybe_mount_drive() -> None:

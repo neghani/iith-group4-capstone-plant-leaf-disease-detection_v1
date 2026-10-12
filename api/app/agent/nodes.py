@@ -8,6 +8,8 @@ from app.services.knowledge import get_entry
 from app.services.report import (
     apply_crop_mismatch,
     build_error_report,
+    build_not_sure_report,
+    build_quality_report,
     build_report_from_knowledge,
     build_unsupported_crop_report,
     enrich_report_with_llm,
@@ -32,6 +34,7 @@ def predict_node(state: DiagnosisState) -> DiagnosisState:
         "strategy": pred.strategy,
         "crop_flag": flag,
         "crop_note": note,
+        "model_status": pred.status,
         "low_confidence": pred.status != "ok" or bool(flag),
     }
 
@@ -58,6 +61,22 @@ def predict_error_node(state: DiagnosisState) -> DiagnosisState:
 
 def unsupported_crop_node(state: DiagnosisState) -> DiagnosisState:
     report = build_unsupported_crop_report(state.get("crop_hint", ""))
+    return {**state, "report": report.model_dump()}
+
+
+def retake_node(state: DiagnosisState) -> DiagnosisState:
+    strategy = state.get("strategy") or {}
+    message = strategy.get("message") or "Please retake the photo with the leaf in focus."
+    report = build_quality_report(message)
+    return {**state, "report": report.model_dump(), "top_k": []}
+
+
+def not_sure_node(state: DiagnosisState) -> DiagnosisState:
+    report = build_not_sure_report(
+        top_k=state.get("top_k") or [],
+        confidence=float(state.get("confidence") or 0.0),
+        crop=state.get("crop") or "",
+    )
     return {**state, "report": report.model_dump()}
 
 
@@ -99,7 +118,7 @@ def safety_node(state: DiagnosisState) -> DiagnosisState:
         or bool(state.get("crop_flag"))
         or bool(state.get("low_confidence"))
     )
-    if low and report.status not in ("quality_issue", "error"):
+    if low and report.status not in ("quality_issue", "error", "not_sure"):
         report.expert_confirmation_required = True
         if report.status in ("confirmed_likely", "healthy"):
             report.status = "possible"

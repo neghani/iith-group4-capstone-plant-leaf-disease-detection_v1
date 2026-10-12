@@ -3,7 +3,23 @@
 import { ImageUp } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
-const CROPS = ["Tomato", "Potato", "Apple", "Corn"];
+// Cropped-PlantDoc crops used for real-photo checks. Values are names the
+// classifier was trained on (PlantVillage); PlantDoc spells soybean "Soyabean".
+const CROPS = [
+  { value: "Apple", label: "Apple" },
+  { value: "Bell pepper", label: "Bell pepper" },
+  { value: "Blueberry", label: "Blueberry" },
+  { value: "Cherry", label: "Cherry" },
+  { value: "Corn", label: "Corn" },
+  { value: "Grape", label: "Grape" },
+  { value: "Peach", label: "Peach" },
+  { value: "Potato", label: "Potato" },
+  { value: "Raspberry", label: "Raspberry" },
+  { value: "Soybean", label: "Soybean" },
+  { value: "Squash", label: "Squash" },
+  { value: "Strawberry", label: "Strawberry" },
+  { value: "Tomato", label: "Tomato" },
+];
 const OTHER = "__other__";
 
 export function UploadStepCard({
@@ -19,6 +35,7 @@ export function UploadStepCard({
   const [otherCrop, setOtherCrop] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const setFileWithPreview = useCallback((f: File) => {
@@ -102,12 +119,17 @@ export function UploadStepCard({
         >
           <option value="">Select crop…</option>
           {CROPS.map((c) => (
-            <option key={c} value={c}>
-              {c}
+            <option key={c.value} value={c.value}>
+              {c.label}
             </option>
           ))}
           <option value={OTHER}>Other crop (not listed)</option>
         </select>
+        <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
+          Real-photo tests work best on this PlantDoc list. The model was
+          trained on PlantVillage photos of these same plants. PlantDoc spells
+          soybean as Soyabean.
+        </span>
       </label>
       {crop === OTHER && (
         <label className="mt-4 block text-sm font-medium text-forest">
@@ -119,8 +141,8 @@ export function UploadStepCard({
             className="mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm"
           />
           <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
-            The disease model only knows crops like tomato, potato, apple and
-            corn. For other plants we will say so instead of guessing.
+            Plants outside this list were not in training. The result will say
+            the model does not cover that crop instead of guessing a disease.
           </span>
         </label>
       )}
@@ -147,6 +169,75 @@ export function UploadStepCard({
       >
         {loading ? "Analyzing…" : "Analyze leaf"}
       </button>
+
+      <p className="mt-5 text-xs font-medium uppercase tracking-wide text-[var(--color-forest-muted)]">
+        Demo these paths on purpose
+      </p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={async () => {
+            setDemoError(null);
+            try {
+              onAnalyze(await makeDarkJpeg(), "", "");
+            } catch (e) {
+              setDemoError(e instanceof Error ? e.message : "Could not start the retake demo");
+            }
+          }}
+          className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm font-medium text-forest disabled:opacity-40"
+        >
+          Show a retake
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={async () => {
+            setDemoError(null);
+            try {
+              onAnalyze(await loadNotSureDemo(), "", "");
+            } catch (e) {
+              setDemoError(e instanceof Error ? e.message : "Could not start the not-sure demo");
+            }
+          }}
+          className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm font-medium text-forest disabled:opacity-40"
+        >
+          Show “I&apos;m not sure”
+        </button>
+      </div>
+      {demoError && (
+        <p className="mt-2 text-center text-sm text-red-700">{demoError}</p>
+      )}
     </div>
   );
+}
+
+function makeDarkJpeg(): Promise<File> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 400;
+  canvas.height = 400;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return Promise.reject(new Error("Could not draw a demo photo"));
+  }
+  ctx.fillStyle = "#050505";
+  ctx.fillRect(0, 0, 400, 400);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Could not build the retake demo photo"));
+        return;
+      }
+      resolve(new File([blob], "too-dark.jpg", { type: "image/jpeg" }));
+    }, "image/jpeg", 0.9);
+  });
+}
+
+async function loadNotSureDemo(): Promise<File> {
+  const res = await fetch("/demo/not-sure.jpg");
+  if (!res.ok) {
+    throw new Error("Demo photo is missing");
+  }
+  const blob = await res.blob();
+  return new File([blob], "not-sure.jpg", { type: blob.type || "image/jpeg" });
 }

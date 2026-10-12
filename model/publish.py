@@ -4,10 +4,13 @@ Token comes from HF_TOKEN (.env locally, Colab secret in Colab, or `hf auth logi
 
 Examples:
     python model/publish.py --check                      # verify token, owner and repo access only
-    python model/publish.py --dry_run                    # list what would be uploaded
+    python model/publish.py --dry_run                    # fill the card, list what would be uploaded
     python model/publish.py                              # upload model/outputs/plantvillage-mobilenetv2 + tag v1.0
     python model/publish.py --tag v1.1 --private
     python model/publish.py --reports_only               # re-push README.md + reports/ (no weights)
+
+Fills README.md from trainer_state.json, reports/metrics.json, final_summary.json,
+calibration.json, latency.json and strategy_comparison.md before uploading.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from card import assemble_card  # noqa: E402
 from common import DEFAULT_HF_MODEL_ID, get_hf_token, hf_api  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -43,6 +47,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--check", action="store_true", help="Verify token / owner / repo access and exit.")
     p.add_argument("--dry_run", action="store_true", help="Show the files that would be uploaded and exit.")
     p.add_argument("--skip_gate", action="store_true", help="Do not enforce the v1.1 publish gate (not for the real release).")
+    p.add_argument("--skip_card_check", action="store_true",
+                   help="Do not refuse v1.1 when a model-card section is missing.")
     p.add_argument("--diagnostics", default=str(DIAGNOSTICS), help="v1.0 validation diagnostics (diagnostics.py).")
     return p.parse_args()
 
@@ -121,8 +127,19 @@ def main() -> None:
         raise SystemExit(f"{model_dir}/config.json is missing; this is not a saved model directory.")
     if not (model_dir / "reports" / "metrics.json").exists():
         print("Warning: reports/metrics.json missing. Run model/evaluate.py first so the Hub gets metrics and the model card.")
+    card_status = assemble_card(model_dir)
+    print(f"Model card sections filled: {', '.join(card_status['filled']) or '(none)'}")
+    if card_status["missing"]:
+        print(f"Model card sections missing: {', '.join(card_status['missing'])}")
     if not (model_dir / "README.md").exists():
         print("Warning: README.md (model card) missing. evaluate.py writes it.")
+    if args.tag == "v1.1" and card_status["missing"] and not args.skip_card_check:
+        msg = ("v1.1 card check failed; missing sections: "
+               + ", ".join(card_status["missing"])
+               + ". Run the matching eval scripts or pass --skip_card_check.")
+        if not args.dry_run:
+            raise SystemExit(msg)
+        print(f"[dry run] the real publish would stop here: {msg}")
     if args.tag == "v1.1" and not args.skip_gate:
         try:
             publish_gate(model_dir, args.tag, Path(args.diagnostics))
