@@ -43,7 +43,14 @@ def run(*argv: str) -> None:
     env["PYTHONPATH"] = str(root)
     cmd = [sys.executable, *map(str, argv)]
     print("$", " ".join(cmd))
-    subprocess.check_call(cmd, cwd=root, env=env)
+    try:
+        subprocess.check_call(cmd, cwd=root, env=env)
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(
+            f"Command exited {exc.returncode}: {' '.join(cmd)}\n"
+            "The script's own error is in the cell output above this message "
+            "(missing weights, splits.json, DATA_DIR, etc.)."
+        ) from None
 
 
 def run_mod(module: str, *args: str) -> None:

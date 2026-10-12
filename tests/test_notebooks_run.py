@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from notebooks.colab_sync import DEFAULT_BRANCH, assert_pv_staging_helper, parse_args
-from notebooks.run import flag_on
+from notebooks.run import flag_on, run
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_mobilenetv2.ipynb"
 
@@ -68,5 +68,29 @@ def test_colab_sync_no_reset_flag():
 def test_notebook_stage2_and_publish_cells_honor_skip_flags():
     src = _notebook_source()
     assert src.count('flag_on("RUN_STAGE2")') >= 4
-    assert src.count('flag_on("RUN_STAGE1")') >= 2
+    assert src.count('flag_on("RUN_STAGE1")') >= 4  # section 6 eval+reports, section 8 dry-run+tag
     assert 'os.environ["RUN_STAGE1"]' in src
+    eval_cell = next(c for c in _notebook_cells() if "model/evaluate.py" in c and "--push" in c)
+    assert 'flag_on("RUN_STAGE1")' in eval_cell
+
+
+def test_run_wraps_nonzero_exit_as_systemexit():
+    with pytest.raises(SystemExit, match="exited 1"):
+        run("-c", "raise SystemExit(1)")
+
+
+def test_evaluate_rejects_empty_local_dir(tmp_path):
+    empty = tmp_path / "stage1"
+    empty.mkdir()
+    import subprocess
+    import sys
+
+    repo = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "model/evaluate.py", "--model", str(empty)],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "not a trained model" in (result.stderr + result.stdout)

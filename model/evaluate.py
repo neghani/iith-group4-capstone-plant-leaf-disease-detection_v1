@@ -177,9 +177,17 @@ def fill_template(template: str, values: dict[str, object]) -> str:
 
 def main() -> None:
     args = parse_args()
+    model_path = Path(args.model)
+    model_is_local = model_path.exists()
+    if model_is_local and model_path.is_dir() and not (model_path / "config.json").is_file():
+        raise SystemExit(
+            f"{model_path} exists but is not a trained model (no config.json). "
+            "Section 5 skips training when RUN_STAGE1 is False and still points OUTPUT_DIR here. "
+            "Skip section 6, or set RUN_STAGE1 = True and train first. "
+            "To score the published model: --model neghani/plantvillage-mobilenetv2 --revision v1.0"
+        )
     from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support
 
-    model_is_local = Path(args.model).exists()
     splits_path = locate_splits(args, model_is_local)
     splits = load_splits(splits_path)
     label_names: list[str] = splits["label_names"]
