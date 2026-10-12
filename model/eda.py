@@ -6,7 +6,8 @@ Hard-fails (exit 1) on a missing color folder, a class set that does not match
 api/tests/model_labels.json, an empty class, or an unreadable image. Warnings (imbalance,
 small images, non-RGB, extra files, a capped pHash sample) are recorded and do not block training.
 
-Writes model/outputs/plantvillage_eda.json, plantvillage_eda.md, and plantvillage_aug_preview.png.
+Writes model/outputs/plantvillage_eda.json, plantvillage_eda.md,
+plantvillage_class_counts.png, and plantvillage_aug_preview.png.
 """
 
 from __future__ import annotations
@@ -158,8 +159,9 @@ def audit(
     extra_files: list[str] = []
     unreadable: list[str] = []
     n_images = 0
+    n_classes = len(label_names)
 
-    for name in label_names:
+    for i, name in enumerate(label_names, start=1):
         files = by_class[name]
         class_dir = root / name
         listed = _listdir_files(class_dir)
@@ -174,6 +176,7 @@ def audit(
         modes: dict[str, int] = defaultdict(int)
         widths: list[int] = []
         heights: list[int] = []
+        opened = 0
         for path in files:
             info, err = inspect_image(path)
             if err:
@@ -181,6 +184,7 @@ def audit(
                 continue
             assert info is not None
             n_images += 1
+            opened += 1
             modes[info["mode"]] += 1
             widths.append(info["width"])
             heights.append(info["height"])
@@ -200,6 +204,7 @@ def audit(
                 "min_height": min(heights) if heights else None,
             }
         )
+        print(f"class {i}/{n_classes} {name}, {opened} images opened", flush=True)
 
     if unreadable:
         errors.append(f"{len(unreadable)} unreadable image(s): " + "; ".join(unreadable[:MAX_EXAMPLE]))
@@ -380,11 +385,46 @@ def write_preview(
     return out_path
 
 
-def write_outputs(payload: dict, out_dir: Path, preview_path: Path | None = None) -> None:
+def write_class_counts_chart(payload: dict, out_path: Path) -> Path | None:
+    """Horizontal bar of per-class image counts. Does not change splits."""
+    rows = payload.get("per_class") or []
+    if not rows:
+        return None
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as e:
+        print(f"WARN: class-count chart skipped: {e}", flush=True)
+        return None
+    names = [str(r["name"]) for r in rows]
+    counts = [int(r["n"]) for r in rows]
+    fig_h = max(4.0, 0.28 * len(names))
+    fig, ax = plt.subplots(figsize=(10, fig_h))
+    ax.barh(names, counts, color="#3d7a46")
+    ax.set_xlabel("Images")
+    ax.set_title("PlantVillage class counts")
+    ax.invert_yaxis()
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+    return out_path
+
+
+def write_outputs(
+    payload: dict,
+    out_dir: Path,
+    preview_path: Path | None = None,
+    chart_path: Path | None = None,
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
+    payload = dict(payload)
     if preview_path:
-        payload = dict(payload)
         payload["augmentation_preview"] = str(preview_path)
+    if chart_path:
+        payload["class_counts_chart"] = str(chart_path)
     (out_dir / "plantvillage_eda.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     (out_dir / "plantvillage_eda.md").write_text(report_md(payload), encoding="utf-8")
 
@@ -427,17 +467,20 @@ def main(argv: list[str] | None = None) -> None:
             payload["warnings"] = list(payload.get("warnings") or []) + [
                 {"code": "preview_failed", "message": f"augmentation preview skipped: {e}"}
             ]
-    write_outputs(payload, out_dir, preview)
+    chart = write_class_counts_chart(payload, out_dir / "plantvillage_class_counts.png")
+    write_outputs(payload, out_dir, preview, chart)
     for err in payload.get("errors") or []:
-        print("ERROR:", err)
+        print("ERROR:", err, flush=True)
     for warn in payload.get("warnings") or []:
-        print("WARN:", warn["message"])
-    print("Wrote", out_dir / "plantvillage_eda.json")
+        print("WARN:", warn["message"], flush=True)
+    print("Wrote", out_dir / "plantvillage_eda.json", flush=True)
+    if chart:
+        print("Class counts", chart, flush=True)
     if preview:
-        print("Preview", preview)
+        print("Preview", preview, flush=True)
     if payload["errors"]:
         raise SystemExit(1)
-    print("PlantVillage sanity check passed.")
+    print("PlantVillage sanity check passed.", flush=True)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from aug import (
     build_transforms,
     transform_op_names,
 )
-from eda import _StubProcessor, audit, load_expected_labels, write_preview
+from eda import _StubProcessor, audit, load_expected_labels, write_class_counts_chart, write_preview
 
 REPO = Path(__file__).resolve().parents[1]
 LABELS = load_expected_labels(REPO / "api" / "tests" / "model_labels.json")
@@ -124,6 +124,23 @@ def test_near_duplicate_sample_is_a_warning(tmp_path):
     assert payload["ok"]
     assert payload["near_duplicates"]["n_pairs"] >= 1
     assert any(w["code"] == "near_duplicates" for w in payload["warnings"])
+
+
+def test_audit_prints_per_class_progress(tmp_path, capsys):
+    tomatoes = [n for n in LABELS if n.startswith("Tomato___")][:2]
+    root = _folder(tmp_path / "color", labels=tomatoes, per_class=1)
+    audit(root, crop_filter="Tomato", phash_per_class=0)
+    out = capsys.readouterr().out
+    assert f"class 1/2 {tomatoes[0]}, 1 images opened" in out
+    assert f"class 2/2 {tomatoes[1]}, 1 images opened" in out
+
+
+def test_class_counts_chart_writes_png(tmp_path):
+    payload = {"per_class": [{"name": "Apple___healthy", "n": 3}, {"name": "Tomato___healthy", "n": 1}]}
+    path = write_class_counts_chart(payload, tmp_path / "plantvillage_class_counts.png")
+    assert path is not None and path.exists()
+    img = Image.open(path)
+    assert img.size[0] > 0 and img.size[1] > 0
 
 
 def test_preview_writes_contact_sheet(tmp_path):

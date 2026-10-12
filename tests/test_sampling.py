@@ -2,7 +2,7 @@
 
 from collections import Counter
 
-from sampling import inverse_sqrt_weights, plan_epoch, plan_global
+from sampling import class_weight_summary, inverse_sqrt_weights, plan_epoch, plan_global
 
 
 def test_inverse_sqrt_upweights_rare_classes():
@@ -44,3 +44,17 @@ def test_plan_global_offsets_into_concatenated_set():
     idx = plan_global(pv, pd, labels, fraction=0.5, epoch_samples=20, seed=1, epoch=0)
     assert len(idx) == 20
     assert set(idx) <= set(pv) | set(pd)
+
+
+def test_class_weight_summary_matches_inverse_sqrt():
+    labels = ["a"] * 16 + ["b"] * 4
+    summary = class_weight_summary(labels, fraction=0.5, epoch_samples=400)
+    assert summary["n_pd_draws"] == 200
+    assert summary["n_pv_draws"] == 200
+    by = {r["class"]: r for r in summary["classes"]}
+    assert by["a"]["count"] == 16
+    assert by["b"]["count"] == 4
+    # per-row 1/sqrt(freq): a=0.25, b=0.5; class shares 4/6 and 2/6.
+    assert abs(by["a"]["inv_sqrt_share"] - 4 / 6) < 1e-9
+    assert abs(by["b"]["inv_sqrt_share"] - 2 / 6) < 1e-9
+    assert abs(by["b"]["expected_draws"] - 200 * 2 / 6) < 1e-9

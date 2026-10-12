@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from notebooks.colab_sync import DEFAULT_BRANCH, assert_pv_staging_helper, parse_args
-from notebooks.run import flag_on, run
+from notebooks.run import apply_knobs, flag_on, knob, print_publish_checklist, print_session_plan, run, stage2_lrs
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_mobilenetv2.ipynb"
 
@@ -68,15 +68,73 @@ def test_colab_sync_no_reset_flag():
 def test_notebook_stage2_and_publish_cells_honor_skip_flags():
     src = _notebook_source()
     assert src.count('flag_on("RUN_STAGE2")') >= 4
-    assert src.count('flag_on("RUN_STAGE1")') >= 4  # section 6 eval+reports, section 8 dry-run+tag
-    assert 'os.environ["RUN_STAGE1"]' in src
+    assert src.count('flag_on("RUN_STAGE1")') >= 4  # section 5 train, section 6 eval+reports, section 8
+    assert "apply_knobs" in src
+    assert "print_session_plan" in src
+    assert "print_publish_checklist" in src
     eval_cell = next(c for c in _notebook_cells() if "model/evaluate.py" in c and "--push" in c)
     assert 'flag_on("RUN_STAGE1")' in eval_cell
+
+
+def test_notebook_knobs_cell_owns_stage_flags_and_shows_work():
+    cells = _notebook_cells()
+    knobs = next(c for c in cells if "apply_knobs" in c and "PD_FRACTION" in c)
+    assert "RUN_STAGE1 = False" in knobs
+    assert "RUN_STAGE2 = False" in knobs
+    assert "STAGE2_LRS" in knobs
+    train = next(c for c in cells if "--push_to_hub" in c and "google/mobilenet_v2")
+    assert "RUN_STAGE1 = False" not in train
+    assert "PlantDoc is not in this run" in train
+    assert "knob(\"STAGE1_EPOCHS\")" in train
+    mix = next(c for c in cells if "class_weight_summary" in c)
+    assert "uniform PlantVillage" in mix
+    loop = next(c for c in cells if "--extra_data" in c and "plantdoc" in c and "stage2_lrs()" in c)
+    assert "for lr_s, out in zip(stage2_lrs()" in loop
+    eda = next(c for c in cells if "plantvillage_eda.json" in c and "per_class" in c)
+    assert "PlantVillage class counts" in eda
+    assert "shared/release.json" in "\n".join(cells)
 
 
 def test_run_wraps_nonzero_exit_as_systemexit():
     with pytest.raises(SystemExit, match="exited 1"):
         run("-c", "raise SystemExit(1)")
+
+
+def test_run_launches_unbuffered_python(monkeypatch):
+    import subprocess
+    import sys
+
+    seen = {}
+
+    def fake_check_call(cmd, cwd=None, env=None):
+        seen["cmd"] = cmd
+        seen["env"] = env
+
+    monkeypatch.setattr(subprocess, "check_call", fake_check_call)
+    run("-c", "print(1)")
+    assert seen["cmd"][0] == sys.executable
+    assert seen["cmd"][1] == "-u"
+    assert seen["env"]["PYTHONUNBUFFERED"] == "1"
+
+
+def test_apply_knobs_and_publish_checklist(monkeypatch, capsys):
+    for key in (
+        "RUN_STAGE1", "RUN_STAGE2", "PD_FRACTION", "STAGE2_LRS",
+        "STAGE1_EPOCHS", "STAGE1_LR", "EPOCH_SAMPLES", "HF_MODEL_ID",
+    ):
+        monkeypatch.setenv(key, "x")
+    apply_knobs(RUN_STAGE1=False, RUN_STAGE2=True, PD_FRACTION=0.5, STAGE2_LRS=["1e-4", "5e-5"])
+    monkeypatch.setenv("HF_MODEL_ID", "neghani/plantvillage-mobilenetv2")
+    assert flag_on("RUN_STAGE1") is False
+    assert flag_on("RUN_STAGE2") is True
+    assert knob("PD_FRACTION") == "0.5"
+    assert stage2_lrs() == ["1e-4", "5e-5"]
+    print_session_plan()
+    print_publish_checklist()
+    out = capsys.readouterr().out
+    assert "v1.1" in out
+    assert "shared/release.json" in out
+    assert "https://huggingface.co/" in out
 
 
 def test_evaluate_rejects_empty_local_dir(tmp_path):

@@ -68,3 +68,45 @@ def plan_global(
     for src, i in local:
         out.append(pv_indices[i] if src == "pv" else pd_indices[i])
     return out
+
+
+def class_weight_summary(
+    pd_labels: list,
+    fraction: float,
+    epoch_samples: int,
+) -> dict:
+    """Per-class PlantDoc sampling: count, 1/sqrt(freq) share, expected draws per epoch.
+
+    PlantVillage draws in the same epoch are uniform over the PV train set
+    (`epoch_samples - n_pd`). Does not run training.
+    """
+    if not 0.0 <= fraction <= 1.0:
+        raise ValueError(f"plantdoc_fraction must be in [0, 1], got {fraction}")
+    if epoch_samples <= 0:
+        raise ValueError("epoch_samples must be positive")
+    n_pd = int(round(epoch_samples * fraction))
+    n_pd = min(max(n_pd, 0), epoch_samples)
+    n_pv = epoch_samples - n_pd
+    counts = Counter(pd_labels)
+    shares: dict = {}
+    if pd_labels:
+        for lab, w in zip(pd_labels, inverse_sqrt_weights(pd_labels)):
+            shares[lab] = shares.get(lab, 0.0) + w
+    rows = []
+    for lab in sorted(counts):
+        share = float(shares.get(lab, 0.0))
+        rows.append(
+            {
+                "class": lab,
+                "count": int(counts[lab]),
+                "inv_sqrt_share": share,
+                "expected_draws": share * n_pd,
+            }
+        )
+    return {
+        "n_pv_draws": n_pv,
+        "n_pd_draws": n_pd,
+        "epoch_samples": int(epoch_samples),
+        "plantdoc_fraction": float(fraction),
+        "classes": rows,
+    }
