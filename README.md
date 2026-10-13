@@ -72,12 +72,28 @@ The disease model is called over HTTP at `HF_ENDPOINT_URL`. Hugging Face serverl
 
 ### Run with Docker
 
+Three containers (UI :3000, API :8000, model :7860):
+
 ```bash
 docker compose up --build
 ```
 
+All three services in **one** container (one port, same as Render):
+
+```bash
+docker compose --profile all up --build cropcare
+```
+
 - **Farmer UI:** http://localhost:3000 — `/check` upload, `/results` diagnosis + chat
-- **API:** http://localhost:8000 — `/docs`, `/health`
+- **API:** http://localhost:8000 (three-container) or http://localhost:3000/docs (one-container)
+
+### Deploy one machine on Render
+
+Language **Docker**, Dockerfile Path **`Dockerfile`**, context **repo root**. Or connect the repo and apply `render.yaml`. First build pulls the Hub model into the image; use a **Standard** (2 GB) instance — starter 512 MB will OOM. After deploy, open `https://<service>.onrender.com/check`.
+
+### Deploy one machine on Railway
+
+New project → this GitHub repo. [`railway.toml`](railway.toml) selects the root Dockerfile, health-checks `/health`, and waits up to 5 minutes for the model to load. Generate a domain, set RAM to **at least 2 GB**, and optionally add `LLM_API_KEY`. Open `https://<service>.up.railway.app/check`.
 
 ### Run locally (without Docker)
 

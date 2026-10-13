@@ -33,3 +33,17 @@ services:
       - "3000:3000"
     depends_on:
       - api-service
+
+  # One container, one port — same process layout as Render. Does not start with
+  # `docker compose up`; run: docker compose --profile all up --build cropcare
+  cropcare:
+    profiles: ["all"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      PORT: ${PORT:-3000}
+      HF_ENDPOINT_URL: http://127.0.0.1:7860/
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"

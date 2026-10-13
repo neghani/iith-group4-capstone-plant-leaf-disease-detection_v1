@@ -1,8 +1,20 @@
-# Root build context is used by api/Dockerfile only (it needs shared/); keep it small.
-**
-!api/requirements.txt
-!api/app/**
-!api/data/**
-!shared/**
-**/__pycache__
+# Build context is the repo root (api/Dockerfile and the all-in-one Dockerfile).
+.git
+.github
 **/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/.next
+**/.env
+**/.DS_Store
+model/
+notebooks/
+docs/
+tests/
+api/tests/
+*.md
+README copy.md

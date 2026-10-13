@@ -1,0 +1,21 @@
+# One Railway service: UI + API + model (root Dockerfile).
+# New Project → GitHub repo; Generate Domain; set RAM ≥ 2 GB.
+# Optional variable: LLM_API_KEY. Leave HF_ENDPOINT_URL empty.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = [
+  "Dockerfile",
+  "deploy/**",
+  "api/**",
+  "web/**",
+  "hf_space/**",
+  "shared/**",
+]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

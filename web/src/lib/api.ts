@@ -1,7 +1,10 @@
 import type { ImageQualityResult, PredictResponse } from "./types";
 
+const rawApi = process.env.NEXT_PUBLIC_API_URL;
 const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+  rawApi === "" || rawApi === "same-origin"
+    ? ""
+    : (rawApi ?? "http://localhost:8000")
 ).replace(/\/$/, "");
 
 export async function fetchHealth(): Promise<{

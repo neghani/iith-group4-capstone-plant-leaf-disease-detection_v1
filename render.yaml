@@ -1,0 +1,20 @@
+# Single Render Web Service: UI + API + model, same as `docker compose` on one machine.
+# Dashboard: New → Blueprint, or New Web Service → Docker, Dockerfile Path = Dockerfile.
+services:
+  - type: web
+    name: cropcare
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # PyTorch + Next + API need more than the 512 MB starter instance.
+    plan: standard
+    envVars:
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: HF_ENDPOINT_URL
+        value: http://127.0.0.1:7860/
