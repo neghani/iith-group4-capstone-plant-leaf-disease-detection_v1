@@ -1,7 +1,11 @@
+import logging
+import traceback
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.config import get_settings
+
+_log = logging.getLogger("leafcheck.llm")
 
 
 def llm_configured() -> bool:
@@ -13,13 +17,19 @@ def get_chat_model(temperature: float = 0.2) -> ChatOpenAI | None:
     settings = get_settings()
     if not settings.llm_api_key.strip():
         return None
+
+    base_url = settings.llm_base_url.strip() or None
+    print(f"\n[LLM ROUTE CHECK] Model: {settings.llm_model} | Base URL: {base_url}", flush=True)
+
     kwargs: dict = {
         "model": settings.llm_model,
         "api_key": settings.llm_api_key,
         "temperature": temperature,
     }
-    if settings.llm_base_url.strip():
-        kwargs["base_url"] = settings.llm_base_url.strip()
+    if base_url:
+        kwargs["base_url"] = base_url
+        kwargs["openai_api_base"] = base_url
+
     return ChatOpenAI(**kwargs)
 
 
@@ -41,6 +51,7 @@ def generate_text(system: str, user: str) -> str | None:
         raise TypeError("LLM accepts text only; images go to the Hugging Face classifier.")
     model = get_chat_model()
     if model is None:
+        print("\n>>> [LLM STATUS]: model is None (check .env LLM_API_KEY)\n", flush=True)
         return None
     try:
         response = model.invoke(
@@ -50,7 +61,11 @@ def generate_text(system: str, user: str) -> str | None:
         if isinstance(content, str):
             return content.strip()
         return str(content).strip()
-    except Exception:
+    except Exception as exc:
+        print(f"\n{'='*50}", flush=True)
+        print(f">>> [LLM CALL FAILED]: {type(exc).__name__}: {exc}", flush=True)
+        traceback.print_exc()
+        print(f"{'='*50}\n", flush=True)
         return None
 
 
