@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     default_language: str = "en"
 
     # Phone photos are 3-15 MB; they are decoded with JPEG draft mode and downscaled.
-    max_image_bytes: int = 25 * 1024 * 1024
+    max_image_bytes: int = 10 * 1024 * 1024
     knowledge_path: str = "data/knowledge/diseases.json"
 
 
