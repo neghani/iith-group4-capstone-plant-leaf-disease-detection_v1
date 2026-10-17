@@ -55,10 +55,15 @@ def generate_text(system: str, user: str) -> str | None:
 
 
 def chat_with_context(
-    user_message: str, context_summary: str, history: str = ""
+    user_message: str,
+    context_summary: str,
+    history: str = "",
+    reply_instruction: str = "",
 ) -> str | None:
     parts = [f"Diagnosis context:\n{context_summary}"]
     if history.strip():
         parts.append(f"Recent conversation:\n{history.strip()}")
+    if reply_instruction.strip():
+        parts.append(reply_instruction.strip())
     parts.append(f"Farmer question:\n{user_message}")
     return generate_text(AGRICULTURE_SYSTEM, "\n\n".join(parts))

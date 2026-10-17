@@ -47,6 +47,7 @@ def test_quality_check_rejects_bad_type(client):
 def test_predict_blocked_by_gate(client, dark_leaf, hf_calls, llm_prompts):
     body = client.post("/predict", files=_upload(dark_leaf)).json()
     assert body["quality"]["ok"] is False
+    assert body["quality"]["reason"] == "too_dark"
     assert body["report"]["status"] == "quality_issue"
     assert hf_calls == []
     assert llm_prompts == []
@@ -155,7 +156,7 @@ def test_chat_context_includes_prediction(monkeypatch):
 
     captured = {}
 
-    def fake_chat(message, context, history=""):
+    def fake_chat(message, context, history="", **_kwargs):
         captured["message"] = message
         captured["context"] = context
         captured["history"] = history

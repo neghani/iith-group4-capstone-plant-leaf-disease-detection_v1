@@ -1,33 +1,24 @@
+"use client";
+
 import { AppShell } from "@/components/AppShell";
+import { useT } from "@/i18n/LocaleProvider";
 
 const tips = [
-  {
-    title: "Take clear leaf photos",
-    body: "Use daylight, hold steady, and fill the frame with the affected leaf.",
-  },
-  {
-    title: "Check lower leaves first",
-    body: "Many fungal issues start on older foliage before spreading upward.",
-  },
-  {
-    title: "Confirm before spraying",
-    body: "Match symptoms over a few days and ask your local extension office before costly treatment.",
-  },
-  {
-    title: "Rotate and sanitize",
-    body: "Remove heavily infected plant material and avoid working in wet fields to limit spread.",
-  },
+  { title: "guide.tip1Title", body: "guide.tip1Body" },
+  { title: "guide.tip2Title", body: "guide.tip2Body" },
+  { title: "guide.tip3Title", body: "guide.tip3Body" },
+  { title: "guide.tip4Title", body: "guide.tip4Body" },
 ];
 
 export default function GuidePage() {
+  const t = useT();
   return (
-    <AppShell breadcrumb="Growing guide">
+    <AppShell breadcrumb={t("guide.breadcrumb")}>
       <h1 className="font-serif text-3xl font-semibold text-forest">
-        Growing guide
+        {t("guide.title")}
       </h1>
       <p className="mt-2 max-w-2xl text-[var(--color-text-muted)]">
-        Practical habits for healthier crops. This demo guide supports the
-        CropCare AI capstone — not a substitute for regional agronomy advice.
+        {t("guide.intro")}
       </p>
 
       <div className="mt-10 grid gap-4 md:grid-cols-2">
@@ -36,9 +27,9 @@ export default function GuidePage() {
             key={tip.title}
             className="rounded-card bg-white p-6 shadow-card"
           >
-            <h3 className="font-semibold text-forest">{tip.title}</h3>
+            <h3 className="font-semibold text-forest">{t(tip.title)}</h3>
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              {tip.body}
+              {t(tip.body)}
             </p>
           </div>
         ))}

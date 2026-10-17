@@ -1,42 +1,28 @@
+"use client";
+
 import { Camera, CheckCircle2, Droplets, Sun } from "lucide-react";
+import { useT } from "@/i18n/LocaleProvider";
 
 const tips = [
-  {
-    icon: Camera,
-    title: "Keep the leaf in focus",
-    body: "Hold the camera steady and let the leaf fill most of the frame.",
-  },
-  {
-    icon: Sun,
-    title: "Use natural light",
-    body: "Avoid harsh shadows and bright glare on the leaf surface.",
-  },
-  {
-    icon: Droplets,
-    title: "Avoid wet leaves",
-    body: "Water drops can hide spots and reduce diagnosis quality.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Upload one clear leaf",
-    body: "JPEG, PNG, or WebP up to 25 MB. Large phone photos are shrunk automatically.",
-  },
+  { icon: Camera, title: "guidelines.focusTitle", body: "guidelines.focusBody" },
+  { icon: Sun, title: "guidelines.lightTitle", body: "guidelines.lightBody" },
+  { icon: Droplets, title: "guidelines.wetTitle", body: "guidelines.wetBody" },
+  { icon: CheckCircle2, title: "guidelines.oneTitle", body: "guidelines.oneBody" },
 ];
 
 export function UploadGuidelinesCard() {
+  const t = useT();
+
   return (
     <aside className="rounded-card bg-white p-6 shadow-card">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-forest">Photo guidelines</h3>
+        <h3 className="font-semibold text-forest">{t("guidelines.title")}</h3>
         <span className="rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
-          Before upload
+          {t("guidelines.badge")}
         </span>
       </div>
 
-      <p className="text-sm text-[var(--color-text-muted)]">
-        Follow these quick checks so the model can detect visible symptoms more
-        reliably.
-      </p>
+      <p className="text-sm text-[var(--color-text-muted)]">{t("guidelines.intro")}</p>
 
       <ul className="mt-5 space-y-4">
         {tips.map((tip) => (
@@ -45,9 +31,9 @@ export function UploadGuidelinesCard() {
               <tip.icon className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-medium text-forest">{tip.title}</p>
+              <p className="text-sm font-medium text-forest">{t(tip.title)}</p>
               <p className="text-xs leading-relaxed text-[var(--color-text-muted)]">
-                {tip.body}
+                {t(tip.body)}
               </p>
             </div>
           </li>

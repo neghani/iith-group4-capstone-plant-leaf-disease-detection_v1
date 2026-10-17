@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
+import { useLocale } from "@/i18n/LocaleProvider";
 import { sendChat } from "@/lib/api";
 import { predictionContextLabel } from "@/lib/chatContext";
 
@@ -15,6 +16,8 @@ export function ChatPanel({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const { locale, t } = useLocale();
+  const contextLabel = predictionContextLabel(sessionContext);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,14 +29,14 @@ export function ChatPanel({
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
     try {
-      const { reply } = await sendChat(text, sessionContext, history);
+      const { reply } = await sendChat(text, sessionContext, history, locale);
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch {
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content: "Could not reach the assistant. Is the API running?",
+          content: t("chat.unreachable"),
         },
       ]);
     } finally {
@@ -43,20 +46,20 @@ export function ChatPanel({
 
   return (
     <div className="rounded-card bg-white p-6 shadow-card">
-      <h4 className="font-semibold text-forest">Ask a follow-up</h4>
+      <h4 className="font-semibold text-forest">{t("chat.title")}</h4>
       <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-        Agriculture questions only · tied to this check in your browser session
+        {t("chat.hint")}
       </p>
-      {predictionContextLabel(sessionContext) && (
+      {contextLabel && (
         <p className="mt-3 rounded-lg bg-sage/50 px-3 py-2 text-sm text-forest">
-          This check: {predictionContextLabel(sessionContext)}
+          {t("chat.thisCheck", { label: contextLabel })}
         </p>
       )}
 
       <div className="mt-4 max-h-64 space-y-3 overflow-y-auto">
         {messages.length === 0 && (
           <p className="text-sm text-[var(--color-text-muted)]">
-            e.g. Should I remove the lower leaves?
+            {t("chat.example")}
           </p>
         )}
         {messages.map((m, i) => (
@@ -78,7 +81,7 @@ export function ChatPanel({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about symptoms, care, or monitoring…"
+          placeholder={t("chat.placeholder")}
           className="flex-1 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm outline-none focus:border-forest/40"
           disabled={loading}
         />

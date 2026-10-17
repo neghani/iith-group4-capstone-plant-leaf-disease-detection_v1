@@ -10,10 +10,13 @@ import { DiagnosisCard } from "@/components/DiagnosisCard";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { predictionChatContext } from "@/lib/chatContext";
 import { getCurrentCheck } from "@/lib/session";
+import { cropName } from "@/i18n";
+import { useLocale } from "@/i18n/LocaleProvider";
 import type { CheckSession } from "@/lib/types";
 
 export default function ResultsPage() {
   const router = useRouter();
+  const { locale, t } = useLocale();
   const [session, setSession] = useState<CheckSession | null>(null);
 
   useEffect(() => {
@@ -27,28 +30,29 @@ export default function ResultsPage() {
 
   if (!session) {
     return (
-      <AppShell breadcrumb="Check a crop / Your results">
-        <p className="text-[var(--color-text-muted)]">Loading…</p>
+      <AppShell breadcrumb={t("results.breadcrumb")}>
+        <p className="text-[var(--color-text-muted)]">{t("results.loading")}</p>
       </AppShell>
     );
   }
 
-  const cropWord = session.cropLabel.toLowerCase().includes("tomato")
-    ? "tomato"
-    : session.cropLabel.toLowerCase();
+  const cropShown =
+    locale === "en"
+      ? cropName(locale, session.cropLabel).toLowerCase()
+      : cropName(locale, session.cropLabel);
   const status = session.report.status;
   const heading =
     status === "quality_issue"
-      ? "This photo needs a retake"
+      ? t("results.headingQuality")
       : status === "not_sure"
-        ? "I'm not confident yet"
-        : `Your ${cropWord} leaf check`;
+        ? t("results.headingUnsure")
+        : t("results.heading", { crop: cropShown });
   const sub =
     status === "quality_issue"
-      ? "The quality gate stopped before the disease model. Retake so the leaf is clear."
+      ? t("results.subQuality")
       : status === "not_sure"
-        ? "The model saw the leaf but the score is too low to name a disease."
-        : "Understand the signs. Start with safer, practical care.";
+        ? t("results.subUnsure")
+        : t("results.subOk");
   const showChat =
     session.qualityOk &&
     status !== "quality_issue" &&
@@ -56,12 +60,12 @@ export default function ResultsPage() {
     status !== "not_sure";
 
   return (
-    <AppShell breadcrumb="Check a crop / Your results">
+    <AppShell breadcrumb={t("results.breadcrumb")}>
       <Link
         href="/check"
         className="text-sm font-medium text-[var(--color-forest-muted)] hover:text-forest"
       >
-        ← Back to crop upload
+        {t("results.back")}
       </Link>
 
       <h1 className="mt-4 font-serif text-4xl font-semibold text-forest">
@@ -70,8 +74,20 @@ export default function ResultsPage() {
       <p className="mt-2 text-[var(--color-text-muted)]">{sub}</p>
 
       <div className="mt-6">
-        <DisclaimerBanner extra={session.report.diagnostic_limitations} />
+        <DisclaimerBanner
+          extra={
+            status === "quality_issue"
+              ? t("quality.limitations")
+              : session.report.diagnostic_limitations
+          }
+        />
       </div>
+
+      {session.language === "te" && session.translationApplied === false && (
+        <p className="mt-4 text-sm text-[var(--color-text-muted)]">
+          {t("results.translationUnavailable")}
+        </p>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <CropPhotoCard src={session.previewDataUrl} />
@@ -80,6 +96,7 @@ export default function ResultsPage() {
           lowConfidence={session.lowConfidence}
           topK={session.topK}
           inference={session.inference}
+          qualityReason={session.qualityReason}
         />
       </div>
 
@@ -93,8 +110,7 @@ export default function ResultsPage() {
       )}
 
       <p className="mt-8 text-xs text-[var(--color-text-muted)]">
-        Demo capstone — photos stay in your browser only. Confirm important
-        decisions with a local agricultural expert.
+        {t("results.footer")}
       </p>
     </AppShell>
   );

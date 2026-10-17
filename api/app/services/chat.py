@@ -1,5 +1,6 @@
 from app.llm.provider import chat_with_context
 from app.schemas import ChatResponse
+from app.services.translate import normalize_language, telugu_reply_note
 
 
 AGRICULTURE_KEYWORDS = (
@@ -130,7 +131,10 @@ def _fallback_chat(message: str, context_summary: str, *, leaf_check: bool) -> s
 
 
 def handle_chat(
-    message: str, session_context: dict, history: list | None = None
+    message: str,
+    session_context: dict,
+    history: list | None = None,
+    language: str = "en",
 ) -> ChatResponse:
     msg = message.strip()
     if not msg:
@@ -149,7 +153,10 @@ def handle_chat(
         )
 
     context = format_session_context(session_context)
-    llm_reply = chat_with_context(msg, context, format_history(history))
+    instruction = telugu_reply_note() if normalize_language(language) == "te" else ""
+    llm_reply = chat_with_context(
+        msg, context, format_history(history), reply_instruction=instruction
+    )
     if llm_reply:
         return ChatResponse(reply=llm_reply)
 

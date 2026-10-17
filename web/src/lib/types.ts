@@ -19,6 +19,7 @@ export type DiagnosisReport = {
 
 export type ImageQualityResult = {
   ok: boolean;
+  reason?: string | null;
   message?: string | null;
   brightness?: number | null;
   blur_score?: number | null;
@@ -52,6 +53,8 @@ export type PredictResponse = {
   top_k: TopKPrediction[];
   session_context: Record<string, unknown>;
   inference?: InferenceInfo | null;
+  language?: "en" | "te" | string;
+  translation_applied?: boolean;
 };
 
 export type CheckSession = {
@@ -65,4 +68,7 @@ export type CheckSession = {
   lowConfidence: boolean;
   qualityOk: boolean;
   inference?: InferenceInfo;
+  qualityReason?: string | null;
+  language?: "en" | "te";
+  translationApplied?: boolean;
 };

@@ -21,6 +21,7 @@ from app.schemas import (
 )
 from app.services.chat import handle_chat
 from app.services.report import build_quality_report
+from app.services.translate import normalize_language, translate_report
 from app.vision.hf_client import hf_configured, probe_endpoint
 from app.vision.quality import PreparedImage, prepare_image, validate_upload
 from shared.vision.config import INFERENCE_SIZE
@@ -49,6 +50,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _localize(
+    report: DiagnosisReport, session_context: dict, language: str
+) -> tuple[DiagnosisReport, dict, bool]:
+    if language != "te":
+        return report, session_context, False
+    translated, applied = translate_report(report)
+    if not applied:
+        return report, session_context, False
+    return translated, {
+        **session_context,
+        "diagnosis_name": translated.diagnosis_name,
+        "summary": translated.initial_message,
+    }, True
 
 
 async def _gate_upload(file: UploadFile) -> PreparedImage:
@@ -94,17 +110,23 @@ async def predict(
     file: Annotated[UploadFile, File(...)],
     crop: Annotated[str | None, Form()] = None,
     additional_symptoms: Annotated[str | None, Form()] = None,
+    language: Annotated[str | None, Form()] = None,
 ) -> PredictResponse:
     """Step 2: re-runs the gate server-side, then HF classifier -> knowledge -> LLM -> safety."""
+    lang = normalize_language(language)
     prepared = await _gate_upload(file)
     quality = prepared.quality
     if not quality.ok or prepared.image is None:
-        report = build_quality_report(quality.message or "Poor image quality.")
+        report, session_context, applied = _localize(
+            build_quality_report(quality.message or "Poor image quality."), {}, lang
+        )
         return PredictResponse(
             quality=quality,
             low_confidence=True,
             report=report,
-            session_context={},
+            session_context=session_context,
+            language=lang,
+            translation_applied=applied,
         )
 
     result = await run_in_threadpool(
@@ -117,6 +139,7 @@ async def predict(
     )
     report = DiagnosisReport.model_validate(result["report"])
     session_context = result.get("session_context", {})
+    report, session_context, applied = _localize(report, session_context, lang)
     inference = result.get("inference")
     strategy = result.get("strategy") or {}
     _log.info(
@@ -137,6 +160,8 @@ async def predict(
         report=report,
         top_k=[TopKPrediction.model_validate(t) for t in result.get("top_k", [])],
         session_context=session_context,
+        language=lang,
+        translation_applied=applied,
         inference=InferenceInfo(
             **inference,
             input_size=[INFERENCE_SIZE, INFERENCE_SIZE],
@@ -153,4 +178,5 @@ def chat(body: ChatRequest) -> ChatResponse:
         body.message,
         body.session_context,
         [turn.model_dump() for turn in body.history],
+        language=normalize_language(body.language),
     )

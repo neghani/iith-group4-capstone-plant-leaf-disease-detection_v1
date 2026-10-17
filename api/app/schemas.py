@@ -17,6 +17,7 @@ DiagnosisStatus = Literal[
 
 class ImageQualityResult(BaseModel):
     ok: bool
+    reason: str | None = None
     message: str | None = None
     brightness: float | None = None
     # Leaf sharpness 0 (blurry) .. 1 (sharp); resolution independent, see vision/leaf.py.
@@ -83,6 +84,8 @@ class PredictResponse(BaseModel):
     top_k: list[TopKPrediction] = Field(default_factory=list)
     session_context: dict = Field(default_factory=dict)
     inference: InferenceInfo | None = None
+    language: str = "en"
+    translation_applied: bool = False
 
 
 class ChatTurn(BaseModel):
@@ -95,6 +98,7 @@ class ChatRequest(BaseModel):
     session_context: dict = Field(default_factory=dict)
     # Prior turns only. The current question is `message`, sent again with the leaf check.
     history: list[ChatTurn] = Field(default_factory=list)
+    language: str = "en"
 
 
 class ChatResponse(BaseModel):

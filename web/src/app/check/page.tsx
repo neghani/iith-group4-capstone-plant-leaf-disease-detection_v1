@@ -5,7 +5,9 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { UploadGuidelinesCard } from "@/components/UploadGuidelinesCard";
 import { UploadStepCard } from "@/components/UploadStepCard";
+import { useLocale } from "@/i18n/LocaleProvider";
 import { checkQuality, predictLeaf } from "@/lib/api";
+import { translateError } from "@/lib/errors";
 import { prepareUpload } from "@/lib/image";
 import { qualityReportFromCheck } from "@/lib/qualityReport";
 import { saveCheckSession } from "@/lib/session";
@@ -15,6 +17,7 @@ type Stage = "idle" | "checking" | "analyzing";
 
 export default function CheckPage() {
   const router = useRouter();
+  const { locale, t } = useLocale();
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +40,8 @@ export default function CheckPage() {
           topK: [],
           lowConfidence: true,
           qualityOk: false,
+          qualityReason: quality.reason,
+          language: locale,
         };
         saveCheckSession(session);
         router.push("/results");
@@ -44,7 +49,7 @@ export default function CheckPage() {
       }
 
       setStage("analyzing");
-      const data = await predictLeaf(upload, crop, symptoms);
+      const data = await predictLeaf(upload, crop, symptoms, locale);
       const cropLabel = data.report.crop || crop || "crop";
 
       const session: CheckSession = {
@@ -58,28 +63,32 @@ export default function CheckPage() {
         lowConfidence: data.low_confidence,
         qualityOk: data.quality.ok,
         inference: data.inference ?? undefined,
+        qualityReason: data.quality.reason,
+        language: data.language === "te" ? "te" : "en",
+        translationApplied: data.translation_applied === true,
       };
 
       saveCheckSession(session);
       router.push("/results");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(
+        translateError(e instanceof Error ? e.message : "", t)
+      );
     } finally {
       setStage("idle");
     }
   }
 
   return (
-    <AppShell breadcrumb="Check a crop">
+    <AppShell breadcrumb={t("check.breadcrumb")}>
       <p className="text-xs font-semibold tracking-widest text-[var(--color-forest-muted)]">
-        HEALTHIER CROPS, ONE PHOTO AT A TIME
+        {t("check.eyebrow")}
       </p>
       <h1 className="mt-2 font-serif text-4xl font-semibold text-forest">
-        Let&apos;s take a look at your crop
+        {t("check.title")}
       </h1>
       <p className="mt-3 max-w-xl text-[var(--color-text-muted)]">
-        Upload a leaf photo. Get possible causes and simple steps to help your
-        plant.
+        {t("check.subtitle")}
       </p>
 
       <div className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
@@ -88,8 +97,8 @@ export default function CheckPage() {
           {stage !== "idle" && (
             <p className="mt-4 text-center text-sm text-[var(--color-text-muted)]">
               {stage === "checking"
-                ? "Checking photo quality…"
-                : "Photo looks good. Analyzing the leaf…"}
+                ? t("check.checking")
+                : t("check.analyzing")}
             </p>
           )}
           {error && (

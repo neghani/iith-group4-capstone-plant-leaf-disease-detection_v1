@@ -29,6 +29,7 @@ class PreparedImage:
 def _quality(gate: GateResult) -> ImageQualityResult:
     return ImageQualityResult(
         ok=gate.ok,
+        reason=gate.reason,
         message=gate.message,
         brightness=gate.brightness,
         blur_score=gate.blur_score,

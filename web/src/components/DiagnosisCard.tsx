@@ -1,24 +1,45 @@
+"use client";
+
 import Link from "next/link";
 import { ScanLine } from "lucide-react";
+import { useT } from "@/i18n/LocaleProvider";
+import { en } from "@/i18n";
 import type { DiagnosisReport, InferenceInfo, TopKPrediction } from "@/lib/types";
 
+function qualityDetail(
+  reason: string | null | undefined,
+  fallback: string,
+  t: (key: string) => string
+): string {
+  if (reason) {
+    const key = `quality.${reason}`;
+    const text = t(key);
+    if (text !== key) return text;
+  }
+  const known = Object.entries(en.quality).find(([, value]) => value === fallback);
+  if (known) return t(`quality.${known[0]}`);
+  return fallback || t("quality.fallback");
+}
+
 function RetakeButton() {
+  const t = useT();
   return (
     <Link
       href="/check"
       className="mt-5 inline-flex rounded-xl bg-forest px-4 py-2.5 text-sm font-semibold text-white"
     >
-      Retake photo
+      {t("diagnosis.retakeButton")}
     </Link>
   );
 }
 
 function TopMatches({ topK }: { topK: TopKPrediction[] }) {
+  const t = useT();
   return (
     <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-      <h4 className="font-semibold text-forest">Model&apos;s top matches</h4>
+      <h4 className="font-semibold text-forest">{t("diagnosis.topMatches")}</h4>
       <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-        Possibilities only — not a diagnosis.
+        {t("diagnosis.possibilitiesOnly")}
       </p>
       <ul className="mt-3 space-y-2">
         {topK.map((t) => (
@@ -45,31 +66,61 @@ export function DiagnosisCard({
   lowConfidence,
   topK,
   inference,
+  qualityReason,
 }: {
   report: DiagnosisReport;
   lowConfidence?: boolean;
   topK?: TopKPrediction[];
   inference?: InferenceInfo;
+  qualityReason?: string | null;
 }) {
+  const t = useT();
+  const badge =
+    report.status === "quality_issue"
+      ? t("diagnosis.qualityBadge")
+      : report.status === "not_sure"
+        ? t("diagnosis.unsureBadge")
+        : report.status === "error"
+          ? t("diagnosis.errorBadge")
+          : report.status_label;
+  const modelLine = inference
+    ? t("diagnosis.model", {
+        id: inference.model_id,
+        revision: inference.model_revision,
+        verified: inference.model_verified ? t("diagnosis.verified") : "",
+        ms: inference.latency_ms,
+      })
+    : null;
+
   if (report.status === "quality_issue" || report.status === "error") {
     return (
       <div className="rounded-card bg-white p-6 shadow-card">
         <span className="inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
           <ScanLine className="h-3.5 w-3.5" />
-          {report.status_label}
+          {badge}
         </span>
         <h2 className="mt-4 font-serif text-3xl font-semibold text-forest">
           {report.status === "quality_issue"
-            ? "Please retake the photo"
+            ? t("diagnosis.retakeTitle")
             : report.diagnosis_name}
         </h2>
-        <p className="mt-3 text-[var(--color-text-muted)]">{report.description}</p>
-        {report.actions?.length > 0 && (
+        <p className="mt-3 text-[var(--color-text-muted)]">
+          {report.status === "quality_issue"
+            ? qualityDetail(qualityReason, report.description, t)
+            : report.description}
+        </p>
+        {report.status === "quality_issue" ? (
           <ul className="mt-4 list-inside list-decimal text-sm text-forest">
-            {report.actions.map((a, i) => (
-              <li key={i}>{a.step}</li>
-            ))}
+            <li>{t("quality.retakeStep")}</li>
           </ul>
+        ) : (
+          report.actions?.length > 0 && (
+            <ul className="mt-4 list-inside list-decimal text-sm text-forest">
+              {report.actions.map((a, i) => (
+                <li key={i}>{a.step}</li>
+              ))}
+            </ul>
+          )
         )}
         {report.status === "quality_issue" && <RetakeButton />}
       </div>
@@ -82,10 +133,10 @@ export function DiagnosisCard({
         <div className="rounded-card bg-white p-6 shadow-card">
           <span className="inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
             <ScanLine className="h-3.5 w-3.5" />
-            {report.status_label}
+            {badge}
           </span>
           <h2 className="mt-4 font-serif text-3xl font-semibold text-forest">
-            I&apos;m not confident — please retake the photo.
+            {t("diagnosis.unsureTitle")}
           </h2>
           <p className="mt-3 text-[var(--color-text-muted)]">{report.description}</p>
           <p className="mt-3 rounded-lg bg-sage/60 px-3 py-2 text-sm text-forest">
@@ -94,7 +145,7 @@ export function DiagnosisCard({
           {topK && topK.length > 0 && <TopMatches topK={topK} />}
           {(!topK || topK.length === 0) && report.alternatives.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-semibold text-forest">Possibilities</h4>
+              <h4 className="font-semibold text-forest">{t("diagnosis.possibilities")}</h4>
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
                 {report.alternatives.join(", ")}
               </p>
@@ -104,7 +155,7 @@ export function DiagnosisCard({
         </div>
         {report.actions.length > 0 && (
           <div className="rounded-card bg-white p-6 shadow-card">
-            <h4 className="font-semibold text-forest">What you can do now</h4>
+            <h4 className="font-semibold text-forest">{t("diagnosis.actions")}</h4>
             <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm text-forest">
               {report.actions.map((a, i) => (
                 <li key={i}>{a.step}</li>
@@ -112,12 +163,8 @@ export function DiagnosisCard({
             </ol>
           </div>
         )}
-        {inference && (
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Model: {inference.model_id} ({inference.model_revision})
-            {inference.model_verified ? " · verified by server" : ""} ·{" "}
-            {inference.latency_ms} ms
-          </p>
+        {modelLine && (
+          <p className="text-xs text-[var(--color-text-muted)]">{modelLine}</p>
         )}
       </div>
     );
@@ -128,7 +175,7 @@ export function DiagnosisCard({
       <div className="rounded-card bg-white p-6 shadow-card">
         <span className="inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
           <ScanLine className="h-3.5 w-3.5" />
-          {report.status_label}
+          {badge}
         </span>
 
         <h2 className="mt-4 font-serif text-3xl font-semibold text-forest">
@@ -144,13 +191,13 @@ export function DiagnosisCard({
 
         {report.expert_confirmation_required && (
           <p className="mt-3 text-sm font-medium text-disclaimer-text">
-            Needs confirmation — check with a local expert before major treatment.
+            {t("diagnosis.confirm")}
           </p>
         )}
 
         {report.symptoms.length > 0 && (
           <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-            <h4 className="font-semibold text-forest">Signs that may fit</h4>
+            <h4 className="font-semibold text-forest">{t("diagnosis.signs")}</h4>
             <ul className="mt-3 space-y-2">
               {report.symptoms.map((s) => (
                 <li key={s.name} className="text-sm">
@@ -167,7 +214,7 @@ export function DiagnosisCard({
 
         {report.disease_id && topK && topK.length > 0 && (
           <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-            <h4 className="font-semibold text-forest">Model&apos;s top matches</h4>
+            <h4 className="font-semibold text-forest">{t("diagnosis.topMatches")}</h4>
             <ul className="mt-3 space-y-2">
               {topK.map((t) => (
                 <li key={t.label} className="text-sm">
@@ -190,7 +237,7 @@ export function DiagnosisCard({
         {(!report.disease_id || !topK || topK.length === 0) &&
           report.alternatives.length > 0 && (
           <div className="mt-6">
-            <h4 className="font-semibold text-forest">Other possibilities</h4>
+            <h4 className="font-semibold text-forest">{t("diagnosis.otherPossibilities")}</h4>
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">
               {report.alternatives.join(", ")}
             </p>
@@ -200,14 +247,14 @@ export function DiagnosisCard({
 
       {report.actions.length > 0 && (
         <div className="rounded-card bg-white p-6 shadow-card">
-          <h4 className="font-semibold text-forest">What you can do now</h4>
+          <h4 className="font-semibold text-forest">{t("diagnosis.actions")}</h4>
           <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm text-forest">
             {report.actions.map((a, i) => (
               <li key={i}>
                 {a.step}
                 {a.safety_note && (
                   <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
-                    Safety: {a.safety_note}
+                    {t("diagnosis.safety")} {a.safety_note}
                   </span>
                 )}
               </li>
@@ -218,7 +265,7 @@ export function DiagnosisCard({
 
       {report.monitoring_guidance && (
         <div className="rounded-card bg-white p-6 shadow-card">
-          <h4 className="font-semibold text-forest">Follow-up monitoring</h4>
+          <h4 className="font-semibold text-forest">{t("diagnosis.monitoring")}</h4>
           <p className="mt-2 text-sm text-[var(--color-text-muted)]">
             {report.monitoring_guidance}
           </p>
@@ -231,12 +278,8 @@ export function DiagnosisCard({
         </div>
       )}
 
-      {inference && (
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Model: {inference.model_id} ({inference.model_revision})
-          {inference.model_verified ? " · verified by server" : ""} ·{" "}
-          {inference.latency_ms} ms
-        </p>
+      {modelLine && (
+        <p className="text-xs text-[var(--color-text-muted)]">{modelLine}</p>
       )}
     </div>
   );

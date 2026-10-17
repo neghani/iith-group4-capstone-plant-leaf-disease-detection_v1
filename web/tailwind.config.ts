@@ -12,8 +12,14 @@ const config: Config = {
         "disclaimer-text": "var(--color-disclaimer-text)",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-inter)",
+          "var(--font-telugu)",
+          "system-ui",
+          "sans-serif",
+        ],
         serif: ["var(--font-fraunces)", "Georgia", "serif"],
+        brand: ["var(--font-fraunces)", "Georgia", "serif"],
       },
       boxShadow: {
         card: "0 1px 3px rgba(27, 48, 34, 0.06), 0 8px 24px rgba(27, 48, 34, 0.04)",

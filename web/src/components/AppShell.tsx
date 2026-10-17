@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, History, ScanLine, Sprout } from "lucide-react";
 import type { ReactNode } from "react";
+import { useT } from "@/i18n/LocaleProvider";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 const nav = [
-  { href: "/check", label: "Check a crop", icon: ScanLine },
-  { href: "/history", label: "My crop checks", icon: History },
-  { href: "/guide", label: "Growing guide", icon: BookOpen },
+  { href: "/check", labelKey: "nav.check", icon: ScanLine },
+  { href: "/history", labelKey: "nav.history", icon: History },
+  { href: "/guide", labelKey: "nav.guide", icon: BookOpen },
 ];
 
 export function AppShell({
@@ -19,6 +21,7 @@ export function AppShell({
   breadcrumb?: string;
 }) {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <div className="flex min-h-screen bg-cream">
@@ -27,17 +30,18 @@ export function AppShell({
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-forest text-white">
             <Sprout className="h-5 w-5" strokeWidth={2.2} />
           </span>
-          <span className="font-serif text-lg font-semibold text-forest">
+          <span className="font-brand text-lg font-semibold text-forest">
             CropCare AI
           </span>
         </Link>
 
         <p className="mb-3 px-3 text-[10px] font-semibold tracking-widest text-[var(--color-text-muted)]">
-          YOUR FARM COMPANION
+          {t("nav.eyebrow")}
         </p>
 
         <nav className="flex flex-col gap-1">
-          {nav.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, labelKey, icon: Icon }) => {
+            const label = t(labelKey);
             const active =
               pathname === href || (href === "/check" && pathname === "/");
             return (
@@ -59,11 +63,10 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {breadcrumb && (
-          <header className="border-b border-[var(--color-border)] bg-white px-8 py-3">
-            <p className="text-sm text-[var(--color-text-muted)]">{breadcrumb}</p>
-          </header>
-        )}
+        <header className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] bg-white px-8 py-3">
+          <p className="text-sm text-[var(--color-text-muted)]">{breadcrumb}</p>
+          <LanguageToggle />
+        </header>
         <main className="flex-1 px-8 py-8">{children}</main>
       </div>
     </div>

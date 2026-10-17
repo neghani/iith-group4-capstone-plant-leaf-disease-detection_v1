@@ -47,10 +47,12 @@ export async function checkQuality(file: File): Promise<ImageQualityResult> {
 export async function predictLeaf(
   file: File,
   crop: string,
-  additionalSymptoms: string
+  additionalSymptoms: string,
+  language: "en" | "te" = "en"
 ): Promise<PredictResponse> {
   const form = new FormData();
   form.append("file", file);
+  form.append("language", language);
   if (crop) form.append("crop", crop);
   if (additionalSymptoms) form.append("additional_symptoms", additionalSymptoms);
 
@@ -67,13 +69,15 @@ export async function predictLeaf(
 export async function sendChat(
   message: string,
   sessionContext: Record<string, unknown>,
-  history: { role: "user" | "assistant"; content: string }[] = []
+  history: { role: "user" | "assistant"; content: string }[] = [],
+  language: "en" | "te" = "en"
 ): Promise<{ reply: string; declined: boolean }> {
   const res = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
+      language,
       session_context: sessionContext,
       history: history.slice(-6).map((turn) => ({
         role: turn.role,

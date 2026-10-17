@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { cropName } from "@/i18n";
+import { useLocale } from "@/i18n/LocaleProvider";
 import {
   getCheckHistory,
   setCurrentFromHistory,
@@ -12,6 +14,7 @@ import type { CheckSession } from "@/lib/types";
 
 export default function HistoryPage() {
   const router = useRouter();
+  const { locale, t } = useLocale();
   const [items, setItems] = useState<CheckSession[]>([]);
 
   useEffect(() => {
@@ -24,22 +27,22 @@ export default function HistoryPage() {
   }
 
   return (
-    <AppShell breadcrumb="My crop checks">
+    <AppShell breadcrumb={t("history.breadcrumb")}>
       <h1 className="font-serif text-3xl font-semibold text-forest">
-        My crop checks
+        {t("history.title")}
       </h1>
       <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-        Stored in this browser session only (not saved on the server).
+        {t("history.subtitle")}
       </p>
 
       {items.length === 0 ? (
         <div className="mt-10 rounded-card bg-white p-8 text-center shadow-card">
-          <p className="text-[var(--color-text-muted)]">No checks yet.</p>
+          <p className="text-[var(--color-text-muted)]">{t("history.empty")}</p>
           <Link
             href="/check"
             className="mt-4 inline-block rounded-xl bg-forest px-5 py-2.5 text-sm font-semibold text-white"
           >
-            Check a crop
+            {t("history.cta")}
           </Link>
         </div>
       ) : (
@@ -62,8 +65,10 @@ export default function HistoryPage() {
                     {item.report.diagnosis_name}
                   </p>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    {new Date(item.timestamp).toLocaleString()} ·{" "}
-                    {item.cropLabel}
+                    {new Date(item.timestamp).toLocaleString(
+                      locale === "te" ? "te-IN" : undefined
+                    )}{" "}
+                    · {cropName(locale, item.cropLabel)}
                   </p>
                 </div>
               </button>
