@@ -186,3 +186,24 @@ def test_chat_context_includes_prediction(monkeypatch):
     assert "Tomato Early Blight" in captured["context"]
     assert "Farmer: Should I remove tomato leaves?" in captured["history"]
     assert "Assistant: Remove badly spotted lower leaves" in captured["history"]
+
+
+def test_followup_is_the_next_turn_not_a_new_chat():
+    from app.llm.provider import build_chat_messages
+
+    messages = build_chat_messages(
+        "how the decease will help with sunlight",
+        "Leaf check: Pepper bell leaf — Bell Pepper Bacterial Spot (54.0%)",
+        history=(
+            "Farmer: Effect of sunlight\n"
+            "Assistant: Sunlight can dry the leaf surface and slow bacterial spot."
+        ),
+        reply_instruction="Reply in Telugu.",
+    )
+    assert [message.type for message in messages] == ["system", "human", "ai", "human"]
+    assert "Reply in Telugu." in messages[0].content
+    assert messages[1].content == "Effect of sunlight"
+    assert "slow bacterial spot" in messages[2].content
+    assert "Bell Pepper Bacterial Spot" in messages[3].content
+    assert "how the decease will help with sunlight" in messages[3].content
+    assert "Reply in Telugu" not in messages[3].content
