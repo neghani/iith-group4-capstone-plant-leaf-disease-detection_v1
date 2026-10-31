@@ -136,44 +136,72 @@ def _has_class_folders(root: Path) -> bool:
     return False
 
 
-def require_data_dir(name: str = "DATA_DIR", *, colab_root: Path | None = None) -> Path:
-    """Stop before train/EDA when DATA_DIR is unset, off the Colab disk, or not an imagefolder.
+DRIVE_PREFIX = "/content/drive"
 
-    On Colab the staged set lives under /content (section 3). A leftover Kaggle path such as
-    /kaggle/input/... is rejected here so train.py is not started on a missing folder.
-    When /content exists, the path must be inside it. Tests pass colab_root to simulate that check.
+
+def require_data_dir(name: str = "DATA_DIR") -> Path:
+    """Stop before EDA or training when DATA_DIR is unset, on Google Drive, missing, or not an imagefolder.
+
+    Section 3 sets DATA_DIR in this kernel. It uses either the staged copy under /content/plantvillage
+    or the kagglehub dataset folder (e.g. /kaggle/input/...). Both are local disk and are accepted.
+    Google Drive paths are refused because reading ~54k small images through the Drive mount is very slow.
     """
     raw = os.environ.get(name, "").strip()
-    exists = bool(raw) and Path(raw).exists()
-    print(f"{name}={raw or '(unset)'}  exists={exists}", flush=True)
+    print(f"{name}={raw or '(unset)'}  exists={bool(raw) and Path(raw).exists()}", flush=True)
     if not raw:
-        raise SystemExit(f"{name} is not set. Re-run section 3 (Load PlantVillage) before this cell.")
-    path = Path(raw)
-    root = colab_root if colab_root is not None else (Path("/content") if Path("/content").is_dir() else None)
-    if root is not None:
-        try:
-            path.resolve().relative_to(root.resolve())
-        except ValueError:
-            raise SystemExit(
-                f"{name}={raw} is not under {root}. "
-                "Section 3 copies PlantVillage to /content/plantvillage. Re-run section 3; "
-                "do not point DATA_DIR at /kaggle/input."
-            ) from None
-    if not path.is_dir():
+        raise SystemExit(f"{name} is not set. Run section 3 (Load PlantVillage) in this session first.")
+    if raw.startswith(DRIVE_PREFIX):
         raise SystemExit(
-            f"{name}={raw} does not exist. Re-run section 3 so DATA_DIR is the staged color folder."
+            f"{name}={raw} is on Google Drive, which is slow for ~54k images. "
+            "Put the zip at MyDrive/plant-disease/plantvillage.zip and re-run section 3 (it copies to /content)."
         )
+    path = Path(raw)
+    if not path.is_dir():
+        raise SystemExit(f"{name}={raw} does not exist. Re-run section 3 in this session.")
     if not _has_class_folders(path):
         raise SystemExit(
-            f"{name}={raw} has no class image folders. Re-run section 3 and point DATA_DIR at the color folder."
+            f"{name}={raw} has no class image folders. Re-run section 3 and check the dataset root."
         )
     print(f"{name} ok: {path}", flush=True)
     return path
 
-
 def flag_on(name: str) -> bool:
     """True when the notebook or env set this to 1/true/yes."""
     return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes")
+
+
+def hub_writes_on() -> bool:
+    """True only when this session opted into a stage that is allowed to write the Hub."""
+    return flag_on("RUN_STAGE1") or flag_on("RUN_STAGE2")
+
+
+def repo_head(root: Path | None = None) -> str:
+    """HEAD sha of the repo. Raises SystemExit with git's own message on failure."""
+    root = Path(root or os.environ.get("REPO_ROOT") or ".")
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip() or "(no output)"
+        raise SystemExit(f"git rev-parse HEAD failed in {root}\n{detail}")
+    return result.stdout.strip()
+
+
+def upload_artifacts(step: str, *paths: str, run_name: str, hub_id: str, drive_dir: str) -> None:
+    """Upload finished step files to Drive and the Hub. Every caller passes the destinations."""
+    missing = [p for p in paths if not Path(p).exists()]
+    if missing:
+        raise SystemExit(f"upload {step}: missing {missing} (the previous step did not finish)")
+    run_mod(
+        "model.artifacts",
+        "--step", step,
+        "--run", run_name,
+        "--hub", hub_id,
+        "--drive", drive_dir,
+        *paths,
+    )
 
 
 def knob(name: str, default: str | None = None) -> str:

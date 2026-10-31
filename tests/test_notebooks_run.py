@@ -1,5 +1,6 @@
 """Notebook helpers: skip flags and PlantVillage staging names."""
 
+import ast
 import json
 from pathlib import Path
 
@@ -70,9 +71,11 @@ def test_notebook_section1_defaults_to_main_not_env():
 
 
 def test_notebook_zip_cell_does_not_hard_reset():
-    zip_cell = next(c for c in _notebook_cells() if "real-world-set-from" in c and "check_call" in c)
+    zip_cell = next(c for c in _notebook_cells() if "real-world-set-from" in c and "colab_sync.py" in c)
     assert "--no-reset" in zip_cell
     assert '"--branch", "main"' in zip_cell
+    assert "reset --hard" not in zip_cell
+    assert "check_call" not in zip_cell
 
 
 def test_colab_sync_no_reset_flag():
@@ -117,12 +120,16 @@ def test_require_data_dir_missing(monkeypatch):
         require_data_dir()
 
 
-def test_require_data_dir_rejects_kaggle_path(tmp_path, monkeypatch):
-    colab = tmp_path / "content"
-    colab.mkdir()
+def test_require_data_dir_rejects_drive_path(monkeypatch):
+    monkeypatch.setenv("DATA_DIR", "/content/drive/MyDrive/plant-disease/color")
+    with pytest.raises(SystemExit, match="Google Drive"):
+        require_data_dir()
+
+
+def test_require_data_dir_rejects_missing_kaggle_path(monkeypatch):
     monkeypatch.setenv("DATA_DIR", "/kaggle/input/plantvillage-dataset/plantvillage dataset/color")
-    with pytest.raises(SystemExit, match="not under"):
-        require_data_dir(colab_root=colab)
+    with pytest.raises(SystemExit, match="does not exist"):
+        require_data_dir()
 
 
 def test_require_data_dir_accepts_class_folder(tmp_path, monkeypatch):
@@ -130,7 +137,7 @@ def test_require_data_dir_accepts_class_folder(tmp_path, monkeypatch):
     root.mkdir(parents=True)
     (root / "a.jpg").write_bytes(b"not-a-real-jpeg")
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "color"))
-    assert require_data_dir(colab_root=tmp_path) == (tmp_path / "color").resolve()
+    assert require_data_dir() == tmp_path / "color"
 
 
 def test_data_dir_cells_call_preflight():
@@ -170,6 +177,118 @@ def test_run_launches_unbuffered_python(monkeypatch):
     assert seen["env"]["PYTHONUNBUFFERED"] == "1"
     assert seen["stdout"] == subprocess.PIPE
     assert seen["stderr"] == subprocess.STDOUT
+
+
+def _parse_code_cells() -> list[tuple[int, str, ast.AST]]:
+    nb = json.loads(NOTEBOOK.read_text())
+    parsed = []
+    for i, cell in enumerate(nb["cells"]):
+        if cell.get("cell_type") != "code":
+            continue
+        src = "".join(cell.get("source") or [])
+        py = "\n".join(line for line in src.splitlines() if not line.lstrip().startswith(("!", "%")))
+        if not py.strip():
+            continue
+        parsed.append((i, src, ast.parse(py)))
+    return parsed
+
+
+def _parents(tree: ast.AST) -> dict[ast.AST, ast.AST]:
+    parents: dict[ast.AST, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[child] = node
+    return parents
+
+
+def _test_calls_gate(test: ast.AST) -> bool:
+    return any(
+        isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in ("hub_writes_on", "flag_on")
+        for n in ast.walk(test)
+    )
+
+
+def _inside_gate(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
+    cur = node
+    while cur in parents:
+        cur = parents[cur]
+        if isinstance(cur, ast.If) and _test_calls_gate(cur.test):
+            return True
+    return False
+
+
+def _environ_keys(tree: ast.AST, ctx: type) -> set[str]:
+    keys: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Subscript) or not isinstance(node.ctx, ctx):
+            continue
+        value = node.value
+        if not (isinstance(value, ast.Attribute) and value.attr == "environ" and isinstance(value.value, ast.Name) and value.value.id == "os"):
+            continue
+        sl = node.slice
+        if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+            keys.add(sl.value)
+    return keys
+
+
+def _require_env_keys(tree: ast.AST) -> set[str]:
+    keys: set[str] = set()
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "require_env"):
+            continue
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                keys.add(arg.value)
+    return keys
+
+
+def _imported_names(tree: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            names.update(a.asname or a.name for a in node.names)
+        elif isinstance(node, ast.Import):
+            names.update(a.asname or a.name.split(".")[0] for a in node.names)
+    return names
+
+
+def test_resnet_notebook_audit():
+    """Fail if a ResNet notebook cell can write the Hub, read env, or call helpers unsafely."""
+    parsed = _parse_code_cells()
+    defined: dict[str, list[int]] = {}
+    for idx, _src, tree in parsed:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                defined.setdefault(node.name, []).append(idx)
+    findings = []
+    for idx, src, tree in parsed:
+        parents = _parents(tree)
+        imported = _imported_names(tree)
+        for node in ast.walk(tree):
+            hub_call = isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "upload_artifacts"
+            hub_flag = isinstance(node, ast.Constant) and node.value in ("--push", "--hub")
+            if (hub_call or hub_flag) and not _inside_gate(node, parents):
+                findings.append(f"cell {idx}: Hub write is not inside hub_writes_on() or flag_on()")
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                name = node.func.id
+                if name in defined and idx not in defined[name] and name not in imported:
+                    findings.append(f"cell {idx}: calls {name}(), defined only in cell(s) {defined[name]}")
+        missing_env = _environ_keys(tree, ast.Load) - _require_env_keys(tree) - _environ_keys(tree, ast.Store)
+        if missing_env:
+            findings.append(f"cell {idx}: os.environ read without require_env: {sorted(missing_env)}")
+        if "subprocess" in src and "urllib.request.urlretrieve" not in src:
+            findings.append(f"cell {idx}: calls subprocess directly; use run() or run_mod()")
+    assert not findings, "\n".join(findings)
+
+
+def test_hub_writes_on_follows_stage_flags(monkeypatch):
+    monkeypatch.setenv("RUN_STAGE1", "0")
+    monkeypatch.setenv("RUN_STAGE2", "0")
+    from notebooks.run import hub_writes_on
+
+    assert hub_writes_on() is False
+    monkeypatch.setenv("RUN_STAGE2", "1")
+    assert hub_writes_on() is True
 
 
 def test_run_surfaces_child_error_text():
