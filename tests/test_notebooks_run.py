@@ -113,15 +113,33 @@ def test_run_launches_unbuffered_python(monkeypatch):
 
     seen = {}
 
-    def fake_check_call(cmd, cwd=None, env=None):
-        seen["cmd"] = cmd
-        seen["env"] = env
+    class FakeProc:
+        stdout = iter(())
 
-    monkeypatch.setattr(subprocess, "check_call", fake_check_call)
+        def __init__(self, cmd, cwd=None, env=None, **kwargs):
+            seen["cmd"] = cmd
+            seen["env"] = env
+            seen["stdout"] = kwargs.get("stdout")
+            seen["stderr"] = kwargs.get("stderr")
+
+        def wait(self):
+            return 0
+
+    monkeypatch.setattr(subprocess, "Popen", FakeProc)
     run("-c", "print(1)")
     assert seen["cmd"][0] == sys.executable
     assert seen["cmd"][1] == "-u"
     assert seen["env"]["PYTHONUNBUFFERED"] == "1"
+    assert seen["stdout"] == subprocess.PIPE
+    assert seen["stderr"] == subprocess.STDOUT
+
+
+def test_run_surfaces_child_error_text():
+    with pytest.raises(SystemExit, match="v1.1 card check failed"):
+        run(
+            "-c",
+            "import sys; sys.stderr.write('v1.1 card check failed; missing sections: latency\\n'); raise SystemExit(1)",
+        )
 
 
 def test_apply_knobs_and_publish_checklist(monkeypatch, capsys):

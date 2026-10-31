@@ -11,9 +11,17 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 DEFAULT_ROOT = "/content/iith-group4-capstone-plant-leaf-disease-detection_v1"
+HEARTBEAT_SECS = 30
+
+
+def _fmt_secs(seconds: float) -> str:
+    m, s = divmod(int(seconds), 60)
+    return f"{m}m{s:02d}s" if m else f"{s}s"
 
 KNOB_DEFAULTS = {
     "RUN_STAGE1": "0",
@@ -54,23 +62,53 @@ def ensure_repo() -> Path:
 def run(*argv: str) -> None:
     """sys.executable -u + args, cwd=repo, PYTHONPATH=repo. Raises on failure.
 
-    `-u` and PYTHONUNBUFFERED keep Trainer / EDA prints streaming into the
-    notebook cell while a long job is still running.
+    Child stdout and stderr are printed through this process so Colab shows them
+    in the cell. On failure the SystemExit repeats the script's last lines.
     """
     root = ensure_repo()
     env = os.environ.copy()
     env["PYTHONPATH"] = str(root)
     env["PYTHONUNBUFFERED"] = "1"
     cmd = [sys.executable, "-u", *map(str, argv)]
-    print("$", " ".join(cmd), flush=True)
+    name = str(argv[1] if len(argv) > 1 and argv[0] == "-m" else argv[0])
+    print(f"START {name}  ({time.strftime('%H:%M:%S')})", flush=True)
+    started = time.time()
+    last_output = [started]
+    proc = subprocess.Popen(
+        cmd,
+        cwd=root,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    stop = threading.Event()
+
+    def heartbeat() -> None:
+        # Silent phases (model download, big file copy, a long epoch) still show that they are alive.
+        while not stop.wait(HEARTBEAT_SECS):
+            silent = time.time() - last_output[0]
+            if silent >= HEARTBEAT_SECS:
+                print(f"  ... {name} still running: {_fmt_secs(time.time() - started)} elapsed, "
+                      f"no new output for {_fmt_secs(silent)}", flush=True)
+
+    threading.Thread(target=heartbeat, daemon=True).start()
+    tail: list[str] = []
+    assert proc.stdout is not None
     try:
-        subprocess.check_call(cmd, cwd=root, env=env)
-    except subprocess.CalledProcessError as exc:
-        raise SystemExit(
-            f"Command exited {exc.returncode}: {' '.join(cmd)}\n"
-            "The script's own error is in the cell output above this message "
-            "(missing weights, splits.json, DATA_DIR, etc.)."
-        ) from None
+        for line in proc.stdout:
+            last_output[0] = time.time()
+            print(line, end="", flush=True)
+            tail.append(line)
+            if len(tail) > 30:
+                del tail[:-30]
+        code = proc.wait()
+    finally:
+        stop.set()
+    print(f"DONE  {name}  in {_fmt_secs(time.time() - started)}  (exit {code})", flush=True)
+    if code != 0:
+        detail = "".join(tail).strip() or "(no output from the script)"
+        raise SystemExit(f"Command exited {code}: {' '.join(cmd)}\n{detail}") from None
 
 
 def run_mod(module: str, *args: str) -> None:

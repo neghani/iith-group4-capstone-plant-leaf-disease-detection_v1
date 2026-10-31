@@ -98,7 +98,14 @@ def in_colab() -> bool:
         return False
 
 
-def run(cmd: list[str], cwd: Path | None = None) -> str:
+def run(cmd: list[str], cwd: Path | None = None, show: bool = False) -> str:
+    """Run cmd. show=True streams its output into the cell (use for clone/fetch, which can be slow)."""
+    if show:
+        print("$", " ".join(cmd), flush=True)
+        code = subprocess.call(cmd, cwd=cwd)
+        if code != 0:
+            raise SystemExit(f"$ {' '.join(cmd)}\nexit {code}")
+        return ""
     result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
@@ -122,7 +129,7 @@ def clone_or_find(repo: str, dest_parent: Path) -> Path:
         return existing
     dest = dest_parent / REPO_NAME
     print(f"Cloning {repo} -> {dest}")
-    run(["git", "clone", repo, str(dest)])
+    run(["git", "clone", repo, str(dest)], show=True)
     return dest.resolve()
 
 
@@ -130,7 +137,7 @@ def reset_to_origin(root: Path, branch: str, commit: str = "") -> str:
     """Replace tracked files with `commit` (a SHA) or origin/<branch>. Keep outputs and images."""
     print("Updating clone with git fetch + git reset --hard (not git pull).")
     print(f"$ git fetch origin {branch}")
-    run(["git", "fetch", "origin", branch], cwd=root)
+    run(["git", "fetch", "origin", branch], cwd=root, show=True)
     target = commit.strip() if commit else f"origin/{branch}"
     if commit and commit not in (branch, f"origin/{branch}"):
         # SHA or other ref: fetch it so reset can see it even if it is not the branch tip.
@@ -249,6 +256,26 @@ def _zip_stamp(path: Path) -> dict[str, int]:
     return {"size": st.st_size, "mtime_ns": st.st_mtime_ns}
 
 
+def _copy_with_progress(src: Path, dst: Path, chunk: int = 64 << 20) -> None:
+    """Copy a large file and print a line every 10%, so a multi-GB Drive copy is not a silent wait."""
+    total = src.stat().st_size
+    done = 0
+    next_mark = 10
+    print(f"Copying {total / 1e9:.2f} GB from Drive ...", flush=True)
+    with open(src, "rb") as fi, open(dst, "wb") as fo:
+        while True:
+            buf = fi.read(chunk)
+            if not buf:
+                break
+            fo.write(buf)
+            done += len(buf)
+            pct = done * 100 // total if total else 100
+            if pct >= next_mark:
+                print(f"  copied {done / 1e9:.2f} of {total / 1e9:.2f} GB ({pct}%)", flush=True)
+                next_mark += 10
+    shutil.copystat(src, dst)
+
+
 def stage_zip_locally(src: Path, dest: Path, local_zip: Path | None = None) -> Path:
     """Copy a Drive zip onto local disk, then unzip that copy. Skip when size+mtime match.
 
@@ -277,13 +304,19 @@ def stage_zip_locally(src: Path, dest: Path, local_zip: Path | None = None) -> P
 
     if src.resolve() != local_zip.resolve():
         local_zip.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, local_zip)
-        print(f"Copied {src} -> {local_zip}")
+        _copy_with_progress(src, local_zip)
+        print(f"Copied {src} -> {local_zip}", flush=True)
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(local_zip) as zf:
-        zf.extractall(dest)
+        members = zf.infolist()
+        total = len(members)
+        print(f"Unzipping {total} files ...", flush=True)
+        for i, member in enumerate(members, 1):
+            zf.extract(member, dest)
+            if i % 5000 == 0 or i == total:
+                print(f"  unzipped {i}/{total} files", flush=True)
     stamp_path.write_text(json.dumps(src_stamp))
     print(f"Unzipped {local_zip} -> {dest}")
     return dest
@@ -304,7 +337,7 @@ def install_requirements(root: Path) -> None:
     if not req.exists():
         return
     subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-q", "-r", str(req)]
+        [sys.executable, "-m", "pip", "install", "-r", str(req)]
     )
     print("Installed model/requirements.txt")
 

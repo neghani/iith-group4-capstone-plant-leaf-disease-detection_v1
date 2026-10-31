@@ -67,7 +67,9 @@ def test_stage_zip_locally_copies_before_extract(tmp_path, monkeypatch):
     dest = tmp_path / "plantvillage"
     local_zip = tmp_path / "plantvillage.zip"
     order: list[str] = []
-    real_copy = shutil.copy2
+    import colab_sync as cs
+
+    real_copy = cs._copy_with_progress
 
     def copy2(a, b):
         order.append("copy")
@@ -84,7 +86,7 @@ def test_stage_zip_locally_copies_before_extract(tmp_path, monkeypatch):
             assert local_zip.exists(), "must copy the zip onto local disk before unzipping"
             super().__init__(file, *args, **kwargs)
 
-    monkeypatch.setattr(shutil, "copy2", copy2)
+    monkeypatch.setattr(cs, "_copy_with_progress", copy2)
     monkeypatch.setattr(zipfile, "ZipFile", TrackingZipFile)
 
     out = stage_zip_locally(src, dest, local_zip)

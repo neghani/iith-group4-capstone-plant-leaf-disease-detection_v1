@@ -131,8 +131,9 @@ def test_audit_prints_per_class_progress(tmp_path, capsys):
     root = _folder(tmp_path / "color", labels=tomatoes, per_class=1)
     audit(root, crop_filter="Tomato", phash_per_class=0)
     out = capsys.readouterr().out
-    assert f"class 1/2 {tomatoes[0]}, 1 images opened" in out
-    assert f"class 2/2 {tomatoes[1]}, 1 images opened" in out
+    assert f"[eda] class 1/2 (50%) {tomatoes[0]}: 1 images" in out
+    assert "elapsed" in out and "eta" in out
+    assert f"[eda] class 2/2 (100%) {tomatoes[1]}: 1 images" in out
 
 
 def test_class_counts_chart_writes_png(tmp_path):

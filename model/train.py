@@ -46,6 +46,7 @@ from transformers import (
 from transformers.trainer_utils import EvalPrediction
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from progress import StepProgress  # noqa: E402
 from common import (  # noqa: E402
     DEFAULT_BASE_MODEL,
     DEFAULT_HF_MODEL_ID,
@@ -534,6 +535,7 @@ def main(argv: list[str] | None = None) -> None:
         processing_class=image_processor,
         data_collator=DefaultDataCollator(),
         compute_metrics=compute_metrics,
+        callbacks=[StepProgress()],
     )
     trainer = trainer_cls(**trainer_kwargs, mixed_sampler=mixed_sampler) if mixed_sampler else Trainer(**trainer_kwargs)
 

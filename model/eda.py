@@ -16,6 +16,7 @@ import argparse
 import json
 import random
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -27,6 +28,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(REPO_ROOT))
 
 from common import IMAGE_EXTS, resolve_data_dir, scan_imagefolder  # noqa: E402
+from progress import fmt_secs  # noqa: E402
 from data_protocol import MATCH_DIST, hamming, phash_file  # noqa: E402
 
 DEFAULT_LABELS = REPO_ROOT / "api" / "tests" / "model_labels.json"
@@ -161,6 +163,7 @@ def audit(
     n_images = 0
     n_classes = len(label_names)
 
+    t_start = time.time()
     for i, name in enumerate(label_names, start=1):
         files = by_class[name]
         class_dir = root / name
@@ -204,7 +207,10 @@ def audit(
                 "min_height": min(heights) if heights else None,
             }
         )
-        print(f"class {i}/{n_classes} {name}, {opened} images opened", flush=True)
+        elapsed = time.time() - t_start
+        eta = elapsed / i * (n_classes - i)
+        print(f"[eda] class {i}/{n_classes} ({100 * i // n_classes}%) {name}: {opened} images  "
+              f"elapsed {fmt_secs(elapsed)}  eta {fmt_secs(eta)}", flush=True)
 
     if unreadable:
         errors.append(f"{len(unreadable)} unreadable image(s): " + "; ".join(unreadable[:MAX_EXAMPLE]))
