@@ -1,9 +1,13 @@
 # Plant leaf disease model (Phase 1)
 
-Fine-tuned **MobileNetV2** on the **PlantVillage** dataset for 38 crop-disease classes. The release
+Fine-tuned **ResNet-18** on the **PlantVillage** dataset for 38 crop-disease classes. The release
 used in the API and Hugging Face Space is published at:
 
-**https://huggingface.co/neghani/plantvillage-mobilenetv2** — live tag is **`shared/release.json`** (`hf_model_revision`)
+**https://huggingface.co/neghani/plantvillage-resnet18** — live tag is **`shared/release.json`** (`hf_model_revision`)
+
+Plant disease classification is fine-grained: early vs late blight can differ in subtle texture (spot
+edges, concentric rings) with noisy backgrounds. ResNet-18 preserves more of that structure than
+depthwise-separable MobileNetV2, which can over-smooth fine detail when optimizing for speed.
 
 | | |
 |---|---|
@@ -17,7 +21,7 @@ used in the API and Hugging Face Space is published at:
 
 | Item | Value |
 |---|---|
-| **Architecture** | [`google/mobilenet_v2_1.0_224`](https://huggingface.co/google/mobilenet_v2_1.0_224) |
+| **Architecture** | [`microsoft/resnet-18`](https://huggingface.co/microsoft/resnet-18) |
 | **Task** | Multi-class image classification (RGB leaf photos) |
 | **Output** | One of 38 PlantVillage labels + softmax confidence (e.g. `Tomato___Early_blight`) |
 | **Input size** | 224×224 centre crop after resize (via `AutoImageProcessor` / `preprocessor_config.json`) |
@@ -27,7 +31,7 @@ used in the API and Hugging Face Space is published at:
 
 ### Published scores (PlantVillage held-out **test** split)
 
-From [`reports/metrics.json`](https://huggingface.co/neghani/plantvillage-mobilenetv2/blob/v1.0/reports/metrics.json) on the Hub (`v1.0`, **5,430** test images):
+From [`reports/metrics.json`](https://huggingface.co/neghani/plantvillage-resnet18/blob/v1.0/reports/metrics.json) on the Hub (tag in `shared/release.json`, **5,430** test images on PlantVillage test split):
 
 | Metric | Score |
 |---|---|
@@ -118,8 +122,8 @@ Colab (after pinning `REPO_COMMIT` in the notebook):
 
 ```bash
 python -m model.prepare_plantdoc
-python -m model.diagnostics --model neghani/plantvillage-mobilenetv2 --revision v1.0
-python -m model.train --init_from neghani/plantvillage-mobilenetv2 --model_revision v1.0 \
+python -m model.diagnostics --model neghani/plantvillage-resnet18 --revision v1.0
+python -m model.train --init_from neghani/plantvillage-resnet18 --model_revision v1.0 \
   --data_dir "$DATA_DIR" --extra_data plantdoc --plantdoc_fraction 0.5 --epoch_samples 4000 \
   --learning_rate 1e-4 --num_train_epochs 8 --label_smoothing_factor 0.1 \
   --output_dir /content/drive/MyDrive/plant-disease/stage2/lr1e-4 \
@@ -135,7 +139,7 @@ python -m model.artifacts --step prep --run stage2 --hub $HF_MODEL_ID --drive ..
 | [`sampling.py`](sampling.py) / `train.py --extra_data plantdoc` | 50/50 mixed epoch (PlantDoc classes weighted `1/sqrt(freq)`), PlantDoc RRC (0.5, 1.0), checkpoint by PlantDoc val macro-F1 |
 | [`calibrate.py`](calibrate.py) | Fits T on validation logits; threshold sweep 0.30–0.95 with a 70% precision rule (provisional if nothing qualifies) |
 | [`final_test.py`](final_test.py) | One shot of v1.0 vs v1.1. Guard JSON is named by revision and lives on the Hub (`stage2-runs`) or Drive, not in local `outputs/` |
-| [`smoke.py`](smoke.py) | Synthetic data + tiny random MobileNetV2; `--smoke` never reads or writes the guard |
+| [`smoke.py`](smoke.py) | Synthetic data + tiny random ResNet-18; `--smoke` never reads or writes the guard |
 
 **Leakage rules** (asserted in [`data_protocol.py`](data_protocol.py), tested in `tests/test_prepare_plantdoc.py`):
 no shared path or pHash near-dup between train/val and the final test, or between train and val;
@@ -213,13 +217,13 @@ Reproducibility: exact file lists live in `splits.json` on the Hub next to the w
 
 ---
 
-## MobileNetV2 training configuration
+## ResNet-18 training configuration
 
-Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-mobilenetv2/blob/v1.0/run_info.json) for `v1.0`:
+Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-resnet18/blob/v1.0/run_info.json) for `v1.0`:
 
 | Hyperparameter | Value |
 |---|---|
-| Base checkpoint | `google/mobilenet_v2_1.0_224` |
+| Base checkpoint | `microsoft/resnet-18` |
 | Epochs | 5 |
 | Learning rate | 5×10⁻⁴ |
 | Batch size (train) | 64 per device |
@@ -231,8 +235,9 @@ Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-mo
 | Wall time (Colab T4) | ~493 s for full run |
 | Backbone | **Not frozen** — end-to-end fine-tune |
 
-**Fallback:** If MobileNetV2 underperforms on real-world photos, retrain with
-`--model_name_or_path microsoft/resnet-50` (same scripts).
+**Fallback:** For faster CPU inference, retrain with
+`--model_name_or_path google/mobilenet_v2_1.0_224` (same scripts). The previous MobileNetV2 release
+remains at [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) (`baseline_revision` in `shared/release.json`).
 
 ### Training augmentations (phone robustness)
 
@@ -349,26 +354,26 @@ python model/predict.py path/to/leaf.jpg --model model/outputs/smoke
 
 ### Full training + publish (GPU, e.g. Colab)
 
-See [`../notebooks/phase1_plantvillage_mobilenetv2.ipynb`](../notebooks/phase1_plantvillage_mobilenetv2.ipynb)
-or:
+See [`../notebooks/phase1_plantvillage_resnet18.ipynb`](../notebooks/phase1_plantvillage_resnet18.ipynb)
+or [`train_resnet18.sh`](train_resnet18.sh):
 
 ```bash
+bash model/train_resnet18.sh
+# or explicitly:
 python model/train.py \
-  --model_name_or_path google/mobilenet_v2_1.0_224 \
+  --model_name_or_path microsoft/resnet-18 \
   --data_dir "$DATA_DIR" \
-  --output_dir model/outputs/plantvillage-mobilenetv2 \
+  --output_dir model/outputs/plantvillage-resnet18 \
   --do_train --do_eval --num_train_epochs 5 \
   --per_device_train_batch_size 64 --learning_rate 5e-4 \
-  --weight_decay 0.01 --warmup_steps 0.05 --lr_scheduler_type cosine \
-  --fp16 --dataloader_num_workers 8 --dataloader_pin_memory true \
-  --dataloader_persistent_workers true \
+  --weight_decay 0.01 --warmup_steps 500 --lr_scheduler_type cosine \
   --eval_strategy epoch --save_strategy epoch --save_total_limit 2 \
   --load_best_model_at_end --metric_for_best_model macro_f1 \
-  --seed 42 --push_to_hub --hub_model_id neghani/plantvillage-mobilenetv2
+  --seed 42 --push_to_hub --hub_model_id neghani/plantvillage-resnet18
 
-python model/evaluate.py --model model/outputs/plantvillage-mobilenetv2 --push
+python model/evaluate.py --model model/outputs/plantvillage-resnet18 --push
 for s in tune final; do python model/eval_real_world_set.py --set_dir model/data/real_world_set --split $s \
-  --predictor app_predictor:diagnose --threshold 0.5 --model model/outputs/plantvillage-mobilenetv2 \
+  --predictor app_predictor:diagnose --threshold 0.5 --model model/outputs/plantvillage-resnet18 \
   --out model/outputs/real_world/$s --push --only_if_changed; done
 python model/publish.py --tag v1.0
 ```
@@ -406,7 +411,7 @@ from transformers import pipeline
 
 clf = pipeline(
     "image-classification",
-    model="neghani/plantvillage-mobilenetv2",
+    model="neghani/plantvillage-resnet18",
     revision="v1.0",
 )
 preds = clf("leaf.jpg", top_k=3)
@@ -415,7 +420,7 @@ preds = clf("leaf.jpg", top_k=3)
 **Phase 1 reference (quality + threshold):**
 
 ```bash
-python model/predict.py leaf.jpg --model neghani/plantvillage-mobilenetv2 --revision v1.0 --threshold 0.5
+python model/predict.py leaf.jpg --model neghani/plantvillage-resnet18 --revision v1.0 --threshold 0.5
 ```
 
 **Hosted Space:** [`hf_space/`](../hf_space/) — same weights, CPU `pipeline` at startup.

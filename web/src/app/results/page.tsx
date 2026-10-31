@@ -36,10 +36,12 @@ export default function ResultsPage() {
     );
   }
 
+  // Prefer the model's predicted crop over the farmer hint when they differ.
+  const cropForHeading = session.report.crop || session.cropLabel;
   const cropShown =
     locale === "en"
-      ? cropName(locale, session.cropLabel).toLowerCase()
-      : cropName(locale, session.cropLabel);
+      ? cropName(locale, cropForHeading).toLowerCase()
+      : cropName(locale, cropForHeading);
   const status = session.report.status;
   const heading =
     status === "quality_issue"

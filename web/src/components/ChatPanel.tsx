@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { sendChat } from "@/lib/api";
 import { predictionContextLabel } from "@/lib/chatContext";
@@ -71,7 +72,11 @@ export function ChatPanel({
                 : "mr-8 bg-[var(--color-cream)] text-forest"
             }`}
           >
-            {m.content}
+            {m.role === "assistant" ? (
+              <MarkdownMessage content={m.content} />
+            ) : (
+              m.content
+            )}
           </div>
         ))}
       </div>

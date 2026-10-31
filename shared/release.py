@@ -19,6 +19,8 @@ BASELINE_REVISION: str = _PIN["baseline_revision"]
 CONFIDENCE_THRESHOLD: float = float(_PIN["confidence_threshold"])
 CALIBRATION_TEMPERATURE: float = float(_PIN["calibration_temperature"])
 CROP_STRATEGY: str = _PIN["crop_strategy"]
+# Minimum top-1 minus top-2 probability gap. Flat softmax → not_sure even if top-1 is high.
+OOD_THRESHOLD: float = float(_PIN.get("ood_threshold", 0.0))
 PIN_PATH = _PATH
 
 

@@ -2,8 +2,8 @@
 
 Engineering log for the capstone write-up. Each entry: what went wrong, the evidence, the root
 cause, what we changed, and what it cost or left open. Numbers come from runs on 2026-10-11
-against `neghani/plantvillage-mobilenetv2@v1.0` (served by `hf_space/`) unless
-stated otherwise. The live app pin is `shared/release.json` (`@v1.1`).
+against `neghani/plantvillage-mobilenetv2@v1.0` (historical MobileNet baseline) unless
+stated otherwise. The live app pin is [`shared/release.json`](../shared/release.json) (`neghani/plantvillage-resnet18` and its `hf_model_revision`).
 
 ## Summary
 
@@ -171,7 +171,8 @@ everything. Verified: TypeScript + `next build`. **Not yet exercised in a real b
 LangGraph `predict` node -> `hf_client.classify_image` -> `HF_ENDPOINT_URL`.
 
 - With Docker Compose, `HF_ENDPOINT_URL` defaults to `inference-service` (`hf_space/`), which loads
-  `neghani/plantvillage-mobilenetv2` revision `v1.1` from `shared/release.json` with `transformers.pipeline`.
+  the Hub id/revision from `hf_space/release.json` (copy of `shared/release.json`) with `transformers.pipeline`.
+  Do not set stale `HF_MODEL_*` in `.env` — that overrides the API pin and can desync inference.
 - If `HF_ENDPOINT_URL` is empty the API is not configured (serverless HF inference does not host this
   fine-tune). `/health` reports `hf_model_configured: false` and `/predict` returns an honest
   "Analysis unavailable" report. There is no mock/placeholder path left in the API; nothing invents a
@@ -185,7 +186,7 @@ LangGraph `predict` node -> `hf_client.classify_image` -> `HF_ENDPOINT_URL`.
   - Structured logs (`leafcheck.hf`, `leafcheck.vision`) for every call.
 - Run on 2026-10-11 (then still `@v1.0`): Space on the real Hub model, API pointed at it.
   `/health?probe=true` -> `hf_served_model: neghani/plantvillage-mobilenetv2@v1.0`;
-  `/predict` -> `model_verified: true`. Live health now expects `@v1.1`.
+  `/predict` -> `model_verified: true`. Live health should match whatever `shared/release.json` pins.
 
 ## 8. Is the prediction really used in the agentic flow?
 
@@ -236,12 +237,13 @@ below 50% and is left as-is; the threshold and the data were not changed after s
 
 ## 10. Open issues and next steps
 
-- **Confidently wrong on unknown plants (the big one).** The reference photo is a hibiscus leaf.
-  The real model returns **Tomato - Early blight at 99.9%** for it, with the old preprocessing and
-  the new one alike. Softmax confidence cannot flag out-of-distribution inputs, and the 0.5
-  threshold never fires. Today we only catch it when the farmer names the crop. Options: add an
-  "other / not a supported crop" class and retrain, or an OOD score (energy / Mahalanobis on the
-  logits), or a crop-level pre-classifier. Not done.
+- **Confidently wrong on unknown / wrong-crop leaves (the big one).** Hibiscus historically got
+  Tomato Early blight at 99.9%. A strawberry leaf (demo photo, hint=tomato) got Tomato Early blight
+  at **97%** on ResNet-18 `@v1.0` (strategy B) and only **12%** on MobileNet `@v1.1` (already
+  `not_sure` via confidence). Max-softmax / top-1−top-2 margin OOD has AUROC ~0.36 on ResNet for
+  this failure mode — it does **not** catch strawberry-as-tomato. Live pin stays MobileNet v1.1
+  with `ood_threshold=0.05` (flat softmax → `not_sure`). ResNet stays a `candidate` until a
+  crop-level head or training negatives land; see `model/outputs/ood/FALLBACK.md`.
 - **CNN leaf detector.** Swap `find_leaf_candidates` for a detector if field photos with several
   overlapping leaves, yellow/brown leaves or very cluttered scenes fail the colour+focus approach.
   Known weaknesses: soil or objects with leaf-like hue, fully necrotic leaves, thin grass-like
@@ -263,7 +265,7 @@ below 50% and is left as-is; the threshold and the data were not changed after s
 cd api && PYTHONPATH=..:. .venv/bin/python -m pytest -q
 
 # Real model end to end (live pin is @v1.1 from shared/release.json)
-cd hf_space && uvicorn app:app --port 7860          # loads neghani/plantvillage-mobilenetv2@v1.1
+cd hf_space && uvicorn app:app --port 7860          # loads shared/release.json pin
 cd api && HF_ENDPOINT_URL=http://127.0.0.1:7860/ uvicorn app.main:app --port 8000
 curl "localhost:8000/health?probe=true"
 curl -F file=@leaf.jpg localhost:8000/predict | jq '.inference, .quality'

@@ -9,6 +9,7 @@ from shared.release import (
     CROP_STRATEGY,
     HF_MODEL_ID,
     HF_MODEL_REVISION,
+    OOD_THRESHOLD,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +36,7 @@ class Settings(BaseSettings):
 
     crop_strategy: str = CROP_STRATEGY
     confidence_threshold: float = CONFIDENCE_THRESHOLD
+    ood_threshold: float = OOD_THRESHOLD
     crop_tta: bool = False  # also classify each crop mirrored and average
     calibration_temperature: float = CALIBRATION_TEMPERATURE
     default_language: str = "en"

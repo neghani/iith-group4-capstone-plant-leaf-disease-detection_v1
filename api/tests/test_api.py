@@ -6,11 +6,12 @@ from PIL import Image
 from app.vision import hf_client
 from app.vision.hf_client import HFInferenceError, LabelScore
 from conftest import _upload
+from shared.release import HF_MODEL_ID, HF_MODEL_REVISION
 
 
 def test_health_reports_model(client):
     body = client.get("/health").json()
-    assert body["hf_model_id"] == "neghani/plantvillage-mobilenetv2"
+    assert body["hf_model_id"] == HF_MODEL_ID
     assert body["hf_endpoint_configured"] is True
     assert body["hf_model_configured"] is True
 
@@ -128,7 +129,7 @@ def test_hf_client_parses_and_sends_auth(monkeypatch):
     class Resp:
         status_code = 200
         text = ""
-        headers = {"x-model-id": "neghani/plantvillage-mobilenetv2", "x-model-revision": "v1.0"}
+        headers = {"x-model-id": HF_MODEL_ID, "x-model-revision": HF_MODEL_REVISION}
 
         def json(self):
             return [[{"label": "Apple___healthy", "score": 0.2}, {"label": "Apple___Black_rot", "score": 0.8}]]

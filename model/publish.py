@@ -22,10 +22,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from card import assemble_card  # noqa: E402
-from common import DEFAULT_HF_MODEL_ID, get_hf_token, hf_api  # noqa: E402
+from common import DEFAULT_HF_MODEL_REPO, get_hf_token, hf_api  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-mobilenetv2"
+DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-resnet18"
 V10_PV_ACCURACY = 0.9912
 MAX_PV_DROP = 0.02
 DIAGNOSTICS = HERE / "outputs" / "diagnostics_v1_0.json"
@@ -38,12 +38,12 @@ WEIGHT_PATTERNS = ["*.safetensors", "*.bin", "pytorch_model*"]
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--model", default=str(DEFAULT_MODEL_DIR), help="Local model directory produced by train.py.")
-    p.add_argument("--hub_model_id", default=DEFAULT_HF_MODEL_ID)
+    p.add_argument("--hub_model_id", default=DEFAULT_HF_MODEL_REPO)
     p.add_argument("--tag", default="v1.0", help="Release tag Phase 5 pins (HF_MODEL_REVISION). Use '' to skip tagging.")
-    p.add_argument("--tag_message", default="Phase 1 release: MobileNetV2 on PlantVillage")
+    p.add_argument("--tag_message", default="Phase 1 release: ResNet-18 on PlantVillage")
     p.add_argument("--private", action="store_true", help="Create the repo as private if it does not exist.")
     p.add_argument("--reports_only", action="store_true", help="Upload README.md and reports/ only (skip weights).")
-    p.add_argument("--commit_message", default="Phase 1: MobileNetV2 on PlantVillage")
+    p.add_argument("--commit_message", default="Phase 1: ResNet-18 on PlantVillage")
     p.add_argument("--check", action="store_true", help="Verify token / owner / repo access and exit.")
     p.add_argument("--dry_run", action="store_true", help="Show the files that would be uploaded and exit.")
     p.add_argument("--skip_gate", action="store_true", help="Do not enforce the v1.1 publish gate (not for the real release).")

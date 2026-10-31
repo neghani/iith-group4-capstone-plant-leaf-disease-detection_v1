@@ -129,8 +129,9 @@ from shared.release import (  # noqa: E402
 
 DEFAULT_HF_MODEL_ID = os.environ.get("HF_MODEL_ID", RELEASE_MODEL_ID)
 DEFAULT_HF_REVISION = os.environ.get("HF_MODEL_REVISION", RELEASE_REVISION)
-DEFAULT_BASE_MODEL = "google/mobilenet_v2_1.0_224"
-FALLBACK_BASE_MODEL = "microsoft/resnet-50"
+DEFAULT_BASE_MODEL = "microsoft/resnet-18"
+FALLBACK_BASE_MODEL = "google/mobilenet_v2_1.0_224"
+DEFAULT_HF_MODEL_REPO = "neghani/plantvillage-resnet18"
 KAGGLE_DATASET = "abdallahalidev/plantvillage-dataset"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}

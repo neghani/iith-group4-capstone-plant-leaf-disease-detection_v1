@@ -10,7 +10,7 @@ which inflates it further. The real-world figures below are the more honest ones
 
 ### Result
 
-One-shot final test of tag **`v1.1`** on 2026-10-11: **284** images (236 Cropped-PlantDoc `test/`
+One-shot final test of MobileNet tag **`v1.1`** on 2026-10-11: **284** images (236 Cropped-PlantDoc `test/`
 plus 48 from the 50-image real-world set after de-dup), 27 classes that map to PlantVillage labels.
 Same chain as the live app (shared quality gate, crop strategy **B**, then this model on the
 256×256 crop). Temperature **T=0.885**; confidence threshold **0.50**, selected on PlantDoc

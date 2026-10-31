@@ -1,4 +1,4 @@
-"""Reference inference: shared quality gate + crop strategy -> MobileNetV2 -> top-k with "not sure".
+"""Reference inference: shared quality gate + crop strategy -> ResNet-18 -> top-k with "not sure".
 
 Same preprocessing as the API (shared/vision), with the model run locally:
 
@@ -7,7 +7,7 @@ Same preprocessing as the API (shared/vision), with the model run locally:
     result["status"]                           # "ok" | "not_sure" | "retake_photo"
 
 CLI:
-    python model/predict.py leaf.jpg [--model neghani/plantvillage-mobilenetv2 --revision v1.0 --threshold 0.6 --strategy B]
+    python model/predict.py leaf.jpg [--model neghani/plantvillage-resnet18 --revision v1.0 --threshold 0.6 --strategy B]
 """
 
 from __future__ import annotations

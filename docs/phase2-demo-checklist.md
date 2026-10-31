@@ -6,6 +6,8 @@
 - [ ] Set `HF_ENDPOINT_URL` to the deployed Space, or leave it empty to use the local `inference-service`
 - [ ] Run `docker compose up --build`
 - [ ] `GET /health?probe=true` shows `hf_model_id` / `hf_model_revision` matching `shared/release.json` (currently `neghani/plantvillage-mobilenetv2@v1.1`), `hf_reachable: true` and `hf_served_model` the same pin
+- [ ] Do **not** set `HF_MODEL_ID` / `HF_MODEL_REVISION` / `CALIBRATION_TEMPERATURE` in `.env` unless overriding the pin (stale values make Docker serve the wrong model)
+- [ ] Strawberry demo photo with crop=tomato must **not** return `confirmed_likely` (expect `not_sure` or `possible`)
 - [ ] Open UI at http://localhost:3000/check
 - [ ] Open API docs at http://localhost:8000/docs
 

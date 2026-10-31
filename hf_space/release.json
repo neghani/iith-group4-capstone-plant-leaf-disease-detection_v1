@@ -4,5 +4,11 @@
   "baseline_revision": "v1.0",
   "confidence_threshold": 0.5,
   "calibration_temperature": 0.8845188130635788,
-  "crop_strategy": "B"
+  "crop_strategy": "B",
+  "ood_threshold": 0.05,
+  "candidate": {
+    "hf_model_id": "neghani/plantvillage-resnet18",
+    "hf_model_revision": "v1.0",
+    "note": "PlantVillage-only; max-softmax/margin OOD cannot reject strawberry-as-tomato. Promote only after field gate + crop-level fix."
+  }
 }

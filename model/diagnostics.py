@@ -46,7 +46,7 @@ def histogram_md(conf: np.ndarray, n_bins: int = 10) -> list[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", default="neghani/plantvillage-mobilenetv2")
+    ap.add_argument("--model", default="neghani/plantvillage-resnet18")
     ap.add_argument("--revision", default="v1.0")
     ap.add_argument("--manifest", default=str(HERE / "data" / "plantdoc_train" / "manifest.csv"))
     ap.add_argument("--extra_dir", default=str(HERE / "data" / "plantdoc_train"))

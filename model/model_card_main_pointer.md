@@ -2,9 +2,10 @@
 ## Real-world images (field and web photos)
 
 The 16% / 16-of-25 block that used to sit here was a `v1.0` eval on 25 images at threshold 0.85.
-The live model is tag **[`v1.1`](https://huggingface.co/neghani/plantvillage-mobilenetv2/blob/v1.1/README.md)**.
-Quote only the one-shot report in `model/final_report.md` (Hub
-`stage2-runs/runs/stage2/final_test/final_report_v1_1.md`):
+The live API pin is **[`shared/release.json`](../shared/release.json)** (`neghani/plantvillage-resnet18`).
+The MobileNet **`v1.1`** one-shot field report below is **historical baseline** only until ResNet stage-2
+is published. Quote from `model/final_report.md` (MobileNet Hub
+[`stage2-runs/runs/stage2/final_test/final_report_v1_1.md`](https://huggingface.co/neghani/plantvillage-mobilenetv2/blob/stage2-runs/runs/stage2/final_test/final_report_v1_1.md)):
 
 | Metric | Value |
 |---|---|

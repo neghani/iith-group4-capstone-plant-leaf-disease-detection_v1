@@ -28,7 +28,7 @@ from common import (  # noqa: E402
 )
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-mobilenetv2"
+DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-resnet18"
 DEFAULT_DATA_DIR = HERE / "data" / "real_world"
 START, END = "<!-- REAL_WORLD_START -->", "<!-- REAL_WORLD_END -->"
 

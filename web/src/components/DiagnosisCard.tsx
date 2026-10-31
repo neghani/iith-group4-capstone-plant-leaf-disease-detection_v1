@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ScanLine } from "lucide-react";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { useT } from "@/i18n/LocaleProvider";
 import { en } from "@/i18n";
 import type { DiagnosisReport, InferenceInfo, TopKPrediction } from "@/lib/types";
@@ -33,30 +34,34 @@ function RetakeButton() {
   );
 }
 
-function TopMatches({ topK }: { topK: TopKPrediction[] }) {
+function Top1Confidence({
+  top,
+  unsure,
+}: {
+  top: TopKPrediction;
+  unsure?: boolean;
+}) {
   const t = useT();
+  const percent = Math.round(top.score * 100);
   return (
     <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-      <h4 className="font-semibold text-forest">{t("diagnosis.topMatches")}</h4>
-      <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-        {t("diagnosis.possibilitiesOnly")}
+      {unsure && (
+        <p className="text-xs text-[var(--color-text-muted)]">
+          {t("diagnosis.possibilitiesOnly")}
+        </p>
+      )}
+      <p className={`text-sm font-medium text-forest ${unsure ? "mt-2" : ""}`}>
+        {t("diagnosis.confidence", {
+          label: top.display_name,
+          percent: String(percent),
+        })}
       </p>
-      <ul className="mt-3 space-y-2">
-        {topK.map((t) => (
-          <li key={t.label} className="text-sm">
-            <div className="flex justify-between text-forest">
-              <span>{t.display_name}</span>
-              <span>{Math.round(t.score * 100)}%</span>
-            </div>
-            <div className="mt-1 h-1.5 rounded-full bg-sage/60">
-              <div
-                className="h-1.5 rounded-full bg-forest"
-                style={{ width: `${Math.round(t.score * 100)}%` }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-2 h-1.5 max-w-xs rounded-full bg-sage/60">
+        <div
+          className="h-1.5 rounded-full bg-forest"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -75,6 +80,7 @@ export function DiagnosisCard({
   qualityReason?: string | null;
 }) {
   const t = useT();
+  const top1 = topK?.[0];
   const badge =
     report.status === "quality_issue"
       ? t("diagnosis.qualityBadge")
@@ -142,15 +148,7 @@ export function DiagnosisCard({
           <p className="mt-3 rounded-lg bg-sage/60 px-3 py-2 text-sm text-forest">
             {report.confidence_explanation}
           </p>
-          {topK && topK.length > 0 && <TopMatches topK={topK} />}
-          {(!topK || topK.length === 0) && report.alternatives.length > 0 && (
-            <div className="mt-6">
-              <h4 className="font-semibold text-forest">{t("diagnosis.possibilities")}</h4>
-              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                {report.alternatives.join(", ")}
-              </p>
-            </div>
-          )}
+          {top1 && <Top1Confidence top={top1} unsure />}
           <RetakeButton />
         </div>
         {report.actions.length > 0 && (
@@ -183,6 +181,8 @@ export function DiagnosisCard({
         </h2>
         <p className="mt-2 text-[var(--color-text-muted)]">{report.description}</p>
 
+        {top1 && <Top1Confidence top={top1} />}
+
         {lowConfidence && (
           <p className="mt-3 rounded-lg bg-sage/60 px-3 py-2 text-sm text-forest">
             {report.confidence_explanation}
@@ -209,38 +209,6 @@ export function DiagnosisCard({
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-
-        {report.disease_id && topK && topK.length > 0 && (
-          <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-            <h4 className="font-semibold text-forest">{t("diagnosis.topMatches")}</h4>
-            <ul className="mt-3 space-y-2">
-              {topK.map((t) => (
-                <li key={t.label} className="text-sm">
-                  <div className="flex justify-between text-forest">
-                    <span>{t.display_name}</span>
-                    <span>{Math.round(t.score * 100)}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-sage/60">
-                    <div
-                      className="h-1.5 rounded-full bg-forest"
-                      style={{ width: `${Math.round(t.score * 100)}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {(!report.disease_id || !topK || topK.length === 0) &&
-          report.alternatives.length > 0 && (
-          <div className="mt-6">
-            <h4 className="font-semibold text-forest">{t("diagnosis.otherPossibilities")}</h4>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              {report.alternatives.join(", ")}
-            </p>
           </div>
         )}
       </div>
@@ -273,8 +241,8 @@ export function DiagnosisCard({
       )}
 
       {report.initial_message && (
-        <div className="rounded-card border border-sage bg-sage/40 p-5 text-sm text-forest">
-          {report.initial_message}
+        <div className="rounded-card border border-sage bg-sage/40 p-5">
+          <MarkdownMessage content={report.initial_message} />
         </div>
       )}
 

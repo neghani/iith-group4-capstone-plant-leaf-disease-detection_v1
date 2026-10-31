@@ -76,6 +76,7 @@
     "errorBadge": "Analysis unavailable",
     "unsureTitle": "I'm not confident — please retake the photo.",
     "retakeButton": "Retake photo",
+    "confidence": "{label}, {percent}% confidence",
     "topMatches": "Model's top matches",
     "possibilitiesOnly": "Possibilities only — not a diagnosis.",
     "possibilities": "Possibilities",

@@ -30,7 +30,7 @@ If you can say that cleanly and then show it working, you have already covered t
 |---|---|---|
 | Training pipeline | Done | `model/train.py` (HF Trainer, augmentations, stratified split, seed, `splits.json`) |
 | Evaluation | Done | `model/evaluate.py` (accuracy, macro-F1, top-3, confusion matrix, threshold sweep, model card) |
-| Publishing | Done | `model/publish.py`, model live at `neghani/plantvillage-mobilenetv2`, live tag `v1.1` (`v1.0` is the baseline) |
+| Publishing | Done | `model/publish.py`, model live at `neghani/plantvillage-resnet18`, live tag `v1.1` (`v1.0` is the baseline) |
 | Inference server | Done | `hf_space/app.py` (FastAPI + `transformers.pipeline`, stamps `x-model-id` / `x-model-revision`) |
 | Quality gate | Done (leaf-aware) | `api/app/vision/quality.py`, `leaf.py` |
 | Agent (LangGraph) | Done | `api/app/agent/graph.py` (predict, knowledge, report, safety, with 2 side exits) |
@@ -86,7 +86,7 @@ flowchart LR
         end
     end
     P -->|image bytes| I[inference-service :7860<br/>transformers pipeline<br/>MobileNetV2 v1.1]
-    I -. weights pulled once .-> H[(Hugging Face Hub<br/>neghani/plantvillage-mobilenetv2)]
+    I -. weights pulled once .-> H[(Hugging Face Hub<br/>neghani/plantvillage-resnet18)]
     R -->|text only| L[LLM provider<br/>OpenAI / Grok via base_url]
 ```
 
@@ -152,7 +152,7 @@ What the project does (`model/train.py`, defaults in `model/README.md`):
 
 | Choice | Value | Reason (and the honest caveat) |
 |---|---|---|
-| Base | `google/mobilenet_v2_1.0_224` (ImageNet pretrained) | Tiny (~9 MB), fast on CPU, matches the brief. |
+| Base | `microsoft/resnet-18` (ImageNet pretrained) | Tiny (~9 MB), fast on CPU, matches the brief. |
 | Head | New 38-way classifier (`ignore_mismatched_sizes=True`) | ImageNet's 1000-way head is dropped. |
 | Fine-tuning | **Whole network** (not frozen) | Plant lesions differ from ImageNet textures; full fine-tune is fine with 43k images. |
 | Optimiser/LR | HF Trainer default AdamW, `lr=5e-4`, cosine schedule, 5% warmup, weight decay 0.01 | Caveat: the repo records no LR sweep. Say "chosen from common practice, not tuned." |
@@ -433,7 +433,7 @@ train_ds, val_ds, test_ds = random_split(full, [n - n_val - n_test, n_val, n_tes
 # NOTE: val/test above still use train_tf (augmented). For honest eval, build a second
 # ImageFolder with eval_tf and index it with val_ds.indices / test_ds.indices.
 
-model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1)
+model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
 model.classifier[1] = nn.Linear(model.last_channel, len(full.classes))
 model.to(dev)
 
@@ -479,7 +479,7 @@ from transformers import pipeline
 from PIL import Image
 import io, json
 
-clf = pipeline("image-classification", model="neghani/plantvillage-mobilenetv2", revision="v1.1")
+clf = pipeline("image-classification", model="neghani/plantvillage-resnet18", revision="v1.1")
 KB = json.load(open("api/data/knowledge/diseases.json"))
 app = FastAPI()
 
@@ -852,7 +852,7 @@ Test accuracy/F1 for in-distribution; the real-world top-1/top-3 for deployment 
 - [ ] Real-world evaluation done; numbers on a slide
 - [ ] `pytest` green in a venv
 - [ ] `docker compose up --build` from a clean state works
-- [ ] `/health?probe=true` shows model `neghani/plantvillage-mobilenetv2@v1.1`
+- [ ] `/health?probe=true` shows model `neghani/plantvillage-resnet18@v1.1`
 - [ ] All demo images tested; backup video recorded
 - [ ] Slides include: pitch, architecture, data, model, confusion matrix, real-world result, gate, agent, decisions, limitations, next steps
 - [ ] You can answer the self-test in 6.1 without notes
@@ -884,4 +884,4 @@ Test accuracy/F1 for in-distribution; the real-world top-1/top-3 for deployment 
 
 ---
 
-*Sources of truth used for this guide:* `model/*`, `hf_space/*`, `api/app/*`, `api/tests/*`, `web/src/*`, `docker-compose.yml`, `docs/Plant_Disease_Detection_Proposal_v1.docx`, `docs/phase2-demo-checklist.md`, and the published model card at `huggingface.co/neghani/plantvillage-mobilenetv2` (fetched on the day of writing). Items labelled "my recommendation" or "my estimate" are not from the repo.
+*Sources of truth used for this guide:* `model/*`, `hf_space/*`, `api/app/*`, `api/tests/*`, `web/src/*`, `docker-compose.yml`, `docs/Plant_Disease_Detection_Proposal_v1.docx`, `docs/phase2-demo-checklist.md`, and the published model card at `huggingface.co/neghani/plantvillage-resnet18` (fetched on the day of writing). Items labelled "my recommendation" or "my estimate" are not from the repo.

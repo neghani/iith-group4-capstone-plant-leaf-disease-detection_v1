@@ -1,6 +1,6 @@
 # AI-Powered Plant Disease Detection and Farmer Assistance
 
-A farmer uploads a photo of a crop leaf. A quality gate checks the photo, the fine-tuned MobileNetV2 on Hugging Face predicts the disease, and a LangGraph agent turns the prediction into treatment guidance with an optional text-only LLM. Follow-up chat stays in the agriculture domain.
+A farmer uploads a photo of a crop leaf. A quality gate checks the photo, the fine-tuned ResNet-18 on Hugging Face predicts the disease, and a LangGraph agent turns the prediction into treatment guidance with an optional text-only LLM. Follow-up chat stays in the agriculture domain.
 
 Capstone Project 7, Group 4.
 
@@ -11,7 +11,7 @@ Capstone Project 7, Group 4.
 
 ## Project Status
 
-- **Phase 1 (model):** MobileNetV2 on PlantVillage — training/evaluation/real-world scripts and Colab notebook ready, publishes to [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2); see [model/README.md](model/README.md)
+- **Phase 1 (model):** Live pin is MobileNetV2 `@v1.1` on [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) (`shared/release.json`). ResNet-18 is a candidate ([`neghani/plantvillage-resnet18`](https://huggingface.co/neghani/plantvillage-resnet18), Colab [`notebooks/phase1_plantvillage_resnet18.ipynb`](notebooks/phase1_plantvillage_resnet18.ipynb)) until it passes the field gate; see [model/README.md](model/README.md)
 - **Phase 2 (demo):** FastAPI + LangGraph agent, **Next.js (CropCare AI) UI**, Docker Compose — implemented
 - **Phase 5:** Phase 1 Hugging Face model wired into the API (two-step quality gate, remote classifier, prediction-driven LLM) — implemented
 - **Hindi UI / translation:** planned
@@ -25,7 +25,7 @@ Capstone Project 7, Group 4.
 | Agent flow | [LangGraph](https://langchain-ai.github.io/langgraph/) | Predict → knowledge → report → safety (quality gate runs before the graph) |
 | Data validation | [Pydantic](https://docs.pydantic.dev/) | API and diagnosis report schemas |
 | User interface | [Next.js](https://nextjs.org/) + Tailwind | Figma-aligned CropCare AI shell |
-| Disease model | MobileNetV2 fine-tuned on PlantVillage, hosted on [Hugging Face](https://huggingface.co/neghani/plantvillage-mobilenetv2) (Phase 1, `model/`) | 38 classes; served by `hf_space/` (Space or local container) and called over HTTP |
+| Disease model | MobileNetV2 `@v1.1` live pin ([Hugging Face](https://huggingface.co/neghani/plantvillage-mobilenetv2)); ResNet-18 candidate | 38 classes; pin + `ood_threshold` in `shared/release.json`; served by `hf_space/` |
 | LLM | OpenAI ChatGPT API (optional) | Text only: farmer summary from the prediction, and chat; template fallback without key |
 | Containers | Docker Compose | `inference-service` + `api-service` + `ui-service` |
 
@@ -77,6 +77,18 @@ Three containers (UI :3000, API :8000, model :7860):
 ```bash
 docker compose up --build
 ```
+
+The inference container loads **`shared/release.json`** (copied into `hf_space/release.json` at build time). Do not set `HF_MODEL_ID` / `HF_MODEL_REVISION` in `.env` unless you are deliberately overriding that pin — stale values will make Docker serve the wrong Hub model while the API pin still reads `release.json`.
+
+After you change the live pin:
+
+```bash
+cp shared/release.json hf_space/release.json
+docker compose build --no-cache
+docker compose up
+```
+
+Check: `curl -s http://localhost:7860/health` and `curl -s 'http://localhost:8000/health?probe=true'` should show the same `hf_model_id` / revision as `shared/release.json`.
 
 All three services in **one** container (one port, same as Render):
 

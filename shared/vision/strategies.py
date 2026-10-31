@@ -96,8 +96,17 @@ SELECTORS: dict[str, Callable[[Image.Image, list[Candidate]], Crops]] = {
 }
 
 
-def decide_status(confidence: float, agreement: float | None, threshold: float) -> str:
+def decide_status(
+    confidence: float,
+    agreement: float | None,
+    threshold: float,
+    *,
+    margin: float | None = None,
+    ood_threshold: float = 0.0,
+) -> str:
     if agreement is not None and agreement < C.MIN_AGREEMENT - 1e-9:
+        return "not_sure"
+    if ood_threshold > 0 and margin is not None and margin < ood_threshold - 1e-9:
         return "not_sure"
     return "ok" if confidence >= threshold else "not_sure"
 
@@ -134,6 +143,7 @@ def run_strategy(
     predictor: Predictor,
     *,
     threshold: float = C.DEFAULT_THRESHOLD,
+    ood_threshold: float = 0.0,
     top_k: int = 3,
     original_size: tuple[int, int] | list[int] | None = None,
     candidates: list[Candidate] | None = None,
@@ -164,16 +174,22 @@ def run_strategy(
     avg = _mean(per_crop)
     ranked = sorted(avg.items(), key=lambda kv: (-kv[1], kv[0]))
     disease, confidence = ranked[0]
+    second = float(ranked[1][1]) if len(ranked) > 1 else 0.0
+    margin = float(confidence) - second
     agreement = sum(_top1(p) == disease for p in per_crop) / n
     return {
-        "status": decide_status(confidence, agreement, threshold),
+        "status": decide_status(
+            confidence, agreement, threshold, margin=margin, ood_threshold=ood_threshold
+        ),
         "disease": disease,
         "confidence": float(confidence),
+        "margin": float(margin),
         "top_k": [{"disease": k, "confidence": round(float(v), 4)} for k, v in ranked[:top_k]],
         "n_crops": n,
         "agreement": agreement,
         "strategy": strategy_id,
         "threshold": threshold,
+        "ood_threshold": ood_threshold,
         "leaf_found": gate.leaf_found,
         "gate_reason": None,
         "message": None,

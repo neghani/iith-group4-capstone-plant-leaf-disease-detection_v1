@@ -1,4 +1,4 @@
-# Phase 1: MobileNetV2 training / evaluation / Hugging Face push.
+# Phase 1: ResNet-18 training / evaluation / Hugging Face push.
 # Install with: pip install -r model/requirements.txt
 # (In Colab, torch and torchvision are preinstalled with CUDA; pip will keep them.)
 torch>=2.2.0

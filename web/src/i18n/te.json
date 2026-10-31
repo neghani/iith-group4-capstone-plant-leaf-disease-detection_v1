@@ -76,6 +76,7 @@
     "errorBadge": "విశ్లేషణ అందుబాటులో లేదు",
     "unsureTitle": "నాకు ఖచ్చితంగా తెలియదు — దయచేసి ఫోటోను మళ్లీ తీయండి.",
     "retakeButton": "ఫోటోను మళ్లీ తీయండి",
+    "confidence": "{label}, {percent}% విశ్వాసం",
     "topMatches": "మోడల్ అగ్ర జతలు",
     "possibilitiesOnly": "కేవలం అవకాశాలు — ఇది నిర్ధారణ కాదు.",
     "possibilities": "అవకాశాలు",

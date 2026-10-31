@@ -66,17 +66,40 @@ def build_not_sure_report(
     top_k: list[dict] | None = None,
     confidence: float = 0.0,
     crop: str = "",
+    *,
+    reason: str = "",
 ) -> DiagnosisReport:
-    """Low-confidence classifier output: do not write up a disease as if it were chosen."""
+    """Low-confidence or OOD classifier output: do not write up a disease as if it were chosen."""
     top_k = top_k or []
     alternatives = [
         f"{t['display_name']} ({round(t['score'] * 100)}%)"
         for t in top_k
         if t.get("score", 0) >= MIN_ALTERNATIVE_SCORE
     ]
+    ood = reason == "ood_margin"
+    explanation = (
+        "The top matches are too close together to trust the crop or disease."
+        if ood
+        else "The model score is below the confidence threshold."
+    )
+    description = (
+        "The photo was readable, but the model cannot confirm the crop or disease with enough "
+        "separation between its top guesses. Retake in daylight with one leaf filling the frame, "
+        "or ask a local expert. The matches below are possibilities only."
+        if ood
+        else (
+            "The photo was readable, but the model is not sure enough to name a disease. "
+            "Retake in daylight with one leaf filling the frame, or ask a local expert. "
+            "The matches below are possibilities only."
+        )
+    )
     message = (
         "I'm not confident — please retake the photo. "
-        "The score is below the threshold, so this is not a diagnosis."
+        + (
+            "The top matches are too close to trust."
+            if ood
+            else "The score is below the threshold, so this is not a diagnosis."
+        )
     )
     return DiagnosisReport(
         status="not_sure",
@@ -85,12 +108,8 @@ def build_not_sure_report(
         crop=crop or None,
         confidence=round(confidence or 0.0, 3),
         confidence_category="inconclusive",
-        confidence_explanation="The model score is below the confidence threshold.",
-        description=(
-            "The photo was readable, but the model is not sure enough to name a disease. "
-            "Retake in daylight with one leaf filling the frame, or ask a local expert. "
-            "The matches below are possibilities only."
-        ),
+        confidence_explanation=explanation,
+        description=description,
         alternatives=alternatives,
         expert_confirmation_required=True,
         actions=[

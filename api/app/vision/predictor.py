@@ -84,13 +84,27 @@ def predict(prepared: PreparedImage) -> PredictionResult:
         settings.crop_strategy,
         hf,
         threshold=settings.confidence_threshold,
+        ood_threshold=settings.ood_threshold,
         top_k=settings.hf_top_k,
         candidates=prepared.candidates,
         gate=prepared.gate,
         tta=settings.crop_tta,
     )
     disease = res.get("disease") or ""
-    trace = {k: res[k] for k in ("strategy", "n_crops", "agreement", "crop_boxes", "crop_tops", "tta") if k in res}
+    trace = {
+        k: res[k]
+        for k in (
+            "strategy",
+            "n_crops",
+            "agreement",
+            "crop_boxes",
+            "crop_tops",
+            "tta",
+            "margin",
+            "ood_threshold",
+        )
+        if k in res
+    }
     if res.get("message"):
         trace["message"] = res["message"]
     if res.get("gate_reason"):

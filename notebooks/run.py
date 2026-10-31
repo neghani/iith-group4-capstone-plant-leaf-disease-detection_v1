@@ -28,7 +28,7 @@ KNOB_DEFAULTS = {
     "STAGE2_BATCH": "64",
 }
 
-DEFAULT_HF_MODEL_ID = "neghani/plantvillage-mobilenetv2"
+DEFAULT_HF_MODEL_ID = "neghani/plantvillage-resnet18"
 
 
 def ensure_repo() -> Path:

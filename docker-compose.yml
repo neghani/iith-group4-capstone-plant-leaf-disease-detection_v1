@@ -1,11 +1,9 @@
 services:
   inference-service:
     build: ./hf_space
-    # Hub id/revision default from shared/release.json (copied to hf_space/release.json).
-    # Set HF_MODEL_ID / HF_MODEL_REVISION only to override that pin.
-    environment:
-      HF_MODEL_ID: ${HF_MODEL_ID:-}
-      HF_MODEL_REVISION: ${HF_MODEL_REVISION:-}
+    # Hub id/revision come from hf_space/release.json baked at build time (copy from shared/release.json).
+    # After bumping the pin: cp shared/release.json hf_space/release.json && docker compose build inference-service
+    # Do not pass HF_MODEL_* here — a .env override would silently serve the wrong weights.
     ports:
       - "7860:7860"
 

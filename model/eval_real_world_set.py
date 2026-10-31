@@ -152,7 +152,7 @@ def main():
     ap.add_argument("--push", action="store_true", help="upload results to the Hub model repo")
     ap.add_argument("--only_if_changed", action="store_true",
                     help="with --push: skip when set, weights and threshold match the Hub's run.json")
-    ap.add_argument("--hub_model_id", default=os.environ.get("HF_MODEL_ID", "neghani/plantvillage-mobilenetv2"))
+    ap.add_argument("--hub_model_id", default=os.environ.get("HF_MODEL_ID", "neghani/plantvillage-resnet18"))
     ap.add_argument("--model", default=None, help="local run dir or Hub id for the predictor (default: HF_MODEL_ID)")
     ap.add_argument("--revision", default=None, help="Hub revision for --model (default: HF_MODEL_REVISION)")
     a = ap.parse_args()

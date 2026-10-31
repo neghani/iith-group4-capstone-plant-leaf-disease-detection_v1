@@ -153,3 +153,35 @@ def test_unsupported_crop_never_gets_a_disease_name(client, good_leaf, hf_calls,
     assert body["low_confidence"] is True
     assert llm_prompts == []  # no LLM write-up of a guess
     assert body["session_context"]["disease_id"] is None
+
+
+def test_hibiscus_hint_stays_unsupported(client, good_leaf, hf_calls, llm_prompts):
+    body = client.post("/predict", files=_upload(good_leaf), data={"crop": "hibiscus"}).json()
+    assert body["report"]["status_label"] == "Crop not supported"
+    assert body["report"]["status"] != "confirmed_likely"
+
+
+def test_strawberry_like_flat_scores_are_not_ok(client, good_leaf, hf_calls, llm_prompts):
+    """MobileNet on the demo strawberry photo: top-1 ~0.12, tiny margin → not_sure."""
+    hf_calls.scores = [
+        LabelScore("Tomato___Tomato_mosaic_virus", 0.1229),
+        LabelScore("Raspberry___healthy", 0.1160),
+        LabelScore("Pepper,_bell___healthy", 0.0863),
+    ]
+    body = client.post("/predict", files=_upload(good_leaf), data={"crop": "tomato"}).json()
+    assert body["report"]["status"] == "not_sure"
+    assert body["report"]["status"] != "confirmed_likely"
+    assert body["low_confidence"] is True
+
+
+def test_high_confidence_but_tiny_margin_is_not_ok(client, good_leaf, hf_calls, llm_prompts):
+    """OOD margin gate: top-1 above thr but nearly tied with top-2."""
+    hf_calls.scores = [
+        LabelScore("Tomato___Early_blight", 0.51),
+        LabelScore("Tomato___Late_blight", 0.49),
+    ]
+    body = client.post("/predict", files=_upload(good_leaf), data={"crop": "tomato"}).json()
+    assert body["report"]["status"] == "not_sure"
+    assert "close together" in body["report"]["confidence_explanation"].lower() or (
+        "not sure" in body["report"]["status_label"].lower()
+    )

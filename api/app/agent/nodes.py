@@ -72,10 +72,22 @@ def retake_node(state: DiagnosisState) -> DiagnosisState:
 
 
 def not_sure_node(state: DiagnosisState) -> DiagnosisState:
+    strategy = state.get("strategy") or {}
+    ood_thr = float(strategy.get("ood_threshold") or 0.0)
+    margin = strategy.get("margin")
+    reason = ""
+    if (
+        ood_thr > 0
+        and margin is not None
+        and float(margin) < ood_thr - 1e-9
+        and float(state.get("confidence") or 0.0) >= get_settings().confidence_threshold
+    ):
+        reason = "ood_margin"
     report = build_not_sure_report(
         top_k=state.get("top_k") or [],
         confidence=float(state.get("confidence") or 0.0),
         crop=state.get("crop") or "",
+        reason=reason,
     )
     return {**state, "report": report.model_dump()}
 

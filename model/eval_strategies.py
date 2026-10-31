@@ -402,7 +402,7 @@ def run_tune(a, rows, predictor, out: Path, leaks: list[str]) -> None:
     print(f"Wrote {out}/strategy_comparison.csv, strategy_comparison.md, per_image.csv")
 
 
-LEGACY_MODEL_KEY = "neghani/plantvillage-mobilenetv2@v1.0"  # locks written before model_key existed
+LEGACY_MODEL_KEY = "neghani/plantvillage-mobilenetv2@v1.0"  # locks written before model_key existed (MobileNet era)
 
 
 def model_key() -> str:

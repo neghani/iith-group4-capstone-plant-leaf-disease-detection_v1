@@ -10,7 +10,7 @@ tags:
 - plant-disease
 - plantvillage
 - agriculture
-- mobilenetv2
+- resnet-18
 datasets:
 - abdallahalidev/plantvillage-dataset
 metrics:
@@ -105,32 +105,12 @@ remaining images would be answered with "not sure". Recommended `CONFIDENCE_THRE
 <!-- REAL_WORLD_START -->
 ## Real-world images (field and web photos)
 
-### How to read the numbers
+PlantVillage test metrics above are **in-distribution** (lab-style photos). Phone photos with clutter,
+blur, and mixed backgrounds score lower. After PlantDoc stage-2 fine-tune (tag `v1.1`), run
+`model/final_test.py` and update this section from `model/final_report.md`.
 
-PlantVillage photos are taken under controlled conditions: one leaf, plain background. Accuracy on
-the held-out PlantVillage split above is therefore an **upper bound**, not what a farmer should
-expect from a phone photo. Images of the same leaf can appear in both the training and test splits,
-which inflates it further. The real-world figures below are the more honest ones.
-
-### Result
-
-One-shot final test of tag **`v1.1`** on 2026-10-11: **284** images (236 Cropped-PlantDoc `test/`
-plus 48 from the 50-image real-world set after de-dup), 27 classes. Same chain as the live app
-(quality gate, crop strategy **B**, T=0.885, threshold **0.50**). Copied from `model/final_report.md`;
-the threshold and the split are frozen. Do not re-run `final_test.py` for this revision.
-
-| Metric | Value |
-|---|---|
-| Rejected by the quality gate (retake photo) | 5 of 284 |
-| Top-1 on images that reached the model | 159/279 (57.0%) |
-| Top-3 on images that reached the model | 219/279 (78.5%) |
-| "Not sure" answers | 91 of 284 |
-| **End-to-end pass rate** (correct and confident, out of all images) | **137/284 (48.2%)** (95% CI 42.5% to 54.0%) |
-| Pass rate, plantdoc_test (pristine held-out) | 116/236 (49.2%), 95% CI 42.8–55.5% |
-| Pass rate, real_world_set | 21/48 (43.8%), 95% CI 30.7–57.7% (wide) |
-
-Project target for the end-to-end pass rate: 50.0%. The point estimate is below the
-target. Reported as-is. v1.0 on the same 284 images: 53/284 (18.7%), not sure 146/284.
+For tag **`{{revision}}`** (PlantVillage stage 1 only): end-to-end real-world numbers are **not
+recorded yet** — publish `v1.1` after stage-2 training and calibration.
 <!-- REAL_WORLD_END -->
 
 ## Real-world results before and after fine-tuning

@@ -1,6 +1,7 @@
-"""Inference server for neghani/plantvillage-mobilenetv2 on a Hugging Face Space (Docker SDK).
+"""Inference server for the plant-disease classifier on a Hugging Face Space (Docker SDK).
 
-Same contract as a HF Inference Endpoint for image-classification:
+Hub id/revision come from release.json (copy of shared/release.json). Same contract as a
+HF Inference Endpoint for image-classification:
     POST /  (raw image bytes)  ?top_k=3  ->  [{"label": "...", "score": 0.97}, ...]
 """
 
@@ -27,7 +28,7 @@ MODEL_ID = os.environ.get("HF_MODEL_ID") or _PIN["hf_model_id"]
 REVISION = os.environ.get("HF_MODEL_REVISION") or _PIN["hf_model_revision"]
 
 classifier = pipeline("image-classification", model=MODEL_ID, revision=REVISION, device="cpu")
-app = FastAPI(title="PlantVillage MobileNetV2 inference")
+app = FastAPI(title="PlantVillage disease inference")
 
 
 @app.get("/health")

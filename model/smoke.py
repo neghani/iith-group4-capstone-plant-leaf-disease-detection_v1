@@ -7,7 +7,7 @@
 
 Everything is written under model/outputs/smoke/. No downloads, no Hugging Face token
 (HF_HUB_OFFLINE=1, HF_TOKEN removed), and the real final-test guard is never read or written.
-The "v1.0" baseline is a tiny randomly initialised MobileNetV2, so the numbers mean nothing.
+The "v1.0" baseline is a tiny randomly initialised ResNet-18, so the numbers mean nothing.
 """
 
 from __future__ import annotations
@@ -122,16 +122,19 @@ def build_data(p: P, seed: int = 0) -> None:
 
 def build_base_model(p: P, seed: int = 0) -> None:
     import torch
-    from transformers import MobileNetV2Config, MobileNetV2ForImageClassification, MobileNetV2ImageProcessor
+    from transformers import ResNetConfig, ResNetForImageClassification, ConvNextImageProcessor
 
     torch.manual_seed(seed)
     labels = label_names()
-    cfg = MobileNetV2Config(
-        num_labels=len(labels), depth_multiplier=0.35, image_size=64,
-        id2label={i: n for i, n in enumerate(labels)}, label2id={n: i for i, n in enumerate(labels)},
+    cfg = ResNetConfig(
+        num_labels=len(labels),
+        depths=[1, 1, 1, 1],
+        hidden_sizes=[16, 32, 64, 128],
+        id2label={i: n for i, n in enumerate(labels)},
+        label2id={n: i for i, n in enumerate(labels)},
     )
-    MobileNetV2ForImageClassification(cfg).save_pretrained(p.base)
-    MobileNetV2ImageProcessor(size={"shortest_edge": 72}, crop_size={"height": 64, "width": 64}).save_pretrained(p.base)
+    ResNetForImageClassification(cfg).save_pretrained(p.base)
+    ConvNextImageProcessor(size={"shortest_edge": 72}, crop_size={"height": 64, "width": 64}).save_pretrained(p.base)
 
 
 def smoke_env() -> dict:

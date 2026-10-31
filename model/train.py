@@ -1,7 +1,7 @@
-"""Fine-tune MobileNetV2 on PlantVillage, optionally continuing from v1.0 on PlantDoc.
+"""Fine-tune ResNet-18 (default) on PlantVillage, optionally continuing from v1.0 on PlantDoc.
 
 Stage 1 (from ImageNet):
-    python model/train.py --data_dir "$DATA_DIR" --output_dir model/outputs/plantvillage-mobilenetv2 ...
+    python model/train.py --data_dir "$DATA_DIR" --output_dir model/outputs/plantvillage-resnet18 ...
 
 Stage 2 (from published v1.0, mixed PlantVillage + Cropped-PlantDoc):
     python model/train.py --init_from neghani/plantvillage-mobilenetv2 --model_revision v1.0 \
@@ -597,7 +597,7 @@ def main(argv: list[str] | None = None) -> None:
         "finetuned_from": model_args.model_name_or_path,
         "dataset": ["PlantVillage", "PlantDoc"] if extra_info else "PlantVillage",
         "tasks": "image-classification",
-        "tags": ["image-classification", "plant-disease", "plantvillage", "mobilenetv2", "agriculture"]
+        "tags": ["image-classification", "plant-disease", "plantvillage", "resnet-18", "agriculture"]
         + (["plantdoc"] if extra_info else []),
     }
     if training_args.push_to_hub:

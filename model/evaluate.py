@@ -8,9 +8,9 @@ Writes to <reports_dir>:
 and fills model_card_template.md into README.md next to the model (or reports_dir for Hub models).
 
 Examples:
-    python model/evaluate.py --model model/outputs/plantvillage-mobilenetv2
-    python model/evaluate.py --model model/outputs/plantvillage-mobilenetv2 --push
-    python model/evaluate.py --model neghani/plantvillage-mobilenetv2 --revision v1.0 --data_dir "$DATA_DIR"
+    python model/evaluate.py --model model/outputs/plantvillage-resnet18
+    python model/evaluate.py --model model/outputs/plantvillage-resnet18 --push
+    python model/evaluate.py --model neghani/plantvillage-resnet18 --revision v1.0 --data_dir "$DATA_DIR"
 """
 
 from __future__ import annotations
@@ -25,8 +25,10 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from card import assemble_card  # noqa: E402
 from common import (  # noqa: E402
     DEFAULT_HF_MODEL_ID,
+    DEFAULT_HF_MODEL_REPO,
     Predictor,
     crop_from_class,
     hf_api,
@@ -36,7 +38,7 @@ from common import (  # noqa: E402
 )
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-mobilenetv2"
+DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-resnet18"
 THRESHOLDS = [round(0.50 + 0.05 * i, 2) for i in range(10)]  # 0.50 .. 0.95
 
 
@@ -54,7 +56,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--template", default=str(HERE / "model_card_template.md"))
     p.add_argument("--card_revision", default="v1.0", help="Revision tag shown in the model card usage snippet.")
     p.add_argument("--target_precision", type=float, default=0.97, help="Accuracy-on-covered target used to recommend the threshold.")
-    p.add_argument("--hub_model_id", default=DEFAULT_HF_MODEL_ID)
+    p.add_argument("--hub_model_id", default=DEFAULT_HF_MODEL_REPO, help="Hub repo id written into the model card (defaults to neghani/plantvillage-resnet18).")
     p.add_argument("--push", action="store_true", help="Upload README.md and reports/ to --hub_model_id.")
     p.add_argument("--device", default=None)
     return p.parse_args()
@@ -184,7 +186,7 @@ def main() -> None:
             f"{model_path} exists but is not a trained model (no config.json). "
             "Section 5 skips training when RUN_STAGE1 is False and still points OUTPUT_DIR here. "
             "Skip section 6, or set RUN_STAGE1 = True and train first. "
-            "To score the published model: --model neghani/plantvillage-mobilenetv2 --revision v1.0"
+            "To score the published model: --model neghani/plantvillage-resnet18 --revision v1.0"
         )
     from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support
 
@@ -273,7 +275,7 @@ def main() -> None:
             )
         else:
             details = "- see `run_info.json` / `training_args.bin` in this repository"
-        hub_id = args.hub_model_id if (model_is_local or args.push) else args.model
+        hub_id = args.hub_model_id if model_is_local else (args.hub_model_id if args.push else args.model)
         values = {
             "model_id": hub_id,
             "model_name": hub_id.split("/")[-1],
@@ -303,6 +305,11 @@ def main() -> None:
         card = fill_template(template_path.read_text(), values)
         card_out = Path(args.card_out) if args.card_out else (Path(args.model) / "README.md" if model_is_local else reports_dir / "README.md")
         card_out.write_text(card)
+        if model_is_local:
+            status = assemble_card(Path(args.model), outputs=HERE / "outputs", latency_path=HERE / "latency.json")
+            print(f"Model card sections filled: {', '.join(status['filled']) or '(none)'}")
+            if status["missing"]:
+                print(f"Model card sections missing: {', '.join(status['missing'])}")
         print(f"Model card written to {card_out}")
     else:
         card_out = None

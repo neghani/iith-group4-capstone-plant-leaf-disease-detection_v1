@@ -8,7 +8,8 @@ import pytest
 from notebooks.colab_sync import DEFAULT_BRANCH, assert_pv_staging_helper, parse_args
 from notebooks.run import apply_knobs, flag_on, knob, print_publish_checklist, print_session_plan, run, stage2_lrs
 
-NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_mobilenetv2.ipynb"
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_resnet18.ipynb"
+MOBILENET_NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_mobilenetv2.ipynb"
 
 
 def test_flag_on_reads_env(monkeypatch):
@@ -42,6 +43,12 @@ def _notebook_cells() -> list[str]:
 
 def _notebook_source() -> str:
     return "\n".join(_notebook_cells())
+
+
+def test_mobilenet_notebook_still_present():
+    assert MOBILENET_NOTEBOOK.is_file()
+    src = MOBILENET_NOTEBOOK.read_text()
+    assert "google/mobilenet_v2" in src
 
 
 def test_notebook_section1_defaults_to_main_not_env():
@@ -82,7 +89,7 @@ def test_notebook_knobs_cell_owns_stage_flags_and_shows_work():
     assert "RUN_STAGE1 = False" in knobs
     assert "RUN_STAGE2 = False" in knobs
     assert "STAGE2_LRS" in knobs
-    train = next(c for c in cells if "--push_to_hub" in c and "google/mobilenet_v2")
+    train = next(c for c in cells if "--push_to_hub" in c and "microsoft/resnet-18")
     assert "RUN_STAGE1 = False" not in train
     assert "PlantDoc is not in this run" in train
     assert "knob(\"STAGE1_EPOCHS\")" in train
@@ -124,7 +131,7 @@ def test_apply_knobs_and_publish_checklist(monkeypatch, capsys):
     ):
         monkeypatch.setenv(key, "x")
     apply_knobs(RUN_STAGE1=False, RUN_STAGE2=True, PD_FRACTION=0.5, STAGE2_LRS=["1e-4", "5e-5"])
-    monkeypatch.setenv("HF_MODEL_ID", "neghani/plantvillage-mobilenetv2")
+    monkeypatch.setenv("HF_MODEL_ID", "neghani/plantvillage-resnet18")
     assert flag_on("RUN_STAGE1") is False
     assert flag_on("RUN_STAGE2") is True
     assert knob("PD_FRACTION") == "0.5"
