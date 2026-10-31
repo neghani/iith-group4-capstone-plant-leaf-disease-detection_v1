@@ -121,6 +121,56 @@ def require_env(*names: str) -> None:
         raise SystemExit(f"Missing env {missing}. Re-run the cells that set them (section 2/3).")
 
 
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
+def _has_class_folders(root: Path) -> bool:
+    if not root.is_dir():
+        return False
+    for child in root.iterdir():
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        for f in child.iterdir():
+            if f.suffix.lower() in _IMAGE_EXTS:
+                return True
+    return False
+
+
+def require_data_dir(name: str = "DATA_DIR", *, colab_root: Path | None = None) -> Path:
+    """Stop before train/EDA when DATA_DIR is unset, off the Colab disk, or not an imagefolder.
+
+    On Colab the staged set lives under /content (section 3). A leftover Kaggle path such as
+    /kaggle/input/... is rejected here so train.py is not started on a missing folder.
+    When /content exists, the path must be inside it. Tests pass colab_root to simulate that check.
+    """
+    raw = os.environ.get(name, "").strip()
+    exists = bool(raw) and Path(raw).exists()
+    print(f"{name}={raw or '(unset)'}  exists={exists}", flush=True)
+    if not raw:
+        raise SystemExit(f"{name} is not set. Re-run section 3 (Load PlantVillage) before this cell.")
+    path = Path(raw)
+    root = colab_root if colab_root is not None else (Path("/content") if Path("/content").is_dir() else None)
+    if root is not None:
+        try:
+            path.resolve().relative_to(root.resolve())
+        except ValueError:
+            raise SystemExit(
+                f"{name}={raw} is not under {root}. "
+                "Section 3 copies PlantVillage to /content/plantvillage. Re-run section 3; "
+                "do not point DATA_DIR at /kaggle/input."
+            ) from None
+    if not path.is_dir():
+        raise SystemExit(
+            f"{name}={raw} does not exist. Re-run section 3 so DATA_DIR is the staged color folder."
+        )
+    if not _has_class_folders(path):
+        raise SystemExit(
+            f"{name}={raw} has no class image folders. Re-run section 3 and point DATA_DIR at the color folder."
+        )
+    print(f"{name} ok: {path}", flush=True)
+    return path
+
+
 def flag_on(name: str) -> bool:
     """True when the notebook or env set this to 1/true/yes."""
     return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes")

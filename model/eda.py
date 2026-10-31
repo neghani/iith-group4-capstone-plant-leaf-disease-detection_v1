@@ -163,7 +163,11 @@ def audit(
     n_images = 0
     n_classes = len(label_names)
 
+    total_files = sum(len(by_class[n]) for n in label_names)
+    print(f"[eda] scanning {total_files} images in {len(label_names)} classes under {root}", flush=True)
     t_start = time.time()
+    done_all = 0
+    last_beat = t_start
     for i, name in enumerate(label_names, start=1):
         files = by_class[name]
         class_dir = root / name
@@ -181,6 +185,16 @@ def audit(
         heights: list[int] = []
         opened = 0
         for path in files:
+            done_all += 1
+            now = time.time()
+            if now - last_beat >= 10:
+                last_beat = now
+                el = now - t_start
+                rate = done_all / el if el else 0.0
+                eta = (total_files - done_all) / rate if rate else 0.0
+                print(f"[eda] {done_all}/{total_files} images ({100 * done_all // total_files}%)  "
+                      f"class {i}/{n_classes} {name}  {rate:.0f} img/s  elapsed {fmt_secs(el)}  "
+                      f"eta {fmt_secs(eta)}", flush=True)
             info, err = inspect_image(path)
             if err:
                 unreadable.append(f"{path.relative_to(root)} ({err})")
@@ -265,6 +279,7 @@ def audit(
             }
         )
 
+    print(f"[eda] image scan done in {fmt_secs(time.time() - t_start)}; near-duplicate sample next", flush=True)
     pairs = _sample_near_dups(root, by_class, phash_per_class, seed) if phash_per_class else []
     if pairs:
         warnings.append(

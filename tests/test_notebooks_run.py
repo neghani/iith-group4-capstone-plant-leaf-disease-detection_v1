@@ -6,7 +6,16 @@ from pathlib import Path
 import pytest
 
 from notebooks.colab_sync import DEFAULT_BRANCH, assert_pv_staging_helper, parse_args
-from notebooks.run import apply_knobs, flag_on, knob, print_publish_checklist, print_session_plan, run, stage2_lrs
+from notebooks.run import (
+    apply_knobs,
+    flag_on,
+    knob,
+    print_publish_checklist,
+    print_session_plan,
+    require_data_dir,
+    run,
+    stage2_lrs,
+)
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_resnet18.ipynb"
 MOBILENET_NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "phase1_plantvillage_mobilenetv2.ipynb"
@@ -100,6 +109,35 @@ def test_notebook_knobs_cell_owns_stage_flags_and_shows_work():
     eda = next(c for c in cells if "plantvillage_eda.json" in c and "per_class" in c)
     assert "PlantVillage class counts" in eda
     assert "shared/release.json" in "\n".join(cells)
+
+
+def test_require_data_dir_missing(monkeypatch):
+    monkeypatch.delenv("DATA_DIR", raising=False)
+    with pytest.raises(SystemExit, match="not set"):
+        require_data_dir()
+
+
+def test_require_data_dir_rejects_kaggle_path(tmp_path, monkeypatch):
+    colab = tmp_path / "content"
+    colab.mkdir()
+    monkeypatch.setenv("DATA_DIR", "/kaggle/input/plantvillage-dataset/plantvillage dataset/color")
+    with pytest.raises(SystemExit, match="not under"):
+        require_data_dir(colab_root=colab)
+
+
+def test_require_data_dir_accepts_class_folder(tmp_path, monkeypatch):
+    root = tmp_path / "color" / "Tomato___healthy"
+    root.mkdir(parents=True)
+    (root / "a.jpg").write_bytes(b"not-a-real-jpeg")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "color"))
+    assert require_data_dir(colab_root=tmp_path) == (tmp_path / "color").resolve()
+
+
+def test_data_dir_cells_call_preflight():
+    cells = _notebook_cells()
+    for needle in ("model/eda.py", "tomato_smoke", "microsoft/resnet-18", "--extra_data"):
+        cell = next(c for c in cells if needle in c and "DATA_DIR" in c)
+        assert "require_data_dir()" in cell
 
 
 def test_run_wraps_nonzero_exit_as_systemexit():
