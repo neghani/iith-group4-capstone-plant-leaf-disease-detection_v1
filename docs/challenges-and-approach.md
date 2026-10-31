@@ -237,6 +237,18 @@ below 50% and is left as-is; the threshold and the data were not changed after s
 
 ## 10. Open issues and next steps
 
+- **ResNet is not ready to replace the live pin.** On 2026-10-31 the same 25-image
+  `real_world_set` final split (strategy B, threshold 0.5) scored MobileNet `@v1.1` at
+  **10/25 = 40%** end-to-end (top-1 10/25, top-3 18/25) and published ResNet `@v1.0` at
+  **2/25 = 8%** (top-1 2/25, top-3 8/25; temperature 1.0). The Hub repo
+  `neghani/plantvillage-resnet18` has no `v1.1` tag; `stage2-runs` is the PlantVillage-only
+  v1.0 run (`extra_data` null). The live pin stays MobileNet v1.1. A Colab stage-2 retrain
+  has to use the fixed sampler below, then the one-shot 284-image test, before any pin change.
+- **PlantDoc sampler was weighting the wrong way.** `model/sampling.py` used per-row
+  `1/sqrt(count)`, so a class total was `sqrt(count)` and common classes got more draws
+  (Northern Leaf Blight 153 images, 108.8 expected draws; Apple scab 74 images, 75.7).
+  The intended class share is `1/sqrt(count)`, which is per-row weight `1/count**1.5`.
+  That fix is in the repo; it applies only to the next stage-2 train, not to published weights.
 - **Confidently wrong on unknown / wrong-crop leaves (the big one).** Hibiscus historically got
   Tomato Early blight at 99.9%. A strawberry leaf (demo photo, hint=tomato) got Tomato Early blight
   at **97%** on ResNet-18 `@v1.0` (strategy B) and only **12%** on MobileNet `@v1.1` (already

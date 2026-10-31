@@ -37,4 +37,4 @@
 2. Analyze a tomato leaf sample; walk through signs, actions, limitations.
 3. Ask one follow-up (“Should I remove lower leaves?”).
 4. Click **Show a retake**, then go back and click **Show “I'm not sure”** — abstaining is a feature.
-5. Explain the flow: quality gate → Hugging Face MobileNetV2 (`v1.1`, 137/284 = 48.2% real-photo pass rate) → text-only LLM summary grounded in the prediction.
+5. Explain the flow: quality gate → Hugging Face MobileNetV2 (`v1.1`, 137/284 = 48.2% real-photo pass rate) → text-only LLM summary grounded in the prediction. Do not present ResNet as the live model: on the same 25-image final split it scores 2/25 against MobileNet's 10/25, and `neghani/plantvillage-resnet18` has no `v1.1` tag yet.

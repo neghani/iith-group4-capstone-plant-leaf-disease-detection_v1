@@ -136,7 +136,7 @@ python -m model.artifacts --step prep --run stage2 --hub $HF_MODEL_ID --drive ..
 | Piece | What it does |
 |---|---|
 | [`prepare_plantdoc.py`](prepare_plantdoc.py) | Clones Cropped-PlantDoc if needed, excludes `real_world_set` paths, pHash near-dups (Hamming ≤6) of test/ and the 50-image set, and spider-mites; clusters remaining train images and holds out 12% of clusters as validation; renders strategy-B 256×256 crops |
-| [`sampling.py`](sampling.py) / `train.py --extra_data plantdoc` | 50/50 mixed epoch (PlantDoc classes weighted `1/sqrt(freq)`), PlantDoc RRC (0.5, 1.0), checkpoint by PlantDoc val macro-F1 |
+| [`sampling.py`](sampling.py) / `train.py --extra_data plantdoc` | 50/50 mixed epoch (PlantDoc **class share** `1/sqrt(count)`, per-row weight `1/count**1.5`), PlantDoc RRC (0.5, 1.0), checkpoint by PlantDoc val macro-F1 |
 | [`calibrate.py`](calibrate.py) | Fits T on validation logits; threshold sweep 0.30–0.95 with a 70% precision rule (provisional if nothing qualifies) |
 | [`final_test.py`](final_test.py) | One shot of v1.0 vs v1.1. Guard JSON is named by revision and lives on the Hub (`stage2-runs`) or Drive, not in local `outputs/` |
 | [`smoke.py`](smoke.py) | Synthetic data + tiny random ResNet-18; `--smoke` never reads or writes the guard |

@@ -11,9 +11,14 @@ from collections import Counter
 
 
 def inverse_sqrt_weights(labels: list) -> list[float]:
-    """Per-row sampling weight: 1/sqrt(class frequency), normalised to sum to 1."""
+    """Per-row weight so each class's total share is proportional to 1/sqrt(count).
+
+    Weighting each row by 1/sqrt(count) makes the class total sqrt(count), so common
+    classes get more draws. Dividing by the count again (per-row 1/count**1.5) makes
+    the class total 1/sqrt(count): rarer classes get more of the epoch.
+    """
     counts = Counter(labels)
-    raw = [1.0 / math.sqrt(counts[lab]) for lab in labels]
+    raw = [1.0 / (counts[lab] ** 1.5) for lab in labels]
     total = sum(raw)
     if total <= 0:
         n = len(labels) or 1
@@ -75,7 +80,7 @@ def class_weight_summary(
     fraction: float,
     epoch_samples: int,
 ) -> dict:
-    """Per-class PlantDoc sampling: count, 1/sqrt(freq) share, expected draws per epoch.
+    """Per-class PlantDoc sampling: count, 1/sqrt(count) class share, expected draws per epoch.
 
     PlantVillage draws in the same epoch are uniform over the PV train set
     (`epoch_samples - n_pd`). Does not run training.
