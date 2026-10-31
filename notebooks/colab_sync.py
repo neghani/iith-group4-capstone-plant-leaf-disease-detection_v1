@@ -51,10 +51,10 @@ import zipfile
 from pathlib import Path
 
 DEFAULT_REPO = (
-    "https://github.com/neghani/iiith-group4-capstone-plat-leaf-decease-detection.git"
+    "https://github.com/neghani/iith-group4-capstone-plant-leaf-disease-detection_v1.git"
 )
 DEFAULT_BRANCH = "main"
-REPO_NAME = "iiith-group4-capstone-plat-leaf-decease-detection"
+REPO_NAME = "iith-group4-capstone-plant-leaf-disease-detection_v1"
 KEEP_UNTRACKED = (
     "model/outputs",
     "model/data/real_world",

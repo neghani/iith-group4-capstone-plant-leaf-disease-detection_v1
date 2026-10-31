@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_ROOT = "/content/iiith-group4-capstone-plat-leaf-decease-detection"
+DEFAULT_ROOT = "/content/iith-group4-capstone-plant-leaf-disease-detection_v1"
 
 KNOB_DEFAULTS = {
     "RUN_STAGE1": "0",
