@@ -21,13 +21,13 @@ def test_dir_guard_roundtrip(tmp_path):
     assert "v1.1.json" in g.describe("v1.1")
 
 
-def test_check_blocks_second_run(tmp_path):
+def test_check_skips_same_weights(tmp_path, capsys):
     g = DirGuard(tmp_path)
     g.write("v1.1", {"date": "2026-10-11", "model_key": "aaa"})
-    with pytest.raises(SystemExit, match="already ran"):
-        check(g, "v1.1", "aaa", force=False)
-    check(g, "v1.1", "aaa", force=True)  # --force allowed
-    check(g, "v1.2", "bbb", force=False)  # different revision is a first run
+    assert check(g, "v1.1", "aaa", force=False) == "skip"
+    assert "skipped" in capsys.readouterr().out
+    assert check(g, "v1.1", "aaa", force=True) == "run"
+    assert check(g, "v1.2", "bbb", force=False) == "run"
 
 
 def test_check_mentions_new_revision_when_weights_differ(tmp_path):

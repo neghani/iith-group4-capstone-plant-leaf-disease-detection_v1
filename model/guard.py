@@ -3,8 +3,9 @@
     hub:<repo_id>   final_test_guard/<revision>.json on the repo's `stage2-runs` branch
     drive:<dir>     <dir>/<revision>.json (e.g. /content/drive/MyDrive/plant-disease/final_test_guard)
 
-A record means the final test was already run for that revision; final_test.py refuses a second
-run unless --force. Smoke mode never constructs a guard.
+A record means the final test was already run for that revision. The same weights skip
+(exit 0). Different weights are refused. --force regenerates the same run. Smoke mode
+never constructs a guard.
 """
 
 from __future__ import annotations
@@ -92,15 +93,32 @@ def make_guard(spec: str, token: str | None = None):
     raise ValueError(f"unknown guard kind {kind!r} in {spec!r}")
 
 
-def check(guard, revision: str, model_key: str, force: bool) -> None:
-    """Refuse a second final test for `revision`. Unreadable guard is an error, never a pass."""
+def check(guard, revision: str, model_key: str, force: bool) -> str:
+    """Return 'run' or 'skip'. Unreadable guard is an error, never a pass.
+
+    Same weights already recorded: 'skip', so a re-run of the notebook does not recompute
+    the one-shot test and does not need --force. Different weights are refused.
+    --force returns 'run' so the same record can be regenerated on purpose.
+    """
     try:
         prev = guard.read(revision)
     except Exception as exc:
         raise SystemExit(f"Cannot read the final-test guard {guard.describe(revision)} ({exc}). "
                          "Refusing to run: the guard must be readable to know this is the first run.") from exc
-    if prev and not force:
-        extra = "" if prev.get("model_key") == model_key else (
-            f" Those were different weights ({prev.get('model_key')}); a new candidate needs a new revision name.")
-        raise SystemExit(f"The final test for {revision} already ran on {prev.get('date')} "
-                         f"({guard.describe(revision)}).{extra} Use --force only to regenerate the same run.")
+    if not prev:
+        return "run"
+    if prev.get("model_key") != model_key:
+        raise SystemExit(
+            f"The final test for {revision} already ran on {prev.get('date')} "
+            f"({guard.describe(revision)}). Those were different weights ({prev.get('model_key')}). "
+            "A new candidate needs a new revision name."
+        )
+    if force:
+        print(f"Regenerating the final test for {revision} ({guard.describe(revision)}).", flush=True)
+        return "run"
+    print(
+        f"Final test for {revision} already recorded on {prev.get('date')} "
+        f"({guard.describe(revision)}). Same weights, so this run is skipped.",
+        flush=True,
+    )
+    return "skip"

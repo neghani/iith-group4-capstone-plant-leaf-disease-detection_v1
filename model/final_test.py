@@ -1,4 +1,4 @@
-"""One-shot final test of v1.0 and v1.1. Refuses a second run for the same revision unless --force.
+"""One-shot final test of v1.0 and v1.1. The same weights skip; different weights are refused. --force regenerates the same run.
 
     python -m model.final_test --v11 /content/drive/MyDrive/plant-disease/stage2/best \
         --revision_name v1.1 --guard hub:neghani/plantvillage-mobilenetv2
@@ -267,7 +267,8 @@ def main(argv: list[str] | None = None) -> None:
     if guard is not None:
         from guard import check
 
-        check(guard, a.revision_name, key, a.force)
+        if check(guard, a.revision_name, key, a.force) == "skip":
+            return
 
     rows = load_final_rows(Path(a.test_dir), Path(a.real_world))
     if not rows:
