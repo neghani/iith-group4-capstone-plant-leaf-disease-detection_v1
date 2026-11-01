@@ -11,7 +11,7 @@ Capstone Project 7, Group 4.
 
 ## Project Status
 
-- **Phase 1 (model):** Live pin is MobileNetV2 `@v1.1` on [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) (`shared/release.json`). ResNet-18 is a candidate ([`neghani/plantvillage-resnet18`](https://huggingface.co/neghani/plantvillage-resnet18), Colab [`notebooks/phase1_plantvillage_resnet18.ipynb`](notebooks/phase1_plantvillage_resnet18.ipynb)) until it passes the field gate; see [model/README.md](model/README.md)
+- **Phase 1 (model):** Live pin is ResNet-18 `@v1.1` on [`neghani/plantvillage-resnet18`](https://huggingface.co/neghani/plantvillage-resnet18) (`shared/release.json`, threshold 0.55, T=0.936). MobileNetV2 `@v1.1` remains the previous pin; see [model/README.md](model/README.md)
 - **Phase 2 (demo):** FastAPI + LangGraph agent, **Next.js (CropCare AI) UI**, Docker Compose — implemented
 - **Phase 5:** Phase 1 Hugging Face model wired into the API (two-step quality gate, remote classifier, prediction-driven LLM) — implemented
 - **Hindi UI / translation:** planned
@@ -25,7 +25,7 @@ Capstone Project 7, Group 4.
 | Agent flow | [LangGraph](https://langchain-ai.github.io/langgraph/) | Predict → knowledge → report → safety (quality gate runs before the graph) |
 | Data validation | [Pydantic](https://docs.pydantic.dev/) | API and diagnosis report schemas |
 | User interface | [Next.js](https://nextjs.org/) + Tailwind | Figma-aligned CropCare AI shell |
-| Disease model | MobileNetV2 `@v1.1` live pin ([Hugging Face](https://huggingface.co/neghani/plantvillage-mobilenetv2)); ResNet-18 candidate | 38 classes; pin + `ood_threshold` in `shared/release.json`; served by `hf_space/` |
+| Disease model | ResNet-18 `@v1.1` live pin ([Hugging Face](https://huggingface.co/neghani/plantvillage-resnet18)); MobileNetV2 `@v1.1` previous pin | 38 classes; pin + `ood_threshold` in `shared/release.json`; served by `hf_space/` |
 | LLM | OpenAI ChatGPT API (optional) | Text only: farmer summary from the prediction, and chat; template fallback without key |
 | Containers | Docker Compose | `inference-service` + `api-service` + `ui-service` |
 
@@ -33,7 +33,7 @@ Capstone Project 7, Group 4.
 
 1. Next.js (`/check`) shrinks big phone photos in the browser (long side 2048 px), then sends the image to `POST /quality-check`. The API decodes once, finds the sharpest leaf (colour + focus), and checks brightness and sharpness on that leaf at a fixed scale, so large photos are not penalised. On failure the farmer gets retake guidance and nothing else runs.
 2. On pass, the UI sends the image to `POST /predict`. The API re-runs the same gate, then crops the best leaf to a 256 px square JPEG (the size the classifier's own preprocessing expects).
-3. The API calls the Hugging Face classifier at `HF_ENDPOINT_URL` and gets the top-3 labels with scores. The response's `inference` block records which model/revision answered (`model_verified` = reported by the server itself). Below `CONFIDENCE_THRESHOLD` (0.5, from `reports/metrics.json`) the result is marked "Possible match" and needs expert confirmation.
+3. The API calls the Hugging Face classifier at `HF_ENDPOINT_URL` and gets the top-3 labels with scores. The response's `inference` block records which model/revision answered (`model_verified` = reported by the server itself). Below `CONFIDENCE_THRESHOLD` (0.55, the ResNet v1.1 threshold) the result is marked "Possible match" and needs expert confirmation.
 4. Curated `api/data/knowledge/diseases.json` (all 38 classes) grounds symptoms, actions and monitoring. If the farmer's crop hint disagrees with the predicted crop the result is downgraded; a crop the model was never trained on gets a "Crop not supported" report instead of a disease name.
 5. The LLM gets only text: the top-3 predictions, the confidence level, the knowledge entry, and the farmer's notes. It writes the farmer summary. The image is never sent to the LLM.
 6. Results and history live in **sessionStorage** only; `POST /chat` uses the prediction context (diagnosis, confidence, top-3) from the client.

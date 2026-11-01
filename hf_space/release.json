@@ -1,14 +1,14 @@
 {
-  "hf_model_id": "neghani/plantvillage-mobilenetv2",
+  "hf_model_id": "neghani/plantvillage-resnet18",
   "hf_model_revision": "v1.1",
   "baseline_revision": "v1.0",
-  "confidence_threshold": 0.5,
-  "calibration_temperature": 0.8845188130635788,
+  "confidence_threshold": 0.55,
+  "calibration_temperature": 0.9357514486544162,
   "crop_strategy": "B",
   "ood_threshold": 0.05,
   "candidate": {
-    "hf_model_id": "neghani/plantvillage-resnet18",
-    "hf_model_revision": "v1.0",
-    "note": "PlantVillage-only; max-softmax/margin OOD cannot reject strawberry-as-tomato. Promote only after field gate + crop-level fix."
+    "hf_model_id": "neghani/plantvillage-mobilenetv2",
+    "hf_model_revision": "v1.1",
+    "note": "Previous live pin. Same 284-image final test: 137/284 (48.2%) vs ResNet v1.1 96/284 (33.8%)."
   }
 }

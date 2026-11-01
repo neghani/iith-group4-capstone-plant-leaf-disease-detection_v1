@@ -5,7 +5,7 @@
 - [ ] Copy `.env.example` to `.env` (optional `LLM_API_KEY` for richer text)
 - [ ] Set `HF_ENDPOINT_URL` to the deployed Space, or leave it empty to use the local `inference-service`
 - [ ] Run `docker compose up --build`
-- [ ] `GET /health?probe=true` shows `hf_model_id` / `hf_model_revision` matching `shared/release.json` (currently `neghani/plantvillage-mobilenetv2@v1.1`), `hf_reachable: true` and `hf_served_model` the same pin
+- [ ] `GET /health?probe=true` shows `hf_model_id` / `hf_model_revision` matching `shared/release.json` (currently `neghani/plantvillage-resnet18@v1.1`), `hf_reachable: true` and `hf_served_model` the same pin
 - [ ] Do **not** set `HF_MODEL_ID` / `HF_MODEL_REVISION` / `CALIBRATION_TEMPERATURE` in `.env` unless overriding the pin (stale values make Docker serve the wrong model)
 - [ ] Strawberry demo photo with crop=tomato must **not** return `confirmed_likely` (expect `not_sure` or `possible`)
 - [ ] Open UI at http://localhost:3000/check
@@ -37,4 +37,4 @@
 2. Analyze a tomato leaf sample; walk through signs, actions, limitations.
 3. Ask one follow-up (“Should I remove lower leaves?”).
 4. Click **Show a retake**, then go back and click **Show “I'm not sure”** — abstaining is a feature.
-5. Explain the flow: quality gate → Hugging Face MobileNetV2 (`v1.1`, 137/284 = 48.2% real-photo pass rate) → text-only LLM summary grounded in the prediction. Do not present ResNet as the live model: on the same 25-image final split it scores 2/25 against MobileNet's 10/25, and `neghani/plantvillage-resnet18` has no `v1.1` tag yet.
+5. Explain the flow: quality gate → Hugging Face ResNet-18 (`v1.1`, 96/284 = 33.8% on the 284-image final test) → text-only LLM summary grounded in the prediction. MobileNetV2 `v1.1` scored 137/284 (48.2%) on that same test and stays the previous pin.

@@ -236,8 +236,8 @@ Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-re
 | Backbone | **Not frozen** — end-to-end fine-tune |
 
 **Fallback:** For faster CPU inference, retrain with
-`--model_name_or_path google/mobilenet_v2_1.0_224` (same scripts). The previous MobileNetV2 release
-remains at [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) (`baseline_revision` in `shared/release.json`).
+`--model_name_or_path google/mobilenet_v2_1.0_224` (same scripts). The previous live pin
+remains at [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) `@v1.1` (`candidate` in `shared/release.json`). The live pin is ResNet-18 `@v1.1`.
 
 ### Training augmentations (phone robustness)
 

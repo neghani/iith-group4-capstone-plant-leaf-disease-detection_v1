@@ -21,8 +21,9 @@ def test_release_json_has_the_live_pin():
 
     pin = as_dict()
     assert PIN_PATH == REPO / "shared" / "release.json"
-    assert HF_MODEL_ID == "neghani/plantvillage-mobilenetv2"
+    assert HF_MODEL_ID == "neghani/plantvillage-resnet18"
     assert HF_MODEL_REVISION == "v1.1"
+    assert CONFIDENCE_THRESHOLD == 0.55
     assert BASELINE_REVISION.startswith("v")
     assert HF_MODEL_REVISION != BASELINE_REVISION
     assert 0 < CONFIDENCE_THRESHOLD <= 1
@@ -32,7 +33,7 @@ def test_release_json_has_the_live_pin():
     assert pin["ood_threshold"] == OOD_THRESHOLD
     assert pin["hf_model_revision"] == HF_MODEL_REVISION
     cand = pin.get("candidate") or {}
-    assert cand.get("hf_model_id") == "neghani/plantvillage-resnet18"
+    assert cand.get("hf_model_id") == "neghani/plantvillage-mobilenetv2"
     space_pin = json.loads((REPO / "hf_space" / "release.json").read_text(encoding="utf-8"))
     assert space_pin == pin, "copy shared/release.json -> hf_space/release.json after bumping the pin"
 
