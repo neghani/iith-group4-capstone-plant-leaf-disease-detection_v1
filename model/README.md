@@ -61,21 +61,21 @@ blight (~0.91–0.95 F1). Full per-class table: Hub `reports/classification_repo
 The ResNet figures to quote are in [`final_report.md`](final_report.md)
 (`model/outputs/final_report_v1_2.md`). Tag **`v1.2`**, strategy B, T≈0.996, threshold **0.60**,
 284 images. This split was already used for the `v1.1` decision, so treat `v1.2` as a
-same-protocol retrain, not a pristine held-out. MobileNet `v1.1` remains the stronger field
-model on this set (137/284) and stays in `shared/release.json` as `candidate`.
+same-protocol retrain, not a pristine held-out. **Bake-off winner: MobileNet `v1.1`** (live pin).
+Talk sheet: [`docs/model-bakeoff.md`](../docs/model-bakeoff.md).
 
-| Metric | ResNet `v1.0` (thr 0.85) | **ResNet `v1.2` (thr 0.60)** | MobileNet `v1.1` (thr 0.50) |
+| Metric | ResNet `v1.0` (thr 0.85) | ResNet `v1.2` (thr 0.60) | **MobileNet `v1.1` (thr 0.50)** |
 |---|---|---|---|
-| Images | 284 | **284** | 284 |
-| Gate rejects (retake) | 5/284 | **5/284** | 5/284 |
-| Not sure | 172/284 (60.6%) | **145/284 (51.1%)** | 91/284 (32.0%) |
-| Top-1 (reached model) | 65/279 (23.3%) | **158/279 (56.6%)** | 159/279 (57.0%) |
-| Top-3 (reached model) | 135/279 (48.4%) | **229/279 (82.1%)** | 219/279 (78.5%) |
-| **End-to-end pass rate** | 39/284 (13.7%) | **98/284 (34.5%)** | **137/284 (48.2%)** |
-| `plantdoc_test` (pristine) | 36/236 (15.3%) | **86/236 (36.4%)** | 116/236 (49.2%) |
-| `real_world_set` (wide) | 3/48 (6.2%) | **12/48 (25.0%)** | 21/48 (43.8%) |
+| Images | 284 | 284 | **284** |
+| Gate rejects (retake) | 5/284 | 5/284 | **5/284** |
+| Not sure | 172/284 (60.6%) | 145/284 (51.1%) | **91/284 (32.0%)** |
+| Top-1 (reached model) | 65/279 (23.3%) | 158/279 (56.6%) | **159/279 (57.0%)** |
+| Top-3 (reached model) | 135/279 (48.4%) | 229/279 (82.1%) | **219/279 (78.5%)** |
+| **End-to-end pass rate** | 39/284 (13.7%) | 98/284 (34.5%) | **137/284 (48.2%)** |
+| `plantdoc_test` (pristine) | 36/236 (15.3%) | 86/236 (36.4%) | **116/236 (49.2%)** |
+| `real_world_set` (wide) | 3/48 (6.2%) | 12/48 (25.0%) | **21/48 (43.8%)** |
 
-The 50% goal is not met; **34.5% is reported as-is**. Paired gain over ResNet `v1.0`: +20.8 points
+MobileNet is closest to the 50% field goal. ResNet `v1.2` gain over ResNet `v1.0`: +20.8 points
 (95% bootstrap +15.1 to +26.4). Side-by-side numbers: `model/outputs/compare_v1_2.json`.
 
 PlantVillage held-out accuracy on `v1.2` is 97.90% (macro-F1 96.87%), within the 2-point publish
@@ -237,9 +237,9 @@ Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-re
 | Wall time (Colab T4) | ~493 s for full run |
 | Backbone | **Not frozen** — end-to-end fine-tune |
 
-**Fallback:** For faster CPU inference, retrain with
-`--model_name_or_path google/mobilenet_v2_1.0_224` (same scripts). The previous live pin
-remains at [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) `@v1.1` (`candidate` in `shared/release.json`). The live pin is ResNet-18 `@v1.2`.
+**Live pin:** [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) `@v1.1`
+(bake-off winner). ResNet-18 `@v1.2` is the `candidate` in `shared/release.json`. Same scripts work with
+`--model_name_or_path google/mobilenet_v2_1.0_224` or `microsoft/resnet-18`.
 
 ### Training augmentations (phone robustness)
 
