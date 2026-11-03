@@ -63,3 +63,7 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local Kaggle MasterDataset symlink/cache — never commit
+data/masterdataset
+data/masterdataset/

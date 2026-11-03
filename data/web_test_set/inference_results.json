@@ -1,0 +1,406 @@
+{
+  "model": "neghani/plantvillage-resnet18",
+  "revision": "v1.1",
+  "n": 18,
+  "exact": 9,
+  "crop_match": 10,
+  "note": "Smoke set for live PlantVillage pin; not bake-off.",
+  "rows": [
+    {
+      "file": "Apple_Cedar_apple_rust.jpg",
+      "expected": "Apple___Cedar_apple_rust",
+      "pred": "Grape___Black_rot",
+      "score": 0.5225,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Grape___Black_rot",
+          0.5225
+        ],
+        [
+          "Apple___Cedar_apple_rust",
+          0.3928
+        ],
+        [
+          "Blueberry___healthy",
+          0.0311
+        ]
+      ]
+    },
+    {
+      "file": "Apple_Apple_scab.jpg",
+      "expected": "Apple___Apple_scab",
+      "pred": "Grape___Black_rot",
+      "score": 0.2793,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Grape___Black_rot",
+          0.2793
+        ],
+        [
+          "Cherry_(including_sour)___healthy",
+          0.1519
+        ],
+        [
+          "Tomato___Bacterial_spot",
+          0.077
+        ]
+      ]
+    },
+    {
+      "file": "Apple_healthy.jpg",
+      "expected": "Apple___healthy",
+      "pred": "Grape___healthy",
+      "score": 0.424,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Grape___healthy",
+          0.424
+        ],
+        [
+          "Cherry_(including_sour)___healthy",
+          0.2005
+        ],
+        [
+          "Raspberry___healthy",
+          0.0821
+        ]
+      ]
+    },
+    {
+      "file": "Corn_maize_Common_rust.jpg",
+      "expected": "Corn_(maize)___Common_rust_",
+      "pred": "Corn_(maize)___Common_rust_",
+      "score": 0.5564,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Corn_(maize)___Common_rust_",
+          0.5564
+        ],
+        [
+          "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+          0.2291
+        ],
+        [
+          "Corn_(maize)___Northern_Leaf_Blight",
+          0.1597
+        ]
+      ]
+    },
+    {
+      "file": "Corn_maize_Northern_Leaf_Blight.jpg",
+      "expected": "Corn_(maize)___Northern_Leaf_Blight",
+      "pred": "Corn_(maize)___Northern_Leaf_Blight",
+      "score": 0.7117,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Corn_(maize)___Northern_Leaf_Blight",
+          0.7117
+        ],
+        [
+          "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+          0.1821
+        ],
+        [
+          "Corn_(maize)___Common_rust_",
+          0.0507
+        ]
+      ]
+    },
+    {
+      "file": "Corn_maize_healthy.jpg",
+      "expected": "Corn_(maize)___healthy",
+      "pred": "Corn_(maize)___healthy",
+      "score": 0.9374,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Corn_(maize)___healthy",
+          0.9374
+        ],
+        [
+          "Peach___healthy",
+          0.0061
+        ],
+        [
+          "Cherry_(including_sour)___healthy",
+          0.0056
+        ]
+      ]
+    },
+    {
+      "file": "Grape_Black_rot.jpg",
+      "expected": "Grape___Black_rot",
+      "pred": "Grape___Black_rot",
+      "score": 0.8468,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Grape___Black_rot",
+          0.8468
+        ],
+        [
+          "Potato___Early_blight",
+          0.0268
+        ],
+        [
+          "Apple___Cedar_apple_rust",
+          0.0209
+        ]
+      ]
+    },
+    {
+      "file": "Grape_healthy.jpg",
+      "expected": "Grape___healthy",
+      "pred": "Grape___healthy",
+      "score": 0.5479,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Grape___healthy",
+          0.5479
+        ],
+        [
+          "Grape___Black_rot",
+          0.2454
+        ],
+        [
+          "Apple___healthy",
+          0.053
+        ]
+      ]
+    },
+    {
+      "file": "Potato_Early_blight.jpg",
+      "expected": "Potato___Early_blight",
+      "pred": "Potato___Early_blight",
+      "score": 0.8195,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Potato___Early_blight",
+          0.8195
+        ],
+        [
+          "Potato___Late_blight",
+          0.1352
+        ],
+        [
+          "Grape___Black_rot",
+          0.033
+        ]
+      ]
+    },
+    {
+      "file": "Potato_Late_blight.jpg",
+      "expected": "Potato___Late_blight",
+      "pred": "Potato___Late_blight",
+      "score": 0.7225,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Potato___Late_blight",
+          0.7225
+        ],
+        [
+          "Tomato___Late_blight",
+          0.1122
+        ],
+        [
+          "Potato___Early_blight",
+          0.1015
+        ]
+      ]
+    },
+    {
+      "file": "Strawberry_Leaf_scorch.jpg",
+      "expected": "Strawberry___Leaf_scorch",
+      "pred": "Blueberry___healthy",
+      "score": 0.1659,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Blueberry___healthy",
+          0.1659
+        ],
+        [
+          "Strawberry___healthy",
+          0.1223
+        ],
+        [
+          "Tomato___Tomato_mosaic_virus",
+          0.103
+        ]
+      ]
+    },
+    {
+      "file": "Strawberry_healthy.jpg",
+      "expected": "Strawberry___healthy",
+      "pred": "Strawberry___healthy",
+      "score": 0.3897,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Strawberry___healthy",
+          0.3897
+        ],
+        [
+          "Tomato___healthy",
+          0.116
+        ],
+        [
+          "Grape___healthy",
+          0.0791
+        ]
+      ]
+    },
+    {
+      "file": "Tomato_Early_blight.jpg",
+      "expected": "Tomato___Early_blight",
+      "pred": "Grape___Black_rot",
+      "score": 0.2714,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Grape___Black_rot",
+          0.2714
+        ],
+        [
+          "Tomato___Bacterial_spot",
+          0.271
+        ],
+        [
+          "Tomato___Early_blight",
+          0.1563
+        ]
+      ]
+    },
+    {
+      "file": "Tomato_Late_blight.jpg",
+      "expected": "Tomato___Late_blight",
+      "pred": "Potato___Late_blight",
+      "score": 0.4539,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Potato___Late_blight",
+          0.4539
+        ],
+        [
+          "Potato___Early_blight",
+          0.3205
+        ],
+        [
+          "Pepper,_bell___healthy",
+          0.0331
+        ]
+      ]
+    },
+    {
+      "file": "Tomato_Bacterial_spot.jpg",
+      "expected": "Tomato___Bacterial_spot",
+      "pred": "Tomato___Early_blight",
+      "score": 0.4756,
+      "exact": false,
+      "crop_match": true,
+      "top3": [
+        [
+          "Tomato___Early_blight",
+          0.4756
+        ],
+        [
+          "Tomato___Septoria_leaf_spot",
+          0.2203
+        ],
+        [
+          "Tomato___Bacterial_spot",
+          0.2178
+        ]
+      ]
+    },
+    {
+      "file": "Tomato_healthy.jpg",
+      "expected": "Tomato___healthy",
+      "pred": "Tomato___healthy",
+      "score": 0.7176,
+      "exact": true,
+      "crop_match": true,
+      "top3": [
+        [
+          "Tomato___healthy",
+          0.7176
+        ],
+        [
+          "Soybean___healthy",
+          0.1612
+        ],
+        [
+          "Apple___healthy",
+          0.0172
+        ]
+      ]
+    },
+    {
+      "file": "Pepper_bell_Bacterial_spot.jpg",
+      "expected": "Pepper,_bell___Bacterial_spot",
+      "pred": "Tomato___Early_blight",
+      "score": 0.3259,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Tomato___Early_blight",
+          0.3259
+        ],
+        [
+          "Pepper,_bell___Bacterial_spot",
+          0.309
+        ],
+        [
+          "Tomato___Bacterial_spot",
+          0.1483
+        ]
+      ]
+    },
+    {
+      "file": "Pepper_bell_healthy.jpg",
+      "expected": "Pepper,_bell___healthy",
+      "pred": "Blueberry___healthy",
+      "score": 0.1885,
+      "exact": false,
+      "crop_match": false,
+      "top3": [
+        [
+          "Blueberry___healthy",
+          0.1885
+        ],
+        [
+          "Peach___healthy",
+          0.1575
+        ],
+        [
+          "Cherry_(including_sour)___healthy",
+          0.1467
+        ]
+      ]
+    }
+  ]
+}
