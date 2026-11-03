@@ -64,9 +64,9 @@ class FakeClassifier(list):
     def __init__(self):
         super().__init__()
         self.scores = [
-            LabelScore("Tomato___Early_blight", 0.91),
-            LabelScore("Tomato___Target_Spot", 0.06),
-            LabelScore("Tomato___Septoria_leaf_spot", 0.02),
+            LabelScore("tomato_early_blight", 0.91),
+            LabelScore("tomato_late_blight", 0.06),
+            LabelScore("tomato_septoria_leaf_spot", 0.02),
         ]
 
     def __call__(self, image_bytes, content_type="image/jpeg", top_k=None):

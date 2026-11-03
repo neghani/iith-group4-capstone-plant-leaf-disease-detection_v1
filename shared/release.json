@@ -1,14 +1,31 @@
 {
-  "hf_model_id": "neghani/plantvillage-resnet18",
+  "hf_model_id": "neghani/plantvillage-mobilenetv2",
   "hf_model_revision": "v1.1",
   "baseline_revision": "v1.0",
-  "confidence_threshold": 0.55,
-  "calibration_temperature": 0.9357514486544162,
+  "confidence_threshold": 0.5,
+  "calibration_temperature": 0.885,
   "crop_strategy": "B",
   "ood_threshold": 0.05,
   "candidate": {
-    "hf_model_id": "neghani/plantvillage-mobilenetv2",
+    "hf_model_id": "neghani/plantvillage-resnet18",
     "hf_model_revision": "v1.1",
-    "note": "Previous live pin. Same 284-image final test: 137/284 (48.2%) vs ResNet v1.1 96/284 (33.8%)."
+    "knowledge_file": "data/knowledge/diseases.plantvillage.json",
+    "note": "Shared bake-off runner-up (63/110 top-1 vs MobileNet 60/110; lost on not-sure tie-break)."
+  },
+  "masterdataset": {
+    "hf_model_id": "neghani/plant-leaf-masterdataset-resnet18",
+    "hf_model_revision": "v1.0.1",
+    "knowledge_file": "data/knowledge/diseases.json",
+    "confidence_threshold": 0.3,
+    "calibration_temperature": 1.0877081469119998,
+    "note": "Lost shared-label field bake-off (14/110 top-1). Keep for 19-crop lab track."
+  },
+  "knowledge_file": "data/knowledge/diseases.plantvillage.json",
+  "bakeoff": {
+    "set": "model/data/shared_set",
+    "report": "model/outputs/bakeoff/bakeoff_report.md",
+    "n_final": 110,
+    "winner": "A_mobilenet_v1.1",
+    "metric": "final_top1_with_not_sure_tiebreak"
   }
 }

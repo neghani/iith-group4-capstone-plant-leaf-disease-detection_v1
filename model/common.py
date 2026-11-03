@@ -133,6 +133,8 @@ DEFAULT_BASE_MODEL = "microsoft/resnet-18"
 FALLBACK_BASE_MODEL = "google/mobilenet_v2_1.0_224"
 DEFAULT_HF_MODEL_REPO = "neghani/plantvillage-resnet18"
 KAGGLE_DATASET = "abdallahalidev/plantvillage-dataset"
+MASTER_KAGGLE_DATASET = "adiithape1/plant-disease-detection-dataset-master-version"
+MASTER_HF_MODEL_ID = "neghani/plant-leaf-masterdataset-resnet18"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
@@ -178,20 +180,77 @@ def load_image(path: str | Path) -> Image.Image:
 # --------------------------------------------------------------------------------------
 
 
+# Folder prefixes in the 19-crop MasterDataset. Longer names first so bell_pepper wins over a shorter prefix.
+MASTER_CROPS = (
+    "bell_pepper",
+    "groundnut",
+    "strawberry",
+    "sugarcane",
+    "apple",
+    "bean",
+    "cherry",
+    "corn",
+    "cotton",
+    "cucumber",
+    "grape",
+    "guava",
+    "lemon",
+    "peach",
+    "potato",
+    "pumpkin",
+    "rice",
+    "tomato",
+    "wheat",
+)
+
+
+def _title_crop(slug: str) -> str:
+    return slug.replace("_", " ").title()
+
+
+def _master_parts(class_name: str) -> tuple[str, str] | None:
+    """'healthy_apple' -> ('apple', 'healthy'); 'tomato_early_blight' -> ('tomato', 'early_blight')."""
+    low = class_name.lower()
+    if low.startswith("healthy_"):
+        return low[len("healthy_") :], "healthy"
+    if low.startswith("diseased_"):
+        return low[len("diseased_") :], "diseased"
+    for crop in sorted(MASTER_CROPS, key=len, reverse=True):
+        prefix = crop + "_"
+        if low.startswith(prefix):
+            return crop, low[len(prefix) :]
+    return None
+
+
 def crop_from_class(class_name: str) -> str:
-    """'Tomato___Early_blight' -> 'Tomato'; 'Corn_(maize)___Common_rust_' -> 'Corn (maize)'."""
-    crop = class_name.split("___")[0]
-    return crop.replace("_", " ").strip()
+    """'Tomato___Early_blight' -> 'Tomato'; 'tomato_early_blight' -> 'Tomato'; 'healthy_apple' -> 'Apple'."""
+    if "___" in class_name:
+        crop = class_name.split("___")[0]
+        return crop.replace("_", " ").strip()
+    parts = _master_parts(class_name)
+    if parts:
+        return _title_crop(parts[0])
+    return class_name.replace("_", " ").strip()
 
 
 def display_name(class_name: str) -> str:
-    """'Tomato___Early_blight' -> 'Tomato - Early blight'."""
+    """'Tomato___Early_blight' -> 'Tomato - Early blight'; 'healthy_apple' -> 'Apple - Healthy'."""
+    if "___" not in class_name:
+        parts = _master_parts(class_name)
+        if parts:
+            cond = parts[1].replace("_", " ").strip()
+            return f"{_title_crop(parts[0])} - {cond[:1].upper()}{cond[1:]}" if cond else _title_crop(parts[0])
     parts = class_name.split("___")
     crop = parts[0].replace("_", " ").strip()
     if len(parts) == 1:
         return crop
     cond = parts[1].replace("_", " ").strip()
     return f"{crop} - {cond}"
+
+
+def is_healthy_class(class_name: str) -> bool:
+    low = class_name.lower()
+    return low.endswith("___healthy") or low.startswith("healthy_") or low.endswith("_healthy")
 
 
 # --------------------------------------------------------------------------------------
@@ -258,6 +317,12 @@ def resolve_data_dir(path: str | Path) -> Path:
     if not root.exists():
         raise FileNotFoundError(f"Data directory not found: {root}")
     if _has_class_folders(root):
+        return root
+    # Pre-split MasterDataset: train/val/test each hold class folders. splits.json paths
+    # include the split directory, so evaluate.py joins them onto this root.
+    train = root / "train"
+    names = {p.name.lower() for p in root.iterdir() if p.is_dir()} if root.is_dir() else set()
+    if train.is_dir() and _has_class_folders(train) and "test" in names and names & {"val", "valid", "validation"}:
         return root
     for candidate in ("color", "plantvillage dataset/color", "PlantVillage/color"):
         c = root / candidate

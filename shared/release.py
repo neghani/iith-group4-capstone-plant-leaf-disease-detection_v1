@@ -21,6 +21,8 @@ CALIBRATION_TEMPERATURE: float = float(_PIN["calibration_temperature"])
 CROP_STRATEGY: str = _PIN["crop_strategy"]
 # Minimum top-1 minus top-2 probability gap. Flat softmax → not_sure even if top-1 is high.
 OOD_THRESHOLD: float = float(_PIN.get("ood_threshold", 0.0))
+# Relative to api/. MasterDataset live file, or diseases.plantvillage.json on rollback.
+KNOWLEDGE_FILE: str = _PIN.get("knowledge_file", "data/knowledge/diseases.json")
 PIN_PATH = _PATH
 
 

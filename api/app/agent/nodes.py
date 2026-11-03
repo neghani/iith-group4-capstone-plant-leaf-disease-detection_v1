@@ -4,7 +4,7 @@ from app.agent.state import DiagnosisState
 from app.config import get_settings
 from app.schemas import DiagnosisReport
 from app.services.crops import resolve_hint, same_crop
-from app.services.knowledge import get_entry
+from app.services.knowledge import curated_reference, get_entry
 from app.services.report import (
     apply_crop_mismatch,
     build_error_report,
@@ -104,9 +104,10 @@ def generate_report_node(state: DiagnosisState) -> DiagnosisState:
         state.get("crop", "Unknown"),
         state.get("top_k", []),
     )
+    disease_id = state["disease_id"]
     report = enrich_report_with_llm(
         report,
-        reference=state.get("knowledge_entry") or {},
+        reference=curated_reference(disease_id),
         top_k=state.get("top_k", []),
         low_confidence=state.get("low_confidence", False),
         crop_hint=state.get("crop_hint", ""),

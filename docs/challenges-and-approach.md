@@ -3,7 +3,12 @@
 Engineering log for the capstone write-up. Each entry: what went wrong, the evidence, the root
 cause, what we changed, and what it cost or left open. Numbers come from runs on 2026-10-11
 against `neghani/plantvillage-mobilenetv2@v1.0` (historical MobileNet baseline) unless
-stated otherwise. The live app pin is [`shared/release.json`](../shared/release.json) (`neghani/plantvillage-resnet18` and its `hf_model_revision`).
+stated otherwise. The live app pin is [`shared/release.json`](../shared/release.json)
+(`neghani/plantvillage-mobilenetv2` at `v1.1`), chosen by the shared-label field bake-off
+(`model/outputs/bakeoff/bakeoff_report.md`: 60/110 top-1, lower not-sure than ResNet).
+PlantVillage ResNet `@v1.1` is the candidate; MasterDataset ResNet `@v1.0.1` (19 crops, lab
+test 0.9615) stays documented for the 86-class track but lost the shared field bake-off
+(14/110 top-1) and is not the live pin.
 
 ## Summary
 
@@ -196,7 +201,8 @@ Flow: `predict` (HF) -> `knowledge` -> `generate_report` -> `safety` (side exits
 Traced and now covered by `tests/test_agent_flow.py`, which changes only the classifier output:
 
 - `disease_id`/confidence/top-3 from the HF call select the curated knowledge entry
-  (`diseases.json`; all 38 model labels have an entry, checked against the Hub `config.json`).
+  (`diseases.json`; all 86 MasterDataset labels have an entry, checked against the Hub `config.json`
+  and `api/tests/model_labels.json` at API startup).
 - The text-only LLM prompt contains the top-3 with scores, the confidence category and a
   below-threshold warning; the LLM never receives the image.
 - `safety` downgrades low-confidence results to "Possible match" and requires expert confirmation.
@@ -219,7 +225,8 @@ Traced and now covered by `tests/test_agent_flow.py`, which changes only the cla
 test at threshold 0.85, with 146/284 "not sure". Softmax is overconfident on the wrong class.
 
 **Approach.** Continue from the published `v1.0` weights on a 50/50 mix of PlantVillage and
-Cropped-PlantDoc (Singh et al. 2020, CC BY 4.0; 27 of 38 classes). Split by pHash cluster, exclude
+Cropped-PlantDoc (Singh et al. 2020, CC BY 4.0; historically 27 of 38 PlantVillage classes;
+the live MasterDataset pin overlaps 21 classes for OOD only). Split by pHash cluster, exclude
 every `real_world_set` original path and near-duplicates of the held-out test, fit temperature and
 the threshold on **validation only**, and run the final test once per revision (guard JSON on the
 Hub `stage2-runs` branch or Drive, never local `outputs/`).

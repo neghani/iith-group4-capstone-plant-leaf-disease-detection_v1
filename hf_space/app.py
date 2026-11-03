@@ -28,7 +28,8 @@ MODEL_ID = os.environ.get("HF_MODEL_ID") or _PIN["hf_model_id"]
 REVISION = os.environ.get("HF_MODEL_REVISION") or _PIN["hf_model_revision"]
 
 classifier = pipeline("image-classification", model=MODEL_ID, revision=REVISION, device="cpu")
-app = FastAPI(title="PlantVillage disease inference")
+_NUM_LABELS = int(classifier.model.config.num_labels)
+app = FastAPI(title="Plant disease inference")
 
 
 @app.get("/health")
@@ -37,7 +38,7 @@ def health() -> dict:
 
 
 @app.post("/")
-async def classify(request: Request, response: Response, top_k: int = Query(3, ge=1, le=38)) -> list[dict]:
+async def classify(request: Request, response: Response, top_k: int = Query(3, ge=1, le=_NUM_LABELS)) -> list[dict]:
     body = await request.body()
     if not body:
         raise HTTPException(status_code=400, detail="Empty image body.")

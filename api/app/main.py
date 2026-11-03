@@ -43,6 +43,24 @@ app = FastAPI(
     version="0.4.0",
 )
 
+
+@app.on_event("startup")
+def _check_knowledge_matches_labels() -> None:
+    """Refuse to serve when diseases.json and the pinned label list disagree."""
+    from pathlib import Path
+
+    from app.services.knowledge import assert_labels_match_knowledge, list_disease_ids
+
+    labels_path = Path(__file__).resolve().parents[1] / "tests" / "model_labels.json"
+    if not labels_path.is_file():
+        _log.warning("model_labels.json missing; skipping knowledge/label guard")
+        return
+    import json
+
+    labels = json.loads(labels_path.read_text(encoding="utf-8"))
+    assert_labels_match_knowledge(labels)
+    _log.info("Knowledge guard OK: %s classes", len(list_disease_ids()))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -4,25 +4,7 @@ import { ImageUp } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { cropName } from "@/i18n";
-
-// Cropped-PlantDoc crops used for real-photo checks. Values are names the
-// classifier was trained on (PlantVillage); PlantDoc spells soybean "Soyabean".
-const CROPS = [
-  "Apple",
-  "Bell pepper",
-  "Blueberry",
-  "Cherry",
-  "Corn",
-  "Grape",
-  "Peach",
-  "Potato",
-  "Raspberry",
-  "Soybean",
-  "Squash",
-  "Strawberry",
-  "Tomato",
-];
-const OTHER = "__other__";
+import { MASTER_CROPS, OTHER_CROP } from "@/lib/crops";
 
 export function UploadStepCard({
   onAnalyze,
@@ -121,18 +103,18 @@ export function UploadStepCard({
           className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm"
         >
           <option value="">{t("upload.selectCrop")}</option>
-          {CROPS.map((value) => (
+          {MASTER_CROPS.map((value) => (
             <option key={value} value={value}>
               {cropName(locale, value)}
             </option>
           ))}
-          <option value={OTHER}>{t("upload.otherCrop")}</option>
+          <option value={OTHER_CROP}>{t("upload.otherCrop")}</option>
         </select>
         <span className="mt-1 block text-xs font-normal text-[var(--color-text-muted)]">
           {t("upload.cropHint")}
         </span>
       </label>
-      {crop === OTHER && (
+      {crop === OTHER_CROP && (
         <label className="mt-4 block text-sm font-medium text-forest">
           {t("upload.whichCrop")}
           <input
@@ -163,7 +145,7 @@ export function UploadStepCard({
         disabled={!file || loading}
         onClick={() =>
           file &&
-          onAnalyze(file, crop === OTHER ? otherCrop.trim() : crop, symptoms)
+          onAnalyze(file, crop === OTHER_CROP ? otherCrop.trim() : crop, symptoms)
         }
         className="mt-6 w-full rounded-xl bg-forest py-3 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
       >

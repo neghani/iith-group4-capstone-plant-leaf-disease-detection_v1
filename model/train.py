@@ -50,6 +50,7 @@ from progress import StepProgress  # noqa: E402
 from common import (  # noqa: E402
     DEFAULT_BASE_MODEL,
     DEFAULT_HF_MODEL_ID,
+    MASTER_HF_MODEL_ID,
     get_hf_token,
     refuse_stale_resume,
     resolve_data_dir,
@@ -124,7 +125,15 @@ class DataArguments:
         default="default",
         metadata={
             "help": "Training augmentation: 'default' (current stack) or 'robust' (adds RandomErasing). "
-            "Changing this on a resumed run is a new experiment, not a resume."
+            "Changing this on a resumed run is a new experiment, not a resume. "
+            "Ignored when --dataset masterdataset (that path uses model/dataset.py)."
+        },
+    )
+    dataset: str = field(
+        default="plantvillage",
+        metadata={
+            "help": "plantvillage: scan one imagefolder and make a random split. "
+            "masterdataset: use the pre-split train/val/test folders and do not mix in PlantDoc."
         },
     )
 
@@ -387,8 +396,27 @@ def main(argv: list[str] | None = None) -> None:
             for name in ("README.md", "splits.json", "run_info.json", "all_results.json",
                          "train_results.json", "eval_results.json", "test_results.json"):
                 (output_dir / name).unlink(missing_ok=True)
+    dataset_kind = (data_args.dataset or "plantvillage").strip().lower()
+    if dataset_kind not in ("plantvillage", "masterdataset"):
+        raise SystemExit(f"Unknown --dataset {data_args.dataset!r}. Use plantvillage or masterdataset.")
+    if dataset_kind == "masterdataset" and data_args.extra_data:
+        raise SystemExit(
+            "PlantDoc is out-of-dataset proof for the MasterDataset. Do not pass --extra_data. "
+            "Score the overlap with model/plantdoc_ood.py after training."
+        )
     if training_args.push_to_hub and not training_args.hub_model_id:
         training_args.hub_model_id = DEFAULT_HF_MODEL_ID
+    if (
+        dataset_kind == "masterdataset"
+        and training_args.push_to_hub
+        and training_args.hub_model_id in (DEFAULT_HF_MODEL_ID, "neghani/plantvillage-resnet18")
+    ):
+        logger.warning(
+            "Refusing to push the MasterDataset run onto the live PlantVillage repo %s. Using %s.",
+            training_args.hub_model_id,
+            MASTER_HF_MODEL_ID,
+        )
+        training_args.hub_model_id = MASTER_HF_MODEL_ID
     if training_args.load_best_model_at_end and training_args.metric_for_best_model in (None, "macro_f1"):
         training_args.metric_for_best_model = "plantdoc_macro_f1" if data_args.extra_data else "macro_f1"
         training_args.greater_is_better = True
@@ -400,7 +428,23 @@ def main(argv: list[str] | None = None) -> None:
         if not training_args.hub_token:
             logger.warning("push_to_hub is set but no HF token found (HF_TOKEN env or `hf auth login`).")
 
-    data_dir = resolve_data_dir(data_args.data_dir)
+    if dataset_kind == "masterdataset":
+        from dataset import build_hf_datasets
+
+        label_names, splits, datasets, data_dir = build_hf_datasets(
+            data_args.data_dir,
+            data_args.crop_filter,
+            data_args.max_samples_per_class,
+            training_args.seed,
+        )
+        extra_info = None
+        extra_dir = None
+        sampler_spec = None
+    else:
+        data_dir = resolve_data_dir(data_args.data_dir)
+        label_names, splits, datasets, extra_info, extra_dir, sampler_spec = build_datasets(
+            data_dir, data_args, training_args.seed
+        )
     logger.info("Data dir: %s", data_dir)
     if "/content/drive/" in str(data_dir.resolve()).replace("\\", "/"):
         logger.warning(
@@ -409,9 +453,6 @@ def main(argv: list[str] | None = None) -> None:
             data_dir,
         )
 
-    label_names, splits, datasets, extra_info, extra_dir, sampler_spec = build_datasets(
-        data_dir, data_args, training_args.seed
-    )
     if extra_dir:
         assert_training_protocol(data_dir, splits["train"], extra_dir, artifacts / "pv_phash_cache.json")
         # Keep exclusion counts from prepare; add PlantVillage split sizes.
@@ -441,7 +482,7 @@ def main(argv: list[str] | None = None) -> None:
     id2label = {i: n for i, n in enumerate(label_names)}
     label2id = {n: i for i, n in id2label.items()}
     logger.info("Classes (%d): %s", num_labels, ", ".join(label_names))
-    logger.info("Split sizes (PlantVillage): %s", {k: len(v) for k, v in splits.items()})
+    logger.info("Split sizes (%s): %s", dataset_kind, {k: len(v) for k, v in splits.items()})
     if extra_info:
         logger.info("Extra data: %s; mixed epoch %d draws, PlantDoc fraction %.2f",
                     extra_info, data_args.epoch_samples, data_args.plantdoc_fraction)
@@ -453,6 +494,7 @@ def main(argv: list[str] | None = None) -> None:
         label_names,
         splits,
         extra={
+            "dataset": dataset_kind,
             "seed": training_args.seed,
             "crop_filter": data_args.crop_filter,
             "max_samples_per_class": data_args.max_samples_per_class,
@@ -471,7 +513,7 @@ def main(argv: list[str] | None = None) -> None:
     base_labels = [base_config.id2label[i] for i in range(len(base_config.id2label))]
     if len(base_labels) == num_labels and base_labels != label_names:
         raise SystemExit(
-            "The starting model already has a 38-class head whose label order differs from the training folders; "
+            "The starting model already has a classification head whose label order differs from the training folders; "
             "continuing would scramble it. Compare id2label in the model's config.json with the data_dir class folders."
         )
     config = AutoConfig.from_pretrained(
@@ -484,23 +526,44 @@ def main(argv: list[str] | None = None) -> None:
         **pretrained_kwargs,
     )
     image_processor = AutoImageProcessor.from_pretrained(model_args.model_name_or_path, **pretrained_kwargs)
+    master_record = None
+    if dataset_kind == "masterdataset":
+        from dataset import align_processor, build_transforms as master_transforms
 
-    pv_tf = build_transforms(
-        image_processor, data_args.image_size, is_training=True, rrc_scale=(0.7, 1.0),
-        aug_policy=data_args.aug_policy,
-    )
-    pd_tf = build_transforms(
-        image_processor, data_args.image_size, is_training=True, rrc_scale=(0.5, 1.0),
-        aug_policy=data_args.aug_policy,
-    )
-    eval_tf = build_transforms(image_processor, data_args.image_size, is_training=False)
+        align_processor(image_processor)
+        train_tf = master_transforms(True)
+        eval_tf = master_transforms(False)
+        master_record = {
+            "policy": "masterdataset",
+            "image_size": 224,
+            "ops": ["Resize", "RandomHorizontalFlip", "RandomRotation", "ToTensor", "Normalize"],
+            "eval_ops": ["Resize", "CenterCrop", "ToTensor", "Normalize"],
+            "mean": [0.485, 0.456, 0.406],
+            "std": [0.229, 0.224, 0.225],
+        }
 
-    def preprocess_train(examples):
-        out = []
-        for img, src in zip(examples["image"], examples["source"]):
-            tf = pd_tf if src == "plantdoc" else pv_tf
-            out.append(tf(img.convert("RGB")))
-        return {"pixel_values": out, "labels": examples["label"]}
+        def preprocess_train(examples):
+            return {
+                "pixel_values": [train_tf(img.convert("RGB")) for img in examples["image"]],
+                "labels": examples["label"],
+            }
+    else:
+        pv_tf = build_transforms(
+            image_processor, data_args.image_size, is_training=True, rrc_scale=(0.7, 1.0),
+            aug_policy=data_args.aug_policy,
+        )
+        pd_tf = build_transforms(
+            image_processor, data_args.image_size, is_training=True, rrc_scale=(0.5, 1.0),
+            aug_policy=data_args.aug_policy,
+        )
+        eval_tf = build_transforms(image_processor, data_args.image_size, is_training=False)
+
+        def preprocess_train(examples):
+            out = []
+            for img, src in zip(examples["image"], examples["source"]):
+                tf = pd_tf if src == "plantdoc" else pv_tf
+                out.append(tf(img.convert("RGB")))
+            return {"pixel_values": out, "labels": examples["label"]}
 
     def preprocess_eval(examples):
         return {"pixel_values": [eval_tf(img.convert("RGB")) for img in examples["image"]], "labels": examples["label"]}
@@ -553,6 +616,10 @@ def main(argv: list[str] | None = None) -> None:
             trainer.log_metrics("eval", metrics)
             trainer.save_metrics("eval", metrics)
         if "test" in datasets:
+            # Persistent workers cache eval loaders under the key "eval". Clear that
+            # cache or the test pass reuses the validation DataLoader.
+            if getattr(trainer, "_eval_dataloaders", None):
+                trainer._eval_dataloaders.clear()
             metrics = trainer.evaluate(eval_dataset=datasets["test"], metric_key_prefix="test")
             trainer.log_metrics("test", metrics)
             trainer.save_metrics("test", metrics)
@@ -572,7 +639,8 @@ def main(argv: list[str] | None = None) -> None:
         "data_manifest": (json.loads((artifacts / "data_manifest.json").read_text())
                           if extra_info and (artifacts / "data_manifest.json").exists() else None),
         **code_commit(),
-        "augmentation": augmentation_record(data_args.aug_policy),
+        "dataset": dataset_kind,
+        "augmentation": master_record or augmentation_record(data_args.aug_policy),
         "label_smoothing_factor": training_args.label_smoothing_factor,
         "train_rows": len(datasets["train"]),
         "num_labels": num_labels,
@@ -597,9 +665,14 @@ def main(argv: list[str] | None = None) -> None:
 
     card_kwargs = {
         "finetuned_from": model_args.model_name_or_path,
-        "dataset": ["PlantVillage", "PlantDoc"] if extra_info else "PlantVillage",
+        "dataset": (
+            "Plant Leaf Disease MasterDataset"
+            if dataset_kind == "masterdataset"
+            else (["PlantVillage", "PlantDoc"] if extra_info else "PlantVillage")
+        ),
         "tasks": "image-classification",
-        "tags": ["image-classification", "plant-disease", "plantvillage", "resnet-18", "agriculture"]
+        "tags": ["image-classification", "plant-disease", "resnet-18", "agriculture"]
+        + (["masterdataset"] if dataset_kind == "masterdataset" else ["plantvillage"])
         + (["plantdoc"] if extra_info else []),
     }
     if training_args.push_to_hub:

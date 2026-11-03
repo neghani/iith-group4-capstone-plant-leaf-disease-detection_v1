@@ -59,13 +59,13 @@ def test_predict_high_confidence(client, good_leaf, hf_calls, llm_prompts):
         "/predict", files=_upload(good_leaf), data={"crop": "tomato", "additional_symptoms": "rings"}
     ).json()
     report = body["report"]
-    assert report["disease_id"] == "Tomato___Early_blight"
+    assert report["disease_id"] == "tomato_early_blight"
     assert report["status"] == "confirmed_likely"
     assert body["low_confidence"] is False
-    assert [t["label"] for t in body["top_k"]][0] == "Tomato___Early_blight"
-    assert report["alternatives"][0].startswith("Tomato - Target Spot")
+    assert [t["label"] for t in body["top_k"]][0] == "tomato_early_blight"
+    assert report["alternatives"][0].startswith("Tomato - Late blight")
     assert report["initial_message"] == "LLM summary for the farmer."
-    assert body["session_context"]["top_k"][0]["label"] == "Tomato___Early_blight"
+    assert body["session_context"]["top_k"][0]["label"] == "tomato_early_blight"
 
     # Classifier receives a square 256px JPEG: the size its own preprocessing resizes to.
     sent = Image.open(BytesIO(hf_calls[0]))
@@ -77,9 +77,10 @@ def test_llm_gets_prediction_as_text_only(client, good_leaf, hf_calls, llm_promp
     system, user = llm_prompts[0]
     assert isinstance(system, str) and isinstance(user, str)
     assert "Tomato - Early blight: 91.0%" in user
-    assert "Tomato - Target Spot: 6.0%" in user
+    assert "Tomato - Late blight: 6.0%" in user
     assert "Farmer-reported symptoms: rings" in user
-    assert "Curated reference" in user
+    # MasterDataset stubs are curated=false, so the LLM prompt must not claim a curated reference.
+    assert "No curated reference exists for this class" in user
 
 
 def test_predict_low_confidence(client, good_leaf, hf_calls, llm_prompts):

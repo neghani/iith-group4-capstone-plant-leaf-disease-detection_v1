@@ -1,9 +1,10 @@
 # Plant leaf disease model (Phase 1)
 
-Fine-tuned **ResNet-18** on the **PlantVillage** dataset for 38 crop-disease classes. The release
-used in the API and Hugging Face Space is published at:
+The live model is **MobileNetV2** fine-tuned on **PlantVillage + PlantDoc** (38 classes, 14 crops), Hub tag **`v1.1`**. It won the shared-label field bake-off (`model/data/shared_set`, final n=110): **60/110 (54.5%)** top-1; PlantVillage ResNet `@v1.1` was 63/110 but lost on the not-sure tie-break; MasterDataset ResNet `@v1.0.1` was 14/110. See `model/outputs/bakeoff/bakeoff_report.md`. Live pin: **`shared/release.json`**.
 
-**https://huggingface.co/neghani/plantvillage-resnet18** — live tag is **`shared/release.json`** (`hf_model_revision`)
+**https://huggingface.co/neghani/plantvillage-mobilenetv2** — live tag **`v1.1`**.
+
+The MasterDataset ResNet-18 track (19 crops, 86 classes, lab test accuracy **0.9615**) remains under `shared/release.json` → `masterdataset` for the 19-crop product story; it is not the live field pin. PlantVillage ResNet `@v1.1` is the bake-off runner-up / candidate.
 
 Plant disease classification is fine-grained: early vs late blight can differ in subtle texture (spot
 edges, concentric rings) with noisy backgrounds. ResNet-18 preserves more of that structure than

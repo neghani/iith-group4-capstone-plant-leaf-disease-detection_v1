@@ -1,0 +1,128 @@
+{
+  "n": 226,
+  "n_tune": 116,
+  "n_final": 110,
+  "n_shared_classes": 21,
+  "shared_classes": [
+    {
+      "plantdoc": "Apple Scab Leaf",
+      "plantvillage": "Apple___Apple_scab",
+      "master": "apple_apple_scab"
+    },
+    {
+      "plantdoc": "Apple leaf",
+      "plantvillage": "Apple___healthy",
+      "master": "healthy_apple"
+    },
+    {
+      "plantdoc": "Apple rust leaf",
+      "plantvillage": "Apple___Cedar_apple_rust",
+      "master": "apple_cedar_apple_rust"
+    },
+    {
+      "plantdoc": "Bell_pepper leaf spot",
+      "plantvillage": "Pepper,_bell___Bacterial_spot",
+      "master": "bell_pepper_bacterial_spot"
+    },
+    {
+      "plantdoc": "Bell_pepper leaf",
+      "plantvillage": "Pepper,_bell___healthy",
+      "master": "healthy_bell_pepper"
+    },
+    {
+      "plantdoc": "Cherry leaf",
+      "plantvillage": "Cherry_(including_sour)___healthy",
+      "master": "healthy_cherry"
+    },
+    {
+      "plantdoc": "Corn Gray leaf spot",
+      "plantvillage": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+      "master": "corn_gray_leaf_spot"
+    },
+    {
+      "plantdoc": "Corn leaf blight",
+      "plantvillage": "Corn_(maize)___Northern_Leaf_Blight",
+      "master": "corn_northern_leaf_blight"
+    },
+    {
+      "plantdoc": "Corn rust leaf",
+      "plantvillage": "Corn_(maize)___Common_rust_",
+      "master": "corn_common_rust"
+    },
+    {
+      "plantdoc": "Peach leaf",
+      "plantvillage": "Peach___healthy",
+      "master": "healthy_peach"
+    },
+    {
+      "plantdoc": "Potato leaf early blight",
+      "plantvillage": "Potato___Early_blight",
+      "master": "potato_early_blight"
+    },
+    {
+      "plantdoc": "Potato leaf late blight",
+      "plantvillage": "Potato___Late_blight",
+      "master": "potato_late_blight"
+    },
+    {
+      "plantdoc": "Strawberry leaf",
+      "plantvillage": "Strawberry___healthy",
+      "master": "healthy_strawberry"
+    },
+    {
+      "plantdoc": "Tomato Early blight leaf",
+      "plantvillage": "Tomato___Early_blight",
+      "master": "tomato_early_blight"
+    },
+    {
+      "plantdoc": "Tomato Septoria leaf spot",
+      "plantvillage": "Tomato___Septoria_leaf_spot",
+      "master": "tomato_septoria_leaf_spot"
+    },
+    {
+      "plantdoc": "Tomato leaf",
+      "plantvillage": "Tomato___healthy",
+      "master": "healthy_tomato"
+    },
+    {
+      "plantdoc": "Tomato leaf bacterial spot",
+      "plantvillage": "Tomato___Bacterial_spot",
+      "master": "tomato_bacterial_spot"
+    },
+    {
+      "plantdoc": "Tomato leaf late blight",
+      "plantvillage": "Tomato___Late_blight",
+      "master": "tomato_late_blight"
+    },
+    {
+      "plantdoc": "Tomato leaf yellow virus",
+      "plantvillage": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "master": "tomato_yellow_leaf_curl_virus"
+    },
+    {
+      "plantdoc": "grape leaf",
+      "plantvillage": "Grape___healthy",
+      "master": "healthy_grape"
+    },
+    {
+      "plantdoc": "grape leaf black rot",
+      "plantvillage": "Grape___Black_rot",
+      "master": "grape_black_rot"
+    }
+  ],
+  "sources": {
+    "plantdoc_test": 188,
+    "real_world_set": 38
+  },
+  "excluded_basenames": [
+    "36687400253_a227c2ca28_b.jpg",
+    "IMG_1360-1.jpg",
+    "IMG_1376-300x300.jpg",
+    "IMG_1385.jpg",
+    "bacterial-corn-1.jpg",
+    "bacterial-corn-300x300.jpg",
+    "clip_image010.jpg",
+    "corn-disease-update-fig-2-diplodia-leaf-streak1.jpg"
+  ],
+  "note": "Shared-label field set for bake-off. label/label_pv are PlantVillage ids; label_master is the MasterDataset id. Score each model against its own column."
+}

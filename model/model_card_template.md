@@ -62,9 +62,11 @@ result and suggests treatment from a curated agricultural knowledge base.
 - [PlantVillage](https://www.kaggle.com/datasets/abdallahalidev/plantvillage-dataset) `color`
   images, stratified per-class split with seed {{seed}}:
   train {{num_train}} · validation {{num_val}} · test {{num_test}}.
-- Stage 2 (tag `v1.1` and later) also uses [Cropped-PlantDoc](https://github.com/pratikkayal/PlantDoc-Dataset)
-  (Singh et al. 2020, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)): 27 of 38 classes;
+- Stage 2 (PlantVillage tag `v1.1`) also uses [Cropped-PlantDoc](https://github.com/pratikkayal/PlantDoc-Dataset)
+  (Singh et al. 2020, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)): 27 of 38 PlantVillage classes;
   the other 11 stay lab-only. See `run_info.json` for the PlantDoc commit and data manifest.
+  (This template is PlantVillage-oriented. The live MasterDataset card is the Hub README for
+  `neghani/plant-leaf-masterdataset-resnet18@v1.0.1`.)
 - Augmentation (phone-photo robustness): random resized crop (70-100% PlantVillage, 50-100% PlantDoc),
   horizontal and vertical flip, rotation up to 180°, brightness/contrast/saturation jitter, random Gaussian blur.
 - Evaluation preprocessing: resize shortest edge, centre crop 224, normalise (same as the bundled

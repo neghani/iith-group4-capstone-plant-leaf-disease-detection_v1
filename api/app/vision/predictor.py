@@ -9,7 +9,11 @@ from shared.vision.calibration import apply_temperature_dict
 from shared.vision.quality import encode_jpeg
 from shared.vision.strategies import run_strategy
 
-NUM_CLASSES = 38  # multi-crop strategies average full softmax vectors, so ask for every class
+def num_classes() -> int:
+    """Ask the classifier for every class. The count follows the knowledge base, not a fixed 38."""
+    from app.services.knowledge import list_disease_ids
+
+    return max(1, len(list_disease_ids()))
 
 
 @dataclass
@@ -30,14 +34,44 @@ class PredictionResult:
     strategy: dict = field(default_factory=dict)  # crop strategy trace
 
 
+_MASTER_CROPS = (
+    "bell_pepper", "groundnut", "strawberry", "sugarcane",
+    "apple", "bean", "cherry", "corn", "cotton", "cucumber", "grape", "guava",
+    "lemon", "peach", "potato", "pumpkin", "rice", "tomato", "wheat",
+)
+
+
+def _master_parts(class_name: str) -> tuple[str, str] | None:
+    low = class_name.lower()
+    if low.startswith("healthy_"):
+        return low[len("healthy_"):], "healthy"
+    if low.startswith("diseased_"):
+        return low[len("diseased_"):], "diseased"
+    for crop in sorted(_MASTER_CROPS, key=len, reverse=True):
+        prefix = crop + "_"
+        if low.startswith(prefix):
+            return crop, low[len(prefix):]
+    return None
+
+
 def crop_from_class(class_name: str) -> str:
-    """'Tomato___Early_blight' -> 'Tomato'; 'Corn_(maize)___Common_rust_' -> 'Corn (maize)'."""
+    """'Tomato___Early_blight' -> 'Tomato'; 'tomato_early_blight' -> 'Tomato'; 'healthy_apple' -> 'Apple'."""
+    if "___" not in class_name:
+        parts = _master_parts(class_name)
+        if parts:
+            return parts[0].replace("_", " ").title()
     crop = class_name.split("___")[0]
     return crop.replace("_", " ").replace(",", "").strip()
 
 
 def display_name(class_name: str) -> str:
-    """'Tomato___Early_blight' -> 'Tomato - Early blight'."""
+    """'Tomato___Early_blight' -> 'Tomato - Early blight'; 'healthy_apple' -> 'Apple - Healthy'."""
+    if "___" not in class_name:
+        parts = _master_parts(class_name)
+        if parts:
+            cond = parts[1].replace("_", " ").strip()
+            crop = parts[0].replace("_", " ").title()
+            return f"{crop} - {cond[:1].upper()}{cond[1:]}" if cond else crop
     parts = class_name.split("___")
     crop = crop_from_class(class_name)
     if len(parts) == 1:
@@ -47,7 +81,8 @@ def display_name(class_name: str) -> str:
 
 
 def is_healthy(class_name: str) -> bool:
-    return class_name.lower().endswith("___healthy")
+    low = class_name.lower()
+    return low.endswith("___healthy") or low.startswith("healthy_") or low.endswith("_healthy")
 
 
 class HFPredictor:
@@ -59,7 +94,7 @@ class HFPredictor:
     def predict_proba(self, images: list[Image.Image]) -> list[dict[str, float]]:
         out = []
         for img in images:
-            scores = classify_image(encode_jpeg(img), "image/jpeg", top_k=NUM_CLASSES)
+            scores = classify_image(encode_jpeg(img), "image/jpeg", top_k=num_classes())
             self.calls.append(dict(getattr(scores, "meta", {})))
             raw = {s.label: s.score for s in scores}
             t = get_settings().calibration_temperature

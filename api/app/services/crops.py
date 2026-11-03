@@ -1,9 +1,10 @@
 """Compare the farmer's crop hint with what the classifier can actually recognise.
 
-The classifier only knows the crops in `data/knowledge/diseases.json` (the 14 PlantVillage
-crops). A hint outside that list (e.g. hibiscus) means any "disease" it returns is a guess
-about a plant it has never seen, and a hint that differs from the predicted crop means one of
-the two is wrong. Both must change how the result is presented.
+Supported crops are whatever `data/knowledge/diseases.json` lists. The MasterDataset pin
+covers 19 crops. A hint outside
+that list (e.g. hibiscus) means any "disease" it returns is a guess about a plant it has never
+seen, and a hint that differs from the predicted crop means one of the two is wrong. Both must
+change how the result is presented.
 """
 
 import re

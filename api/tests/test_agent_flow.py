@@ -15,14 +15,14 @@ from app.services.knowledge import get_entry, list_disease_ids
 from app.vision.hf_client import LabelScore
 from app.vision.predictor import crop_from_class
 
-# id2label of the Hub classifier (config.json; 38 classes, unchanged across v1.0/v1.1)
+# id2label of the live Hub classifier (api/tests/model_labels.json). Must match the knowledge base.
 MODEL_LABELS = json.loads(
     (Path(__file__).parent / "model_labels.json").read_text(encoding="utf-8")
 )
 
 
 def test_every_model_label_has_curated_knowledge():
-    assert len(MODEL_LABELS) == 38
+    assert len(MODEL_LABELS) == len(list_disease_ids())
     assert sorted(MODEL_LABELS) == sorted(list_disease_ids())
 
 
@@ -38,20 +38,19 @@ def test_knowledge_crop_matches_class_name():
 @pytest.mark.parametrize(
     "label,expected_name",
     [
-        ("Tomato___Late_blight", "Tomato Late Blight"),
-        ("Apple___Black_rot", "Apple Black Rot"),
-        ("Potato___healthy", None),
+        ("tomato_late_blight", "Tomato - Late blight"),
+        ("apple_black_rot", "Apple - Black rot"),
+        ("healthy_potato", "Potato - Healthy"),
     ],
 )
 def test_classifier_output_drives_report_and_llm(client, good_leaf, hf_calls, llm_prompts, label, expected_name):
-    hf_calls.scores = [LabelScore(label, 0.93), LabelScore("Grape___healthy", 0.03)]
+    hf_calls.scores = [LabelScore(label, 0.93), LabelScore("healthy_grape", 0.03)]
     body = client.post("/predict", files=_upload(good_leaf)).json()
     report = body["report"]
 
     assert report["disease_id"] == label
-    assert report["crop"].lower().startswith(label.split("___")[0].split("_")[0].lower())
-    if expected_name:
-        assert report["diagnosis_name"].lower().replace("-", " ") == expected_name.lower()
+    assert report["crop"] == crop_from_class(label)
+    assert report["diagnosis_name"] == expected_name
     # knowledge entry for THIS label was used, and the LLM saw THIS label (text only)
     assert report["actions"], "curated actions missing"
     system, user = llm_prompts[0]
@@ -63,9 +62,9 @@ def test_classifier_output_drives_report_and_llm(client, good_leaf, hf_calls, ll
 
 
 def test_different_predictions_produce_different_guidance(client, good_leaf, hf_calls, llm_prompts):
-    hf_calls.scores = [LabelScore("Tomato___Late_blight", 0.95)]
+    hf_calls.scores = [LabelScore("tomato_late_blight", 0.95)]
     first = client.post("/predict", files=_upload(good_leaf)).json()["report"]
-    hf_calls.scores = [LabelScore("Corn_(maize)___Common_rust_", 0.95)]
+    hf_calls.scores = [LabelScore("corn_common_rust", 0.95)]
     second = client.post("/predict", files=_upload(good_leaf)).json()["report"]
     assert first["diagnosis_name"] != second["diagnosis_name"]
     assert [a["step"] for a in first["actions"]] != [a["step"] for a in second["actions"]]
@@ -101,10 +100,10 @@ def test_no_hf_means_no_fabricated_diagnosis(client, good_leaf, monkeypatch, llm
 @pytest.mark.parametrize(
     "hint,crop",
     [
-        ("corn", "Corn (maize)"),
-        ("Maize", "Corn (maize)"),
-        ("bell pepper", "Pepper bell"),
-        ("capsicum", "Pepper bell"),
+        ("corn", "Corn"),
+        ("Maize", "Corn"),
+        ("bell pepper", "Bell Pepper"),
+        ("capsicum", "Bell Pepper"),
         ("tomatoes", "Tomato"),
         ("Potatoes", "Potato"),
     ],
@@ -133,7 +132,7 @@ def test_matching_hint_keeps_confident_result(client, good_leaf, hf_calls, llm_p
 def test_mismatching_hint_downgrades_and_tells_the_llm(client, good_leaf, hf_calls, llm_prompts):
     body = client.post("/predict", files=_upload(good_leaf), data={"crop": "potato"}).json()
     report = body["report"]
-    assert report["disease_id"] == "Tomato___Early_blight"  # prediction still reported
+    assert report["disease_id"] == "tomato_early_blight"  # prediction still reported
     assert report["status"] == "possible"
     assert report["expert_confirmation_required"] is True
     assert "You said this is potato" in report["description"]

@@ -15,6 +15,7 @@ from aug import (
     build_transforms,
     transform_op_names,
 )
+from common import crop_from_class
 from eda import _StubProcessor, audit, load_expected_labels, write_class_counts_chart, write_preview
 
 REPO = Path(__file__).resolve().parents[1]
@@ -66,8 +67,8 @@ def test_clean_folder_passes(tmp_path):
     payload = audit(root, phash_per_class=0)
     assert payload["ok"]
     assert payload["errors"] == []
-    assert payload["n_classes"] == 38
-    assert payload["n_images"] == 38 * 2
+    assert payload["n_classes"] == len(LABELS)
+    assert payload["n_images"] == len(LABELS) * 2
 
 
 def test_class_set_mismatch_fails(tmp_path):
@@ -95,7 +96,7 @@ def test_empty_class_fails(tmp_path):
 
 
 def test_crop_filter_skips_class_set_check(tmp_path):
-    tomatoes = [n for n in LABELS if n.startswith("Tomato___")][:2]
+    tomatoes = [n for n in LABELS if crop_from_class(n) == "Tomato"][:2]
     root = _folder(tmp_path / "color", labels=tomatoes, per_class=1)
     payload = audit(root, crop_filter="Tomato", phash_per_class=0)
     assert payload["ok"]
@@ -127,7 +128,7 @@ def test_near_duplicate_sample_is_a_warning(tmp_path):
 
 
 def test_audit_prints_per_class_progress(tmp_path, capsys):
-    tomatoes = [n for n in LABELS if n.startswith("Tomato___")][:2]
+    tomatoes = [n for n in LABELS if crop_from_class(n) == "Tomato"][:2]
     root = _folder(tmp_path / "color", labels=tomatoes, per_class=1)
     audit(root, crop_filter="Tomato", phash_per_class=0)
     out = capsys.readouterr().out

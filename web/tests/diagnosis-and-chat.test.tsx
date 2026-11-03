@@ -34,7 +34,7 @@ afterEach(() => {
 const baseReport: DiagnosisReport = {
   status: "confirmed_likely",
   status_label: "Likely disease",
-  disease_id: "Tomato___Early_blight",
+  disease_id: "tomato_early_blight",
   diagnosis_name: "Tomato - Early blight",
   crop: "Tomato",
   confidence: 0.91,
@@ -42,7 +42,7 @@ const baseReport: DiagnosisReport = {
   confidence_explanation: "Looks good.",
   description: "A common fungal disease.",
   symptoms: [],
-  alternatives: ["Tomato - Target Spot (6%)"],
+  alternatives: ["Tomato - Late blight (6%)"],
   expert_confirmation_required: false,
   actions: [],
   monitoring_guidance: "",
@@ -52,18 +52,18 @@ const baseReport: DiagnosisReport = {
 
 const topK: TopKPrediction[] = [
   {
-    label: "Tomato___Early_blight",
+    label: "tomato_early_blight",
     display_name: "Tomato - Early blight",
     score: 0.91,
   },
   {
-    label: "Tomato___Target_Spot",
-    display_name: "Tomato - Target Spot",
+    label: "tomato_late_blight",
+    display_name: "Tomato - Late blight",
     score: 0.06,
   },
   {
-    label: "Tomato___healthy",
-    display_name: "Tomato - healthy",
+    label: "healthy_tomato",
+    display_name: "Tomato - Healthy",
     score: 0.02,
   },
 ];

@@ -25,9 +25,10 @@ from card import assemble_card  # noqa: E402
 from common import DEFAULT_HF_MODEL_REPO, get_hf_token, hf_api  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-resnet18"
-V10_PV_ACCURACY = 0.9912
-MAX_PV_DROP = 0.02
+DEFAULT_MODEL_DIR = HERE / "outputs" / "masterdataset-resnet18"
+# Floor from the corrected serving-path test score (n=14454). Update when the pin moves.
+MASTER_TEST_ACCURACY = 0.9614639546146395
+MAX_ACCURACY_DROP = 0.02
 DIAGNOSTICS = HERE / "outputs" / "diagnostics_v1_0.json"
 
 # Trainer scratch files that should never land on the Hub.
@@ -53,36 +54,70 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def publish_gate(model_dir: Path, tag: str, diagnostics: Path = DIAGNOSTICS) -> None:
-    """v1.1 is published only if PlantDoc val macro-F1 beats v1.0 and PV accuracy drops by at most 2 points."""
-    if tag != "v1.1":
-        return
-    if not diagnostics.exists():
-        raise SystemExit(f"v1.1 gate: {diagnostics} missing. Run diagnostics.py on the validation split first.")
-    diag = json.loads(diagnostics.read_text())
-    v10_f1 = float(diag["plantdoc_macro_f1"])
-    eval_path = model_dir / "eval_results.json"
-    if not eval_path.exists():
-        eval_path = model_dir / "all_results.json"
-    if not eval_path.exists():
-        raise SystemExit(f"v1.1 gate: {model_dir}/eval_results.json missing.")
-    ev = json.loads(eval_path.read_text())
-    v11_f1 = ev.get("eval_plantdoc_macro_f1")
-    if v11_f1 is None:
-        raise SystemExit("v1.1 gate: eval_plantdoc_macro_f1 not in eval results.")
-    metrics_path = model_dir / "reports" / "metrics.json"
-    if not metrics_path.exists():
-        raise SystemExit(f"v1.1 gate: {metrics_path} missing. Run evaluate.py on the PlantVillage test split.")
-    pv_acc = float(json.loads(metrics_path.read_text())["accuracy"])
+def masterdataset_publish_gate(model_dir: Path) -> None:
+    """Require a one-shot test score, PlantDoc OOD with zero pHash hits, and the accuracy floor."""
     problems = []
-    if v11_f1 <= v10_f1:
-        problems.append(f"PlantDoc val macro F1 {v11_f1:.4f} is not higher than v1.0 {v10_f1:.4f}")
-    if pv_acc < V10_PV_ACCURACY - MAX_PV_DROP:
-        problems.append(f"PlantVillage test accuracy {pv_acc:.4f} dropped more than {MAX_PV_DROP:.0%} from {V10_PV_ACCURACY:.4f}")
+    test_path = model_dir / "test_results.json"
+    info_path = model_dir / "run_info.json"
+    ood_path = model_dir / "plantdoc_ood.json"
+    n_test = None
+    accuracy = None
+    if not test_path.is_file():
+        problems.append(f"{test_path.name} missing (score the held-out test split once)")
+    else:
+        test = json.loads(test_path.read_text())
+        accuracy = test.get("test_accuracy")
+        if accuracy is None:
+            problems.append("test_results.json has no test_accuracy")
+        elif float(accuracy) < MASTER_TEST_ACCURACY - MAX_ACCURACY_DROP:
+            problems.append(
+                f"test accuracy {float(accuracy):.4f} dropped more than {MAX_ACCURACY_DROP:.0%} "
+                f"from MasterDataset baseline {MASTER_TEST_ACCURACY:.4f}"
+            )
+    if info_path.is_file():
+        info = json.loads(info_path.read_text())
+        n_test = (info.get("split_counts") or {}).get("test")
+        if info.get("dataset") not in (None, "masterdataset"):
+            problems.append(f"run_info dataset is {info.get('dataset')!r}, expected masterdataset")
+    else:
+        problems.append("run_info.json missing")
+    if not n_test:
+        problems.append("run_info.split_counts.test missing (sample count must be reported with the accuracy)")
+    if not ood_path.is_file():
+        problems.append(f"{ood_path.name} missing (PlantDoc overlap eval, out of training)")
+    else:
+        ood = json.loads(ood_path.read_text())
+        if "n_images" not in ood or "n_overlap_classes" not in ood:
+            problems.append("plantdoc_ood.json must include n_images and n_overlap_classes")
+        elif ood.get("trained_on_plantdoc"):
+            problems.append("plantdoc_ood.json says the model was trained on PlantDoc")
+        elif not ood.get("ok", False):
+            problems.append("plantdoc_ood.json ok is false (pHash hits remain in the evaluated OOD set)")
     if problems:
-        raise SystemExit("v1.1 publish gate failed:\n  - " + "\n  - ".join(problems))
-    print(f"Publish gate OK: PlantDoc val F1 {v11_f1:.4f} > {v10_f1:.4f}; "
-          f"PlantVillage acc {pv_acc:.4f} (floor {V10_PV_ACCURACY - MAX_PV_DROP:.4f})")
+        raise SystemExit("MasterDataset publish gate failed:\n  - " + "\n  - ".join(problems))
+    print(
+        f"MasterDataset publish gate OK: test accuracy {float(accuracy):.4f} on {n_test} images "
+        f"(floor {MASTER_TEST_ACCURACY - MAX_ACCURACY_DROP:.4f}); PlantDoc overlap ok."
+    )
+
+
+def publish_gate(model_dir: Path, tag: str, diagnostics: Path = DIAGNOSTICS) -> None:
+    """MasterDataset tags use masterdataset_publish_gate. PlantVillage publishing is retired."""
+    del diagnostics  # PlantVillage diagnostics path is unused after the baseline swap.
+    info_path = model_dir / "run_info.json"
+    dataset = None
+    if info_path.is_file():
+        try:
+            dataset = json.loads(info_path.read_text()).get("dataset")
+        except json.JSONDecodeError:
+            dataset = None
+    if dataset == "masterdataset":
+        masterdataset_publish_gate(model_dir)
+        return
+    raise SystemExit(
+        "PlantVillage publishing is retired. The live training set is the MasterDataset; "
+        "rollback still reads the existing Hub tag without re-publishing."
+    )
 
 
 def verify_access(api, repo_id: str) -> str:

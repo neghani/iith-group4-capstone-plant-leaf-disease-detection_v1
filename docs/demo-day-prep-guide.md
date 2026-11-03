@@ -16,7 +16,7 @@ Everything below is grounded in the repository as it stands today (code in `mode
 
 ## 0. The 60-second pitch (memorise this)
 
-> A farmer photographs a leaf. A **quality gate** first checks the photo (dark, blurry, tiny, no leaf?) and asks for a retake instead of guessing. A **MobileNetV2** that we fine-tuned on PlantVillage (38 classes, 14 crops) and then on Cropped-PlantDoc predicts the disease: 99.1% on the lab held-out split, **137/284 (48.2%)** on the one-shot field-style test. A **LangGraph** pipeline then looks the disease up in a curated knowledge base and an LLM writes a plain-language explanation. **The LLM never decides the disease and never sees the image**; it only rewrites what the classifier and knowledge base already say. Low confidence, wrong crop, or off-topic questions are handled explicitly. The live model is versioned on Hugging Face as tag **`v1.1`** (`shared/release.json`; `v1.0` is the PlantVillage-only baseline), served from a container, and the whole system runs with `docker compose up`.
+> A farmer photographs a leaf. A **quality gate** first checks the photo (dark, blurry, tiny, no leaf?) and asks for a retake instead of guessing. A **MobileNetV2** fine-tuned on PlantVillage + PlantDoc (38 classes, 14 crops) predicts the disease. On the shared-label field bake-off (n=110 final): **60/110 (54.5%)** top-1, chosen over PlantVillage ResNet `@v1.1` on the not-sure tie-break and over MasterDataset `@v1.0.1` (14/110). A **LangGraph** pipeline looks the disease up in a knowledge base and an LLM writes a plain-language explanation. **The LLM never decides the disease and never sees the image**. Low confidence, wrong crop, or off-topic questions are handled explicitly. The live model is Hugging Face tag **`v1.1`** on `neghani/plantvillage-mobilenetv2` (`shared/release.json`). The stack runs with `docker compose up`.
 
 If you can say that cleanly and then show it working, you have already covered the rubric.
 
@@ -30,11 +30,11 @@ If you can say that cleanly and then show it working, you have already covered t
 |---|---|---|
 | Training pipeline | Done | `model/train.py` (HF Trainer, augmentations, stratified split, seed, `splits.json`) |
 | Evaluation | Done | `model/evaluate.py` (accuracy, macro-F1, top-3, confusion matrix, threshold sweep, model card) |
-| Publishing | Done | `model/publish.py`, model live at `neghani/plantvillage-resnet18`, live tag `v1.1` (`v1.0` is the baseline) |
+| Publishing | Done | Live pin `neghani/plantvillage-mobilenetv2@v1.1` (shared bake-off winner); ResNet PV + MasterDataset kept as candidates |
 | Inference server | Done | `hf_space/app.py` (FastAPI + `transformers.pipeline`, stamps `x-model-id` / `x-model-revision`) |
 | Quality gate | Done (leaf-aware) | `api/app/vision/quality.py`, `leaf.py` |
 | Agent (LangGraph) | Done | `api/app/agent/graph.py` (predict, knowledge, report, safety, with 2 side exits) |
-| Knowledge base | Done for all 38 classes | `api/data/knowledge/diseases.json` |
+| Knowledge base | 38 curated PlantVillage entries (live); 86 MasterDataset stubs kept for that track | `diseases.plantvillage.json` / `diseases.json` |
 | API | Done | `api/app/main.py`: `/health`, `/quality-check`, `/predict`, `/chat` |
 | UI | Done (Next.js, not Streamlit) | `web/` |
 | Docker | Done | `docker-compose.yml` with 3 services |

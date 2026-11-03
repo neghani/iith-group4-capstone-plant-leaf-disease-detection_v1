@@ -104,6 +104,7 @@ def audit(
     phash_per_class: int = PHASH_PER_CLASS,
     min_size: int = MIN_SIZE,
     seed: int = 42,
+    accept_any_classes: bool = False,
 ) -> dict:
     errors: list[str] = []
     warnings: list[dict] = []
@@ -137,7 +138,7 @@ def audit(
         }
 
     expected_path = Path(labels_path) if labels_path else DEFAULT_LABELS
-    if not crop_filter:
+    if not crop_filter and not accept_any_classes:
         expected = load_expected_labels(expected_path)
         if label_names != expected:
             missing = [n for n in expected if n not in label_names]
@@ -460,6 +461,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--min_size", type=int, default=MIN_SIZE)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--skip_preview", action="store_true")
+    p.add_argument(
+        "--accept_any_classes",
+        action="store_true",
+        help="Do not require the PlantVillage 38-class list. Use this for the MasterDataset.",
+    )
     return p.parse_args(argv)
 
 
@@ -472,6 +478,7 @@ def main(argv: list[str] | None = None) -> None:
         phash_per_class=args.phash_per_class,
         min_size=args.min_size,
         seed=args.seed,
+        accept_any_classes=args.accept_any_classes,
     )
     out_dir = Path(args.out)
     preview = None

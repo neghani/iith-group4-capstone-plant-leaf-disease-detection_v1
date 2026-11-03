@@ -21,9 +21,10 @@ def test_release_json_has_the_live_pin():
 
     pin = as_dict()
     assert PIN_PATH == REPO / "shared" / "release.json"
-    assert HF_MODEL_ID == "neghani/plantvillage-resnet18"
+    # Winner of shared-label bake-off (model/outputs/bakeoff/bakeoff_report.md).
+    assert HF_MODEL_ID == "neghani/plantvillage-mobilenetv2"
     assert HF_MODEL_REVISION == "v1.1"
-    assert CONFIDENCE_THRESHOLD == 0.55
+    assert CONFIDENCE_THRESHOLD == 0.5
     assert BASELINE_REVISION.startswith("v")
     assert HF_MODEL_REVISION != BASELINE_REVISION
     assert 0 < CONFIDENCE_THRESHOLD <= 1
@@ -32,8 +33,14 @@ def test_release_json_has_the_live_pin():
     assert OOD_THRESHOLD > 0
     assert pin["ood_threshold"] == OOD_THRESHOLD
     assert pin["hf_model_revision"] == HF_MODEL_REVISION
+    assert pin.get("knowledge_file") == "data/knowledge/diseases.plantvillage.json"
     cand = pin.get("candidate") or {}
-    assert cand.get("hf_model_id") == "neghani/plantvillage-mobilenetv2"
+    assert cand.get("hf_model_id") == "neghani/plantvillage-resnet18"
+    assert cand.get("hf_model_revision") == "v1.1"
+    assert cand.get("knowledge_file") == "data/knowledge/diseases.plantvillage.json"
+    master = pin.get("masterdataset") or {}
+    assert master.get("hf_model_id") == "neghani/plant-leaf-masterdataset-resnet18"
+    assert master.get("hf_model_revision") == "v1.0.1"
     space_pin = json.loads((REPO / "hf_space" / "release.json").read_text(encoding="utf-8"))
     assert space_pin == pin, "copy shared/release.json -> hf_space/release.json after bumping the pin"
 

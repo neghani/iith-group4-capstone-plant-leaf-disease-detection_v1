@@ -12,7 +12,7 @@
     "breadcrumb": "Check a crop",
     "eyebrow": "HEALTHIER CROPS, ONE PHOTO AT A TIME",
     "title": "Let's take a look at your crop",
-    "subtitle": "Upload a leaf photo. Get possible causes and simple steps to help your plant.",
+    "subtitle": "Upload a leaf photo from one of 19 trained crops. Get possible causes and simple next steps.",
     "checking": "Checking photo quality…",
     "analyzing": "Photo looks good. Analyzing the leaf…"
   },
@@ -26,10 +26,10 @@
     "cropLabel": "Crop (optional hint)",
     "selectCrop": "Select crop…",
     "otherCrop": "Other crop (not listed)",
-    "cropHint": "Real-photo tests work best on this PlantDoc list. The model was trained on PlantVillage photos of these same plants. PlantDoc spells soybean as Soyabean.",
+    "cropHint": "Optional. Trained on leaf photos of these 19 crops (apple, tomato, rice, wheat, cotton, and more). Pick Other if yours is not listed.",
     "whichCrop": "Which crop?",
     "whichPlaceholder": "e.g. hibiscus",
-    "otherHint": "Plants outside this list were not in training. The result will say the model does not cover that crop instead of guessing a disease.",
+    "otherHint": "Crops outside this list were not in training. The result will say the model does not cover that crop instead of guessing a disease.",
     "symptomsLabel": "Extra symptoms (optional)",
     "symptomsPlaceholder": "e.g. spots spreading after rain",
     "analyzing": "Analyzing…",
@@ -46,7 +46,7 @@
   "guidelines": {
     "title": "Photo guidelines",
     "badge": "Before upload",
-    "intro": "Follow these quick checks so the model can detect visible symptoms more reliably.",
+    "intro": "The model was trained on clear, single-leaf photos. These checks help your upload look like that.",
     "focusTitle": "Keep the leaf in focus",
     "focusBody": "Hold the camera steady and let the leaf fill most of the frame.",
     "lightTitle": "Use natural light",
@@ -67,7 +67,7 @@
     "subUnsure": "The model saw the leaf but the score is too low to name a disease.",
     "subOk": "Understand the signs. Start with safer, practical care.",
     "translationUnavailable": "Telugu guidance is unavailable right now, so this result stays in English.",
-    "footer": "Demo capstone — photos stay in your browser only. Confirm important decisions with a local agricultural expert."
+    "footer": "Demo capstone — 19 crops, leaf photos only. Photos stay in your browser. Confirm important decisions with a local agricultural expert."
   },
   "diagnosis": {
     "retakeTitle": "Please retake the photo",
@@ -94,7 +94,7 @@
     "sample": "Sample",
     "alt": "Uploaded crop leaf"
   },
-  "disclaimer": "Illustrative example only — this is not a verified diagnosis. Similar leaf spots can have different causes.",
+  "disclaimer": "Illustrative example only — not a verified diagnosis. The model matches leaf symptoms among its trained classes; similar spots can have different causes.",
   "chat": {
     "title": "Ask a follow-up",
     "hint": "Agriculture questions only · tied to this check in your browser session",
@@ -113,7 +113,7 @@
   "guide": {
     "breadcrumb": "Growing guide",
     "title": "Growing guide",
-    "intro": "Practical habits for healthier crops. This demo guide supports the CropCare AI capstone — not a substitute for regional agronomy advice.",
+    "intro": "Practical habits for healthier crops among the 19 leaf crops this demo can check. Not a substitute for regional agronomy advice.",
     "tip1Title": "Take clear leaf photos",
     "tip1Body": "Use daylight, hold steady, and fill the frame with the affected leaf.",
     "tip2Title": "Check lower leaves first",
@@ -146,20 +146,23 @@
   "crops": {
     "crop": "crop",
     "Apple": "Apple",
-    "Bell pepper": "Bell pepper",
-    "Blueberry": "Blueberry",
+    "Bean": "Bean",
+    "Bell Pepper": "Bell pepper",
     "Cherry": "Cherry",
     "Corn": "Corn",
-    "Corn (maize)": "Corn (maize)",
+    "Cotton": "Cotton",
+    "Cucumber": "Cucumber",
     "Grape": "Grape",
-    "Orange": "Orange",
+    "Groundnut": "Groundnut",
+    "Guava": "Guava",
+    "Lemon": "Lemon",
     "Peach": "Peach",
-    "Pepper bell": "Bell pepper",
     "Potato": "Potato",
-    "Raspberry": "Raspberry",
-    "Soybean": "Soybean",
-    "Squash": "Squash",
+    "Pumpkin": "Pumpkin",
+    "Rice": "Rice",
     "Strawberry": "Strawberry",
-    "Tomato": "Tomato"
+    "Sugarcane": "Sugarcane",
+    "Tomato": "Tomato",
+    "Wheat": "Wheat"
   }
 }

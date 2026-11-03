@@ -21,7 +21,7 @@ def test_english_predict_skips_translation(client, good_leaf, hf_calls, llm_prom
     assert body["language"] == "en"
     assert body["translation_applied"] is False
     assert body["report"]["initial_message"] == "LLM summary for the farmer."
-    assert body["report"]["disease_id"] == "Tomato___Early_blight"
+    assert body["report"]["disease_id"] == "tomato_early_blight"
 
 
 def test_telugu_without_llm_keeps_english(client, good_leaf, hf_calls, llm_prompts):
@@ -55,7 +55,7 @@ def test_telugu_predict_translates_finished_report(client, good_leaf, hf_calls, 
     assert body["language"] == "te"
     assert report["initial_message"] == "తెలుగు సారాంశం"
     assert report["diagnosis_name"] == "టమాట తొలి ఎండుతెగులు"
-    assert report["disease_id"] == "Tomato___Early_blight"
+    assert report["disease_id"] == "tomato_early_blight"
     assert report["status"] == "confirmed_likely"
     assert report["crop"] == "Tomato"
     assert body["session_context"]["summary"] == "తెలుగు సారాంశం"
@@ -76,7 +76,7 @@ def test_bad_telugu_translation_keeps_english(client, good_leaf, hf_calls, llm_p
     body = client.post("/predict", files=_upload(good_leaf), data={"language": "te"}).json()
     assert body["translation_applied"] is False
     assert body["report"]["initial_message"] == "LLM summary for the farmer."
-    assert body["report"]["disease_id"] == "Tomato___Early_blight"
+    assert body["report"]["disease_id"] == "tomato_early_blight"
 
 
 def test_chat_requests_telugu(client, monkeypatch):

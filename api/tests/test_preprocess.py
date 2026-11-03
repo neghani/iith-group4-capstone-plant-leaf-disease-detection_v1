@@ -156,7 +156,7 @@ def test_predict_endpoint_with_large_photo(client, hf_calls, llm_prompts):
     big = _jpeg(_scene(scale=4.0))
     body = client.post("/predict", files=_upload(big)).json()
     assert body["quality"]["ok"] is True
-    assert body["report"]["disease_id"] == "Tomato___Early_blight"
+    assert body["report"]["disease_id"] == "tomato_early_blight"
     info = body["inference"]
     from shared.release import HF_MODEL_ID, HF_MODEL_REVISION
 
@@ -180,7 +180,7 @@ def test_crop_strategy_is_one_config_value(monkeypatch, client, hf_calls, llm_pr
     used = body["inference"]["preprocessing"]["crop_strategy"]
     assert used["strategy"] == strategy
     assert len(hf_calls) == used["n_crops"] >= 1  # one classifier call per crop
-    assert body["report"]["disease_id"] == "Tomato___Early_blight"
+    assert body["report"]["disease_id"] == "tomato_early_blight"
 
 
 def test_crops_that_disagree_are_flagged_low_confidence(monkeypatch, client, hf_calls, llm_prompts):

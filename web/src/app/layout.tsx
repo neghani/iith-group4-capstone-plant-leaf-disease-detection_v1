@@ -21,7 +21,8 @@ const telugu = Noto_Sans_Telugu({
 
 export const metadata: Metadata = {
   title: "CropCare AI",
-  description: "Plant disease detection and farmer assistance",
+  description:
+    "Leaf disease check for 19 crops — upload a photo for possible causes and practical next steps",
 };
 
 export default function RootLayout({

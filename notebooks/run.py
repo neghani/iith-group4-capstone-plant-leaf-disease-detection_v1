@@ -136,6 +136,15 @@ def _has_class_folders(root: Path) -> bool:
     return False
 
 
+def _has_presplit_root(root: Path) -> bool:
+    """True when root is a MasterDataset tree: train/ and test/ plus val, valid, or validation."""
+    if not root.is_dir():
+        return False
+    names = {p.name.lower() for p in root.iterdir() if p.is_dir()}
+    train = root / "train"
+    return train.is_dir() and _has_class_folders(train) and "test" in names and bool(names & {"val", "valid", "validation"})
+
+
 DRIVE_PREFIX = "/content/drive"
 
 
@@ -158,7 +167,7 @@ def require_data_dir(name: str = "DATA_DIR") -> Path:
     path = Path(raw)
     if not path.is_dir():
         raise SystemExit(f"{name}={raw} does not exist. Re-run section 3 in this session.")
-    if not _has_class_folders(path):
+    if not _has_class_folders(path) and not _has_presplit_root(path):
         raise SystemExit(
             f"{name}={raw} has no class image folders. Re-run section 3 and check the dataset root."
         )
