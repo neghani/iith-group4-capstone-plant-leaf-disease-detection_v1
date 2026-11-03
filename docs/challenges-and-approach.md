@@ -237,23 +237,20 @@ below 50% and is left as-is; the threshold and the data were not changed after s
 
 ## 10. Open issues and next steps
 
-- **Live pin is ResNet `@v1.1`.** On the same 284-image final test MobileNet `@v1.1` passed
-  **137/284 (48.2%)** and ResNet `@v1.1` passed **96/284 (33.8%)**. The pin was moved to
-  `neghani/plantvillage-resnet18` at `v1.1` (threshold 0.55, T=0.936) on 2026-10-31 anyway.
-  MobileNet stays in `shared/release.json` as `candidate`. Max-softmax OOD still does not
-  reject strawberry-as-tomato on ResNet.
-- **PlantDoc sampler was weighting the wrong way.** `model/sampling.py` used per-row
-  `1/sqrt(count)`, so a class total was `sqrt(count)` and common classes got more draws
-  (Northern Leaf Blight 153 images, 108.8 expected draws; Apple scab 74 images, 75.7).
-  The intended class share is `1/sqrt(count)`, which is per-row weight `1/count**1.5`.
-  That fix is in the repo; it applies only to the next stage-2 train, not to published weights.
+- **Bake-off winner is MobileNet `@v1.1` (live pin).** Same 284-image protocol: MobileNet
+  **137/284 (48.2%)**, ResNet `@v1.2` **98/284 (34.5%)**, ResNet `@v1.1` **96/284 (33.8%)**.
+  ResNet stays `candidate`. Talk sheet: [`docs/model-bakeoff.md`](model-bakeoff.md).
+- **PlantDoc sampler was weighting the wrong way (fixed in `v1.2`).** Older stage-2 runs used
+  per-row `1/sqrt(count)`, so a class total was `sqrt(count)` and common classes got more draws.
+  The intended class share is `1/sqrt(count)` = per-row `1/count**1.5`. That fix shipped in
+  ResNet `@v1.2`.
 - **Confidently wrong on unknown / wrong-crop leaves (the big one).** Hibiscus historically got
   Tomato Early blight at 99.9%. A strawberry leaf (demo photo, hint=tomato) got Tomato Early blight
   at **97%** on ResNet-18 `@v1.0` (strategy B) and only **12%** on MobileNet `@v1.1` (already
   `not_sure` via confidence). Max-softmax / top-1−top-2 margin OOD has AUROC ~0.36 on ResNet for
-  this failure mode — it does **not** catch strawberry-as-tomato. Live pin stays MobileNet v1.1
-  with `ood_threshold=0.05` (flat softmax → `not_sure`). ResNet stays a `candidate` until a
-  crop-level head or training negatives land; see `model/outputs/ood/FALLBACK.md`.
+  this failure mode — it does **not** catch strawberry-as-tomato. Live `ood_threshold=0.05` still
+  applies (flat softmax → `not_sure`). A crop-level head or training negatives is still the next
+  fix; see `model/outputs/ood/FALLBACK.md`.
 - **CNN leaf detector.** Swap `find_leaf_candidates` for a detector if field photos with several
   overlapping leaves, yellow/brown leaves or very cluttered scenes fail the colour+focus approach.
   Known weaknesses: soil or objects with leaf-like hue, fully necrotic leaves, thin grass-like

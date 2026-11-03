@@ -1,11 +1,13 @@
-"""One-shot final test of v1.0 and v1.1. The same weights skip; different weights are refused. --force regenerates the same run.
+"""One-shot final test of v1.0 and a stage-2 candidate (v1.1 / v1.2 / …).
+
+The same weights skip; different weights are refused. --force regenerates the same run.
 
     python -m model.final_test --v11 /content/drive/MyDrive/plant-disease/stage2/best \
-        --revision_name v1.1 --guard hub:neghani/plantvillage-mobilenetv2
+        --revision_name v1.2 --guard hub:neghani/plantvillage-resnet18
     python -m model.final_test --smoke     # synthetic, under outputs/smoke, no guard
 
 Requires calibration.json and threshold.json (decisions frozen before this runs).
-Never used for any choice. Writes <out>/final_report_v1_1.md. The guard record
+Never used for any choice. Writes <out>/final_report_<revision>.md. The guard record
 (<revision>.json) lives in the Hub repo or on Drive, not on the Colab disk (see guard.py).
 """
 
@@ -164,19 +166,22 @@ def stratum_payload(m: dict, rows: list[dict], name: str = "real_world_set") -> 
 
 
 def write_final_summary(path: Path, m10: dict, m11: dict, rows: list[dict],
-                        v11_thr: float, temperature: float) -> dict:
+                        v11_thr: float, temperature: float, revision_name: str = "v1.1") -> dict:
     summary = {
         "date": datetime.date.today().isoformat(),
         "v1.0": {
             "threshold": V10_THRESHOLD,
             "real_world_set": stratum_payload(m10, rows),
         },
-        "v1.1": {
+        revision_name: {
             "threshold": float(v11_thr),
             "temperature": float(temperature),
             "real_world_set": stratum_payload(m11, rows),
         },
     }
+    # Keep a v1.1 alias so older card code that expects that key still works.
+    if revision_name != "v1.1":
+        summary["v1.1"] = summary[revision_name]
     path.write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
@@ -219,10 +224,10 @@ def metrics_block(name: str, m: dict, rows: list[dict]) -> list[str]:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--v11", default=None, help="Local run dir of the fine-tuned weights.")
-    ap.add_argument("--revision_name", default="v1.1", help="Tag the candidate would be published as; names the guard record.")
+    ap.add_argument("--revision_name", default="v1.2", help="Tag the candidate would be published as; names the guard record.")
     ap.add_argument("--guard", default=None,
                     help="hub:<repo_id> (default: hub:$HF_MODEL_ID) or drive:<dir>. Never local outputs/.")
-    ap.add_argument("--v10", default="neghani/plantvillage-mobilenetv2")
+    ap.add_argument("--v10", default="neghani/plantvillage-resnet18")
     ap.add_argument("--v10_revision", default="v1.0")
     ap.add_argument("--test_dir", default=str(HERE / "data" / "plantdoc_test"))
     ap.add_argument("--real_world", default=str(HERE / "data" / "real_world_set"))
@@ -277,9 +282,11 @@ def main(argv: list[str] | None = None) -> None:
           f"({sum(1 for r in rows if r['stratum']=='plantdoc_test')} plantdoc_test, "
           f"{sum(1 for r in rows if r['stratum']=='real_world_set')} real_world_set)")
 
+    rev = a.revision_name
+    rev_slug = rev.replace(".", "_")
     v11_thr = thr.get("threshold")
     if v11_thr is None:
-        print("[final] threshold is provisional; scoring v1.1 at the v1.0 threshold "
+        print(f"[final] threshold is provisional; scoring {rev} at the v1.0 threshold "
               f"{V10_THRESHOLD} so the comparison is defined, without changing the config.")
         v11_thr = V10_THRESHOLD
     v10_res = run_model(rows, a.v10, a.v10_revision, V10_THRESHOLD, 1.0, a.device)
@@ -289,20 +296,20 @@ def main(argv: list[str] | None = None) -> None:
     gain, lo, hi = paired_bootstrap(m11["pass_vector"], m10["pass_vector"])
 
     lines = [
-        "# Final test report (v1.1 vs v1.0)", "",
+        f"# Final test report ({rev} vs v1.0)", "",
         f"Run {datetime.datetime.now().isoformat(timespec='seconds')}. "
         f"Images: {len(rows)}. This split was not used for any choice.",
         "",
-        f"v1.1 temperature T={calib['temperature']:.3f}; threshold status **{thr['status']}** "
+        f"{rev} temperature T={calib['temperature']:.3f}; threshold status **{thr['status']}** "
         f"({thr['note']})",
         "",
         *metrics_block("v1.0 (threshold 0.85, T=1)", m10, rows),
-        *metrics_block(f"v1.1 (threshold {v11_thr:.2f}, T={calib['temperature']:.3f})", m11, rows),
-        "## Paired difference (v1.1 minus v1.0 pass rate)", "",
+        *metrics_block(f"{rev} (threshold {v11_thr:.2f}, T={calib['temperature']:.3f})", m11, rows),
+        f"## Paired difference ({rev} minus v1.0 pass rate)", "",
         f"Observed {100 * gain:+.1f} points; 95% bootstrap interval "
         f"{100 * lo:+.1f} to {100 * hi:+.1f} (1000 resamples, seed 0).",
         "",
-        "## Per-class (v1.1)", "",
+        f"## Per-class ({rev})", "",
         *per_class_md(v11_res, rows),
         "",
     ]
@@ -316,7 +323,7 @@ def main(argv: list[str] | None = None) -> None:
         masked = run_model(rows, str(v11), None, float(v11_thr), float(calib["temperature"]), a.device,
                            crop_mask=True)
         mm = summarize(masked, rows, float(v11_thr))
-        lines += metrics_block("v1.1 with crop masking (diagnostic)", mm, rows)
+        lines += metrics_block(f"{rev} with crop masking (diagnostic)", mm, rows)
 
     lines += [
         "The 50-image real_world_set is all from Cropped-PlantDoc `train/` and half of it chose",
@@ -326,11 +333,15 @@ def main(argv: list[str] | None = None) -> None:
         "Per-image results: `final_test_per_image.csv`.",
         "",
     ]
-    (out / "final_report_v1_1.md").write_text("\n".join(lines))
+    report_name = f"final_report_{rev_slug}.md"
+    (out / report_name).write_text("\n".join(lines))
+    # Keep the historical filename when the revision is still v1.1.
+    if rev == "v1.1":
+        (out / "final_report_v1_1.md").write_text("\n".join(lines))
     summary = write_final_summary(out / "final_summary.json", m10, m11, rows, float(v11_thr),
-                                  float(calib["temperature"]))
+                                  float(calib["temperature"]), revision_name=rev)
     write_final_summary(v11 / "final_summary.json", m10, m11, rows, float(v11_thr),
-                        float(calib["temperature"]))
+                        float(calib["temperature"]), revision_name=rev)
     with open(out / "final_test_per_image.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["file", "stratum", "true", "v10_pred", "v10_status",
                                           "v10_conf", "v11_pred", "v11_status", "v11_conf"])
@@ -352,10 +363,9 @@ def main(argv: list[str] | None = None) -> None:
         })
         print(f"[final] guard written: {guard.describe(a.revision_name)}")
     print("\n".join(lines[:30]))
-    rw = summary["v1.1"]["real_world_set"]
-    print(f"Wrote {out}/final_report_v1_1.md, final_summary.json "
+    rw = summary[rev]["real_world_set"]
+    print(f"Wrote {out}/{report_name}, final_summary.json "
           f"(real_world_set {rw['label']})")
-
 
 if __name__ == "__main__":
     main()

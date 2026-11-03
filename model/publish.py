@@ -5,8 +5,8 @@ Token comes from HF_TOKEN (.env locally, Colab secret in Colab, or `hf auth logi
 Examples:
     python model/publish.py --check                      # verify token, owner and repo access only
     python model/publish.py --dry_run                    # fill the card, list what would be uploaded
-    python model/publish.py                              # upload model/outputs/plantvillage-mobilenetv2 + tag v1.0
-    python model/publish.py --tag v1.1 --private
+    python model/publish.py                              # upload model/outputs/plantvillage-resnet18 + tag v1.0
+    python model/publish.py --tag v1.2 --private
     python model/publish.py --reports_only               # re-push README.md + reports/ (no weights)
 
 Fills README.md from trainer_state.json, reports/metrics.json, final_summary.json,
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -29,10 +30,16 @@ DEFAULT_MODEL_DIR = HERE / "outputs" / "plantvillage-resnet18"
 V10_PV_ACCURACY = 0.9912
 MAX_PV_DROP = 0.02
 DIAGNOSTICS = HERE / "outputs" / "diagnostics_v1_0.json"
+# Stage-2 tags (v1.1, v1.2, …) must pass the PlantDoc / PlantVillage gate.
+STAGE2_TAG_RE = re.compile(r"^v1\.(?:[1-9]\d*)$")
 
 # Trainer scratch files that should never land on the Hub.
 IGNORE = ["checkpoint-*", "checkpoint-*/**", "runs/**", "optimizer.pt", "scheduler.pt", "rng_state*.pth", "*.log", ".DS_Store"]
 WEIGHT_PATTERNS = ["*.safetensors", "*.bin", "pytorch_model*"]
+
+
+def is_stage2_tag(tag: str) -> bool:
+    return bool(STAGE2_TAG_RE.match(tag or ""))
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,43 +53,73 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--commit_message", default="Phase 1: ResNet-18 on PlantVillage")
     p.add_argument("--check", action="store_true", help="Verify token / owner / repo access and exit.")
     p.add_argument("--dry_run", action="store_true", help="Show the files that would be uploaded and exit.")
-    p.add_argument("--skip_gate", action="store_true", help="Do not enforce the v1.1 publish gate (not for the real release).")
+    p.add_argument("--skip_gate", action="store_true", help="Do not enforce the stage-2 publish gate (not for the real release).")
     p.add_argument("--skip_card_check", action="store_true",
-                   help="Do not refuse v1.1 when a model-card section is missing.")
+                   help="Do not refuse a stage-2 tag when a model-card section is missing.")
     p.add_argument("--diagnostics", default=str(DIAGNOSTICS), help="v1.0 validation diagnostics (diagnostics.py).")
     return p.parse_args()
 
 
 def publish_gate(model_dir: Path, tag: str, diagnostics: Path = DIAGNOSTICS) -> None:
-    """v1.1 is published only if PlantDoc val macro-F1 beats v1.0 and PV accuracy drops by at most 2 points."""
-    if tag != "v1.1":
+    """Stage-2 tags publish only if PlantDoc val macro-F1 beats v1.0 and PV accuracy drops by at most 2 points."""
+    if not is_stage2_tag(tag):
         return
     if not diagnostics.exists():
-        raise SystemExit(f"v1.1 gate: {diagnostics} missing. Run diagnostics.py on the validation split first.")
+        raise SystemExit(f"{tag} gate: {diagnostics} missing. Run diagnostics.py on the validation split first.")
     diag = json.loads(diagnostics.read_text())
     v10_f1 = float(diag["plantdoc_macro_f1"])
     eval_path = model_dir / "eval_results.json"
     if not eval_path.exists():
         eval_path = model_dir / "all_results.json"
     if not eval_path.exists():
-        raise SystemExit(f"v1.1 gate: {model_dir}/eval_results.json missing.")
+        raise SystemExit(f"{tag} gate: {model_dir}/eval_results.json missing.")
     ev = json.loads(eval_path.read_text())
-    v11_f1 = ev.get("eval_plantdoc_macro_f1")
-    if v11_f1 is None:
-        raise SystemExit("v1.1 gate: eval_plantdoc_macro_f1 not in eval results.")
+    cand_f1 = ev.get("eval_plantdoc_macro_f1")
+    if cand_f1 is None:
+        raise SystemExit(f"{tag} gate: eval_plantdoc_macro_f1 not in eval results.")
     metrics_path = model_dir / "reports" / "metrics.json"
     if not metrics_path.exists():
-        raise SystemExit(f"v1.1 gate: {metrics_path} missing. Run evaluate.py on the PlantVillage test split.")
+        raise SystemExit(f"{tag} gate: {metrics_path} missing. Run evaluate.py on the PlantVillage test split.")
     pv_acc = float(json.loads(metrics_path.read_text())["accuracy"])
     problems = []
-    if v11_f1 <= v10_f1:
-        problems.append(f"PlantDoc val macro F1 {v11_f1:.4f} is not higher than v1.0 {v10_f1:.4f}")
+    if cand_f1 <= v10_f1:
+        problems.append(f"PlantDoc val macro F1 {cand_f1:.4f} is not higher than v1.0 {v10_f1:.4f}")
     if pv_acc < V10_PV_ACCURACY - MAX_PV_DROP:
         problems.append(f"PlantVillage test accuracy {pv_acc:.4f} dropped more than {MAX_PV_DROP:.0%} from {V10_PV_ACCURACY:.4f}")
     if problems:
-        raise SystemExit("v1.1 publish gate failed:\n  - " + "\n  - ".join(problems))
-    print(f"Publish gate OK: PlantDoc val F1 {v11_f1:.4f} > {v10_f1:.4f}; "
+        raise SystemExit(f"{tag} publish gate failed:\n  - " + "\n  - ".join(problems))
+    print(f"Publish gate OK ({tag}): PlantDoc val F1 {cand_f1:.4f} > {v10_f1:.4f}; "
           f"PlantVillage acc {pv_acc:.4f} (floor {V10_PV_ACCURACY - MAX_PV_DROP:.4f})")
+
+
+def pass_rate_summary(model_dir: Path) -> str | None:
+    """One-line final-test pass rate for dry-run / publish logs, if final_summary.json exists."""
+    for path in (model_dir / "final_summary.json", HERE / "outputs" / "final_summary.json"):
+        if not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text())
+        except json.JSONDecodeError:
+            continue
+        for key in ("v1.2", "v1.1", "candidate"):
+            block = payload.get(key) or {}
+            rw = block.get("real_world_set") or {}
+            if "passes" in rw and "n" in rw and rw["n"]:
+                rate = 100.0 * float(rw["passes"]) / float(rw["n"])
+                return f"final_summary {key} real_world_set pass {rw['passes']}/{rw['n']} ({rate:.1f}%)"
+        # Prefer the overall pass rate written by final_test when present.
+        overall = payload.get("pass_rate") or payload.get("end_to_end_pass_rate")
+        if overall is not None:
+            return f"final_summary pass_rate={overall}"
+    report = HERE / "outputs" / "final_report_v1_2.md"
+    if not report.exists():
+        report = HERE / "outputs" / "final_report_v1_1.md"
+    if report.exists():
+        text = report.read_text(encoding="utf-8")
+        m = re.search(r"Pass rate \(correct and ok, of all images\) \| ([0-9]+/[0-9]+ \([^)]+\))", text)
+        if m:
+            return f"{report.name}: {m.group(1)}"
+    return None
 
 
 def verify_access(api, repo_id: str) -> str:
@@ -133,25 +170,30 @@ def main() -> None:
         print(f"Model card sections missing: {', '.join(card_status['missing'])}")
     if not (model_dir / "README.md").exists():
         print("Warning: README.md (model card) missing. evaluate.py writes it.")
-    if args.tag == "v1.1" and card_status["missing"] and not args.skip_card_check:
-        msg = ("v1.1 card check failed; missing sections: "
+    stage2 = is_stage2_tag(args.tag)
+    if stage2 and card_status["missing"] and not args.skip_card_check:
+        msg = (f"{args.tag} card check failed; missing sections: "
                + ", ".join(card_status["missing"])
                + ". Run the matching eval scripts or pass --skip_card_check.")
         if not args.dry_run:
             raise SystemExit(msg)
         print(f"[dry run] the real publish would stop here: {msg}")
-    if args.tag == "v1.1" and not args.skip_gate:
+    if stage2 and not args.skip_gate:
         try:
             publish_gate(model_dir, args.tag, Path(args.diagnostics))
         except SystemExit as exc:
             if not args.dry_run:
                 raise
             print(f"[dry run] the real publish would stop here: {exc}")
-    if args.tag == "v1.1" and not (model_dir / "calibration.json").exists():
-        print("Warning: calibration.json missing; v1.1 should ship the fitted temperature.")
+    if stage2 and not (model_dir / "calibration.json").exists():
+        print(f"Warning: calibration.json missing; {args.tag} should ship the fitted temperature.")
 
     ignore = IGNORE + (WEIGHT_PATTERNS if args.reports_only else [])
     allow = ["README.md", "reports/**"] if args.reports_only else None
+
+    rate_line = pass_rate_summary(model_dir)
+    if rate_line:
+        print(f"Pass-rate summary: {rate_line}")
 
     if args.dry_run:
         files = sorted(p.relative_to(model_dir).as_posix() for p in model_dir.rglob("*") if p.is_file())

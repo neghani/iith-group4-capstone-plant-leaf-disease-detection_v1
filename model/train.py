@@ -4,7 +4,7 @@ Stage 1 (from ImageNet):
     python model/train.py --data_dir "$DATA_DIR" --output_dir model/outputs/plantvillage-resnet18 ...
 
 Stage 2 (from published v1.0, mixed PlantVillage + Cropped-PlantDoc):
-    python model/train.py --init_from neghani/plantvillage-mobilenetv2 --model_revision v1.0 \
+    python model/train.py --init_from neghani/plantvillage-resnet18 --model_revision v1.0 \
         --data_dir "$DATA_DIR" --extra_data plantdoc --plantdoc_fraction 0.5 --epoch_samples 4000 \
         --learning_rate 1e-4 --num_train_epochs 8 --label_smoothing_factor 0.1 \
         --output_dir /content/drive/MyDrive/plant-disease/stage2/lr1e-4 \
@@ -82,7 +82,7 @@ class ModelArguments:
     )
     init_from: str | None = field(
         default=None,
-        metadata={"help": "Starting weights (e.g. neghani/plantvillage-mobilenetv2). Overrides model_name_or_path."},
+        metadata={"help": "Starting weights (e.g. neghani/plantvillage-resnet18). Overrides model_name_or_path."},
     )
     model_revision: str | None = field(default=None, metadata={"help": "Hub revision/tag of the starting weights (e.g. v1.0)."})
     ignore_mismatched_sizes: bool = field(default=True, metadata={"help": "Replace the ImageNet head with a PlantVillage head."})
@@ -344,6 +344,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if model_args.init_from:
         model_args.model_name_or_path = model_args.init_from
+    # Keep Hub provenance for run_info even if we later load finished weights from output_dir.
+    provenance_base = model_args.model_name_or_path
+    provenance_revision = model_args.model_revision
+    provenance_init = model_args.init_from or model_args.model_name_or_path
 
     output_dir = Path(training_args.output_dir)
     overwrite = bool(getattr(training_args, "overwrite_output_dir", False))
@@ -561,9 +565,9 @@ def main(argv: list[str] | None = None) -> None:
     if extra_dir and (extra_dir / "prep_report.json").exists():
         plantdoc_commit = json.loads((extra_dir / "prep_report.json").read_text()).get("plantdoc_commit", "")
     run_info = {
-        "base_model": model_args.model_name_or_path,
-        "base_revision": model_args.model_revision,
-        "init_from": model_args.init_from or model_args.model_name_or_path,
+        "base_model": provenance_base,
+        "base_revision": provenance_revision,
+        "init_from": provenance_init,
         "extra_data": extra_info,
         "plantdoc_fraction": data_args.plantdoc_fraction if extra_info else None,
         "epoch_samples": data_args.epoch_samples if extra_info else None,

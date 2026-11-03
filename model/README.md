@@ -3,7 +3,7 @@
 Fine-tuned **ResNet-18** on the **PlantVillage** dataset for 38 crop-disease classes. The release
 used in the API and Hugging Face Space is published at:
 
-**https://huggingface.co/neghani/plantvillage-resnet18** — live tag is **`shared/release.json`** (`hf_model_revision`)
+**https://huggingface.co/neghani/plantvillage-resnet18** — live tag is **`v1.2`** (`shared/release.json`)
 
 Plant disease classification is fine-grained: early vs late blight can differ in subtle texture (spot
 edges, concentric rings) with noisy backgrounds. ResNet-18 preserves more of that structure than
@@ -56,29 +56,31 @@ the 50% goal; see [final_report.md](final_report.md). See [Limitations](#limitat
 blight (~0.91–0.95 F1). Full per-class table: Hub `reports/classification_report.txt` and
 `reports/confusion_matrix.png`.
 
-### Real-world score (one-shot `v1.1` final test)
+### Real-world score (one-shot `v1.2` final test)
 
-The only real-photo figures to quote are in [`final_report.md`](final_report.md) (Hub
-`stage2-runs/runs/stage2/final_test/final_report_v1_1.md`). Tag **`v1.1`**, strategy B, T=0.885,
-threshold **0.50**, 284 images. Do not mix these with the older 25-image `v1.0` evals (12% or 16%).
+The ResNet figures to quote are in [`final_report.md`](final_report.md)
+(`model/outputs/final_report_v1_2.md`). Tag **`v1.2`**, strategy B, T≈0.996, threshold **0.60**,
+284 images. This split was already used for the `v1.1` decision, so treat `v1.2` as a
+same-protocol retrain, not a pristine held-out. MobileNet `v1.1` remains the stronger field
+model on this set (137/284) and stays in `shared/release.json` as `candidate`.
 
-| Metric | `v1.0` (thr 0.85, T=1) | **`v1.1` (thr 0.50, T=0.885)** |
-|---|---|---|
-| Images | 284 | **284** |
-| Gate rejects (retake) | 5/284 | **5/284** |
-| Not sure | 146/284 (51.4%) | **91/284 (32.0%)** |
-| Top-1 (reached model) | 75/279 (26.9%) | **159/279 (57.0%)** |
-| Top-3 (reached model) | 137/279 (49.1%) | **219/279 (78.5%)** |
-| **End-to-end pass rate** | 53/284 (18.7%, 14.6–23.6%) | **137/284 (48.2%, 42.5–54.0%)** |
-| `plantdoc_test` (pristine) | 48/236 (20.3%) | **116/236 (49.2%)** |
-| `real_world_set` (wide) | 5/48 (10.4%) | **21/48 (43.8%)** |
+| Metric | ResNet `v1.0` (thr 0.85) | **ResNet `v1.2` (thr 0.60)** | MobileNet `v1.1` (thr 0.50) |
+|---|---|---|---|
+| Images | 284 | **284** | 284 |
+| Gate rejects (retake) | 5/284 | **5/284** | 5/284 |
+| Not sure | 172/284 (60.6%) | **145/284 (51.1%)** | 91/284 (32.0%) |
+| Top-1 (reached model) | 65/279 (23.3%) | **158/279 (56.6%)** | 159/279 (57.0%) |
+| Top-3 (reached model) | 135/279 (48.4%) | **229/279 (82.1%)** | 219/279 (78.5%) |
+| **End-to-end pass rate** | 39/284 (13.7%) | **98/284 (34.5%)** | **137/284 (48.2%)** |
+| `plantdoc_test` (pristine) | 36/236 (15.3%) | **86/236 (36.4%)** | 116/236 (49.2%) |
+| `real_world_set` (wide) | 3/48 (6.2%) | **12/48 (25.0%)** | 21/48 (43.8%) |
 
-The 50% goal is not met; **48.2% is reported as-is**. Paired gain over `v1.0`: +29.6 points
-(95% bootstrap +23.9 to +35.2). Weakest classes (0 passes): cherry healthy 0/12, tomato bacterial
-spot 0/11, tomato mosaic 0/12.
+The 50% goal is not met; **34.5% is reported as-is**. Paired gain over ResNet `v1.0`: +20.8 points
+(95% bootstrap +15.1 to +26.4). Side-by-side numbers: `model/outputs/compare_v1_2.json`.
 
-PlantVillage held-out accuracy on `v1.1` is 98.23% (macro-F1 97.27%), within the 2-point publish
-gate of `v1.0`'s 99.12%.
+PlantVillage held-out accuracy on `v1.2` is 97.90% (macro-F1 96.87%), within the 2-point publish
+gate of the documented `v1.0` floor (99.12% − 2%). Hub `v1.0` itself was a short 1-epoch run
+(~98.3% test); stage 2 continued from that published tag.
 
 Do **not** re-run `final_test.py` for this revision. The guard is already written.
 
@@ -153,9 +155,9 @@ Space pin the live tag from [`shared/release.json`](../shared/release.json) (cop
 
 **Limit to state.** Training crops, `real_world_set` and `plantdoc_test` are web photos from PlantDoc,
 so gains overstate phone-photo performance. PlantDoc labels were not checked by a pathologist.
-Classes PlantDoc lacks only keep their PlantVillage training. The final pass rate is
-**137/284 (48.2%)**, below 50%; it is reported honestly in [`final_report.md`](final_report.md).
-Do not change the threshold or the data after seeing that number.
+Classes PlantDoc lacks only keep their PlantVillage training. The ResNet `v1.2` final pass rate is
+**98/284 (34.5%)**, below 50%; it is reported honestly in [`final_report.md`](final_report.md).
+Do not change the threshold or the data after seeing that number. MobileNet `v1.1` remains 137/284 on the same set.
 
 The older [`real_world_eval.py`](real_world_eval.py) (full frame, images under
 [`data/real_world/`](data/real_world/README.md)) still works for ad-hoc photo folders. See
@@ -237,7 +239,7 @@ Recorded in Hub [`run_info.json`](https://huggingface.co/neghani/plantvillage-re
 
 **Fallback:** For faster CPU inference, retrain with
 `--model_name_or_path google/mobilenet_v2_1.0_224` (same scripts). The previous live pin
-remains at [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) `@v1.1` (`candidate` in `shared/release.json`). The live pin is ResNet-18 `@v1.1`.
+remains at [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2) `@v1.1` (`candidate` in `shared/release.json`). The live pin is ResNet-18 `@v1.2`.
 
 ### Training augmentations (phone robustness)
 
@@ -432,8 +434,8 @@ python model/predict.py leaf.jpg --model neghani/plantvillage-resnet18 --revisio
 | Item | Value |
 |---|---|
 | `HF_MODEL_ID` | `shared/release.json` → `hf_model_id` |
-| `HF_MODEL_REVISION` | `shared/release.json` → `hf_model_revision` (currently `v1.1`) |
-| `CONFIDENCE_THRESHOLD` | `shared/release.json` → `confidence_threshold` (currently `0.5`) |
+| `HF_MODEL_REVISION` | `shared/release.json` → `hf_model_revision` (currently `v1.2`) |
+| `CONFIDENCE_THRESHOLD` | `shared/release.json` → `confidence_threshold` (currently `0.6`) |
 | `CALIBRATION_TEMPERATURE` | `shared/release.json` → `calibration_temperature` |
 | Labels | `config.json` `id2label` ↔ `api/data/knowledge/diseases.json` (38 entries) |
 | Reference logic | [`predict.py`](predict.py) `diagnose()` |
@@ -446,7 +448,7 @@ python model/predict.py leaf.jpg --model neghani/plantvillage-resnet18 --revisio
 - **Lab vs field:** PlantVillage uses plain backgrounds; field photos need leaf cropping and often score lower.
 - **Split leakage:** Random per-image splits can place near-duplicate leaves in both train and test.
 - **Closed set:** The model always outputs one of 38 classes; unknown plants or non-leaves can get high-confidence wrong answers (mitigated partly by crop hint and “unsupported crop” in the agent — see `docs/challenges-and-approach.md`).
-- **Softmax confidence** is temperature-scaled on PlantDoc validation (T=0.885); remaining
+- **Softmax confidence** is temperature-scaled on PlantDoc validation (T≈0.996 for ResNet `v1.2`); remaining
   overconfidence out-of-distribution is a limitation. The live app treats low confidence as
   "not sure" and asks for a retake.
 

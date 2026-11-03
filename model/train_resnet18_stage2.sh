@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Stage 2: PlantVillage + PlantDoc mix, starting from ResNet v1.0.
-# Tags v1.1 only if publish.py's gate passes. Does not edit the live release pin.
+# Tags v1.2 only if publish.py's gate passes. Does not edit the live release pin.
+# Uses the corrected PlantDoc sampler (class share 1/sqrt(freq) = per-row 1/count**1.5).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -14,6 +15,8 @@ STAGE2_EPOCHS="${STAGE2_EPOCHS:-8}"
 STAGE2_BATCH="${STAGE2_BATCH:-64}"
 STAGE2_LRS="${STAGE2_LRS:-1e-4,5e-5}"
 STAGE2_ROOT="${STAGE2_ROOT:-model/outputs/stage2-resnet18}"
+STAGE2_TAG="${STAGE2_TAG:-v1.2}"
+INIT_REVISION="${INIT_REVISION:-v1.0}"
 
 GPU_FLAGS=()
 while IFS= read -r line; do
@@ -24,8 +27,8 @@ echo "Preparing Cropped-PlantDoc..."
 python3 -m model.prepare_plantdoc
 
 # Gate baseline: PlantDoc val macro-F1 of the published v1.0, not of the stage-2 run.
-echo "Diagnostics on ${HUB}@v1.0 (writes model/outputs/diagnostics_v1_0.json)"
-python3 -m model.diagnostics --model "$HUB" --revision v1.0 --out model/outputs
+echo "Diagnostics on ${HUB}@${INIT_REVISION} (writes model/outputs/diagnostics_v1_0.json)"
+python3 -m model.diagnostics --model "$HUB" --revision "$INIT_REVISION" --out model/outputs
 
 best_dir=""
 best_f1="-1"
@@ -36,7 +39,7 @@ for lr in "${LRS[@]}"; do
   echo "=== Stage 2 lr=${lr} -> ${out} ==="
   python3 -m model.train \
     --init_from "$HUB" \
-    --model_revision v1.0 \
+    --model_revision "$INIT_REVISION" \
     --data_dir "$DATA_DIR" \
     --extra_data plantdoc \
     --plantdoc_fraction "$PD_FRACTION" \
@@ -82,7 +85,9 @@ python3 -m model.evaluate --model "$best_dir" --hub_model_id "$HUB" --data_dir "
 python3 -m model.publish \
   --model "$best_dir" \
   --hub_model_id "$HUB" \
-  --tag v1.1 \
-  --diagnostics model/outputs/diagnostics_v1_0.json
-echo "Tagged v1.1 on ${HUB}. calibration.json is only in ${best_dir}."
+  --tag "$STAGE2_TAG" \
+  --diagnostics model/outputs/diagnostics_v1_0.json \
+  --tag_message "Stage 2 (${STAGE2_TAG}): PlantVillage + Cropped-PlantDoc (fixed sampler)" \
+  --commit_message "Stage 2 (${STAGE2_TAG}): fine-tune on PlantDoc with corrected 1/sqrt(freq) sampler"
+echo "Tagged ${STAGE2_TAG} on ${HUB}. calibration.json is only in ${best_dir}."
 echo "Live pin was not changed. Run final_test once, check the strawberry photo, then promote Docker."

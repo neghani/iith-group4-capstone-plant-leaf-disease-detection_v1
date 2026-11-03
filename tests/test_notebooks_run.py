@@ -314,7 +314,7 @@ def test_apply_knobs_and_publish_checklist(monkeypatch, capsys):
     print_session_plan()
     print_publish_checklist()
     out = capsys.readouterr().out
-    assert "v1.1" in out
+    assert "v1.2" in out
     assert "shared/release.json" in out
     assert "https://huggingface.co/" in out
 

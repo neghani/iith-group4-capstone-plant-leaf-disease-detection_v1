@@ -8,9 +8,9 @@
   "ood_threshold": 0.05,
   "candidate": {
     "hf_model_id": "neghani/plantvillage-resnet18",
-    "hf_model_revision": "v1.1",
-    "confidence_threshold": 0.55,
-    "calibration_temperature": 0.9357514486544162,
-    "note": "Previous live pin / bake-off runner-up. Swap back via shared/release.json if needed."
+    "hf_model_revision": "v1.2",
+    "confidence_threshold": 0.6,
+    "calibration_temperature": 0.9957333642299206,
+    "note": "Bake-off runner-up (98/284). Winner is MobileNet v1.1 at 137/284 — see docs/model-bakeoff.md."
   }
 }

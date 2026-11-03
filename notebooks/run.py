@@ -34,6 +34,7 @@ KNOB_DEFAULTS = {
     "STAGE2_EPOCHS": "8",
     "STAGE2_LRS": "1e-4,5e-5",
     "STAGE2_BATCH": "64",
+    "STAGE2_TAG": "v1.2",
 }
 
 DEFAULT_HF_MODEL_ID = "neghani/plantvillage-resnet18"
@@ -236,10 +237,11 @@ def print_session_plan() -> None:
     print("  Stage 1 PlantVillage train (section 5):",
           "YES" if s1 else "SKIP (v1.0 already on the Hub)", flush=True)
     print("  Stage 1 tag v1.0 (section 8):", "YES" if s1 else "SKIP", flush=True)
+    stage2_tag = knob("STAGE2_TAG") or "v1.2"
     print("  Stage 2 mixed PlantVillage+PlantDoc train (section 7b):",
-          "YES" if s2 else "SKIP (v1.1 already on the Hub)", flush=True)
-    print("  Stage 2 tag v1.1 (section 7b):", "YES" if s2 else "SKIP", flush=True)
-    tags = [t for t, on in (("v1.0", s1), ("v1.1", s2)) if on]
+          "YES" if s2 else f"SKIP ({stage2_tag} already on the Hub or knobs off)", flush=True)
+    print(f"  Stage 2 tag {stage2_tag} (section 7b):", "YES" if s2 else "SKIP", flush=True)
+    tags = [t for t, on in (("v1.0", s1), (stage2_tag, s2)) if on]
     print("  Hub tag this session would write:", ", ".join(tags) or "(none)", flush=True)
     print("  shared/release.json: unchanged by this notebook", flush=True)
     print(f"  PlantVillage: {knob('STAGE1_EPOCHS')} epochs, lr {knob('STAGE1_LR')}", flush=True)
@@ -255,11 +257,12 @@ def print_publish_checklist() -> None:
     s1 = flag_on("RUN_STAGE1")
     s2 = flag_on("RUN_STAGE2")
     hub = os.environ.get("HF_MODEL_ID") or DEFAULT_HF_MODEL_ID
-    tags = [t for t, on in (("v1.0", s1), ("v1.1", s2)) if on]
+    stage2_tag = knob("STAGE2_TAG") or "v1.2"
+    tags = [t for t, on in (("v1.0", s1), (stage2_tag, s2)) if on]
     print("Hugging Face publish checklist", flush=True)
     print(f"  Repo: https://huggingface.co/{hub}", flush=True)
-    print("  1. Weights: section 5 Trainer --push_to_hub (v1.0) or section 7b local save then publish.py (v1.1)", flush=True)
-    print("  2. reports/ + model card: evaluate.py --push (v1.0) or evaluate then publish.py (v1.1)", flush=True)
-    print("  3. Release tag: publish.py --tag v1.0 (section 8) or --tag v1.1 (section 7b)", flush=True)
+    print(f"  1. Weights: section 5 Trainer --push_to_hub (v1.0) or section 7b local save then publish.py ({stage2_tag})", flush=True)
+    print(f"  2. reports/ + model card: evaluate.py --push (v1.0) or evaluate then publish.py ({stage2_tag})", flush=True)
+    print(f"  3. Release tag: publish.py --tag v1.0 (section 8) or --tag {stage2_tag} (section 7b)", flush=True)
     print("  This session would tag:", ", ".join(tags) or "(none; RUN_STAGE1/RUN_STAGE2 are off)", flush=True)
     print("  shared/release.json is unchanged by this notebook. The live API pin stays until that file is edited.", flush=True)
