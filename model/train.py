@@ -123,7 +123,8 @@ class DataArguments:
     aug_policy: str = field(
         default="default",
         metadata={
-            "help": "Training augmentation: 'default' (current stack) or 'robust' (adds RandomErasing). "
+            "help": "Training augmentation: 'default' (current stack), 'robust' (adds RandomErasing) or "
+            "'field' (robust + affine shift/zoom/shear + stronger colour jitter). "
             "Changing this on a resumed run is a new experiment, not a resume."
         },
     )

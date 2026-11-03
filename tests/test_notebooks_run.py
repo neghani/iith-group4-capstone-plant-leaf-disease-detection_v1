@@ -57,8 +57,18 @@ def _notebook_source() -> str:
 
 def test_mobilenet_notebook_still_present():
     assert MOBILENET_NOTEBOOK.is_file()
-    src = MOBILENET_NOTEBOOK.read_text()
+    cells = ["".join(c.get("source") or []) for c in json.loads(MOBILENET_NOTEBOOK.read_text())["cells"]]
+    src = "\n".join(cells)
     assert "google/mobilenet_v2" in src
+    assert "RUN_V12 = False" in src
+    assert "## 11. MobileNetV2 v1.2" in src
+    assert '"--branch", "v1.2"' in src
+    assert "V12_STAGE1" in src
+    assert "baseline_revision" in src
+    # v1.2 stage 1 must not push to the Hub (leaves main/v1.1 alone).
+    stage1 = next(c for c in cells if "V12_STAGE1" in c and "google/mobilenet_v2_1.0_224" in c)
+    assert "--push_to_hub" not in stage1
+    assert 'flag_on("RUN_V12")' in stage1
 
 
 def test_notebook_section1_defaults_to_main_not_env():

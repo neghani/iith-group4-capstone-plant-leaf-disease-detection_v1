@@ -1,11 +1,19 @@
-"""One-shot final test of v1.0 and v1.1. The same weights skip; different weights are refused. --force regenerates the same run.
+"""One-shot final test of a candidate vs a baseline. Same weights skip; different weights are refused. --force regenerates.
 
-    python -m model.final_test --v11 /content/drive/MyDrive/plant-disease/stage2/best \
+    # Historical v1.1 vs v1.0 (defaults):
+    python -m model.final_test --v11 /content/drive/.../stage2/best \
         --revision_name v1.1 --guard hub:neghani/plantvillage-mobilenetv2
+
+    # v1.2 vs published v1.1 (writes under a dedicated out dir, never model/outputs):
+    python -m model.final_test --v11 /content/drive/.../v1.2/stage2 \
+        --revision_name v1.2 --out /content/drive/.../v1.2/final \
+        --baseline_revision v1.1 --baseline_threshold 0.5 --baseline_temperature 0.885 \
+        --guard hub:neghani/plantvillage-mobilenetv2
+
     python -m model.final_test --smoke     # synthetic, under outputs/smoke, no guard
 
 Requires calibration.json and threshold.json (decisions frozen before this runs).
-Never used for any choice. Writes <out>/final_report_v1_1.md. The guard record
+Never used for any choice. Writes <out>/final_report_<revision>.md. The guard record
 (<revision>.json) lives in the Hub repo or on Drive, not on the Colab disk (see guard.py).
 """
 
@@ -39,7 +47,15 @@ from stats import (  # noqa: E402
     wilson,
 )
 
-V10_THRESHOLD = 0.85
+# Defaults match the published MobileNet v1.0 / v1.1 pins (shared/release.json history).
+DEFAULT_BASELINE_REVISION = "v1.0"
+DEFAULT_BASELINE_THRESHOLD = 0.85
+DEFAULT_BASELINE_TEMPERATURE = 1.0
+# Published MobileNet v1.1 (used when comparing a v1.2 candidate).
+V11_BASELINE_THRESHOLD = 0.5
+V11_BASELINE_TEMPERATURE = 0.885
+# Refuse writing into the shared outputs folder so a v1.2 run cannot overwrite v1.1 reports.
+PROTECTED_OUT = (HERE / "outputs").resolve()
 
 
 def require_frozen(calib: Path, thr: Path) -> tuple[dict, dict]:
@@ -163,18 +179,32 @@ def stratum_payload(m: dict, rows: list[dict], name: str = "real_world_set") -> 
     }
 
 
-def write_final_summary(path: Path, m10: dict, m11: dict, rows: list[dict],
-                        v11_thr: float, temperature: float) -> dict:
+def write_final_summary(
+    path: Path,
+    m_base: dict,
+    m_cand: dict,
+    rows: list[dict],
+    cand_thr: float,
+    temperature: float,
+    *,
+    baseline_name: str = "v1.0",
+    candidate_name: str = "v1.1",
+    baseline_threshold: float = DEFAULT_BASELINE_THRESHOLD,
+    baseline_temperature: float = DEFAULT_BASELINE_TEMPERATURE,
+) -> dict:
     summary = {
         "date": datetime.date.today().isoformat(),
-        "v1.0": {
-            "threshold": V10_THRESHOLD,
-            "real_world_set": stratum_payload(m10, rows),
+        "baseline": baseline_name,
+        "candidate": candidate_name,
+        baseline_name: {
+            "threshold": float(baseline_threshold),
+            "temperature": float(baseline_temperature),
+            "real_world_set": stratum_payload(m_base, rows),
         },
-        "v1.1": {
-            "threshold": float(v11_thr),
+        candidate_name: {
+            "threshold": float(cand_thr),
             "temperature": float(temperature),
-            "real_world_set": stratum_payload(m11, rows),
+            "real_world_set": stratum_payload(m_cand, rows),
         },
     }
     path.write_text(json.dumps(summary, indent=2) + "\n")
@@ -218,20 +248,61 @@ def metrics_block(name: str, m: dict, rows: list[dict]) -> list[str]:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--v11", default=None, help="Local run dir of the fine-tuned weights.")
-    ap.add_argument("--revision_name", default="v1.1", help="Tag the candidate would be published as; names the guard record.")
+    ap.add_argument("--v11", default=None, help="Local run dir of the candidate (fine-tuned) weights.")
+    ap.add_argument("--revision_name", default="v1.1", help="Tag the candidate would be published as; names the guard record and report file.")
     ap.add_argument("--guard", default=None,
                     help="hub:<repo_id> (default: hub:$HF_MODEL_ID) or drive:<dir>. Never local outputs/.")
-    ap.add_argument("--v10", default="neghani/plantvillage-mobilenetv2")
-    ap.add_argument("--v10_revision", default="v1.0")
+    ap.add_argument("--v10", default="neghani/plantvillage-mobilenetv2",
+                    help="Baseline model id or local dir (legacy name; kept for callers).")
+    ap.add_argument("--v10_revision", default=None,
+                    help="Deprecated alias for --baseline_revision.")
+    ap.add_argument("--baseline_revision", default=None,
+                    help="Hub revision of the baseline (default: v1.0; use v1.1 when scoring a v1.2 candidate).")
+    ap.add_argument("--baseline_threshold", type=float, default=None,
+                    help="Confidence threshold for the baseline chain (default: 0.85 for v1.0, 0.5 for v1.1).")
+    ap.add_argument("--baseline_temperature", type=float, default=None,
+                    help="Softmax temperature for the baseline (default: 1.0 for v1.0, 0.885 for v1.1).")
     ap.add_argument("--test_dir", default=str(HERE / "data" / "plantdoc_test"))
     ap.add_argument("--real_world", default=str(HERE / "data" / "real_world_set"))
-    ap.add_argument("--out", default=str(HERE / "outputs"))
+    ap.add_argument("--out", default=str(HERE / "outputs"),
+                    help="Report directory. Must NOT be model/outputs for a non-v1.1 revision (protects v1.1 artifacts).")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--crop_mask", action="store_true", help="Also report crop-masked metrics (diagnostic).")
     ap.add_argument("--smoke", action="store_true", help="synthetic data under outputs/smoke; no guard")
     return ap.parse_args(argv)
+
+
+def resolve_baseline(a: argparse.Namespace) -> tuple[str, float, float]:
+    """Return (revision, threshold, temperature) for the baseline chain."""
+    rev = a.baseline_revision or a.v10_revision or DEFAULT_BASELINE_REVISION
+    if a.baseline_threshold is not None:
+        thr = float(a.baseline_threshold)
+    elif rev == "v1.1":
+        thr = V11_BASELINE_THRESHOLD
+    else:
+        thr = DEFAULT_BASELINE_THRESHOLD
+    if a.baseline_temperature is not None:
+        temp = float(a.baseline_temperature)
+    elif rev == "v1.1":
+        temp = V11_BASELINE_TEMPERATURE
+    else:
+        temp = DEFAULT_BASELINE_TEMPERATURE
+    return rev, thr, temp
+
+
+def assert_out_safe(out: Path, revision_name: str, smoke: bool) -> None:
+    """Refuse writing a non-v1.1 report into the shared model/outputs folder."""
+    if smoke:
+        return
+    if revision_name == "v1.1":
+        return
+    if out.resolve() == PROTECTED_OUT:
+        raise SystemExit(
+            f"--out {out} is the shared model/outputs folder. "
+            f"A {revision_name} final test must write elsewhere "
+            f"(e.g. .../v1.2/final) so v1.1 reports are not overwritten."
+        )
 
 
 def resolve_guard(a: argparse.Namespace):
@@ -253,21 +324,29 @@ def main(argv: list[str] | None = None) -> None:
         from smoke import ensure
 
         p = ensure("final")
-        a.v11, a.v10, a.v10_revision = str(p.run), str(p.base), None
+        a.v11, a.v10 = str(p.run), str(p.base)
+        a.baseline_revision = None
+        a.v10_revision = None
         a.test_dir, a.real_world, a.out, a.device = str(p.pd_test), str(p.data / "real_world_set"), str(p.artifacts), "cpu"
     if not a.v11:
         raise SystemExit("--v11 is required (or --smoke)")
+    base_rev, base_thr, base_temp = resolve_baseline(a)
+    # Local baseline dir (smoke) has no Hub revision.
+    baseline_hub_rev = None if Path(a.v10).exists() else base_rev
+    cand_name = a.revision_name
+    base_name = base_rev or "baseline"
     guard = resolve_guard(a)
 
-    v11 = Path(a.v11)
-    calib, thr = require_frozen(v11 / "calibration.json", v11 / "threshold.json")
-    key = model_key(str(v11), None)
+    cand = Path(a.v11)
+    calib, thr = require_frozen(cand / "calibration.json", cand / "threshold.json")
+    key = model_key(str(cand), None)
     out = Path(a.out)
+    assert_out_safe(out, cand_name, a.smoke)
     out.mkdir(parents=True, exist_ok=True)
     if guard is not None:
         from guard import check
 
-        if check(guard, a.revision_name, key, a.force) == "skip":
+        if check(guard, cand_name, key, a.force) == "skip":
             return
 
     rows = load_final_rows(Path(a.test_dir), Path(a.real_world))
@@ -276,47 +355,60 @@ def main(argv: list[str] | None = None) -> None:
     print(f"[final] {len(rows)} images "
           f"({sum(1 for r in rows if r['stratum']=='plantdoc_test')} plantdoc_test, "
           f"{sum(1 for r in rows if r['stratum']=='real_world_set')} real_world_set)")
+    print(f"[final] candidate={cand_name} vs baseline={base_name} "
+          f"(thr={base_thr}, T={base_temp})")
 
-    v11_thr = thr.get("threshold")
-    if v11_thr is None:
-        print("[final] threshold is provisional; scoring v1.1 at the v1.0 threshold "
-              f"{V10_THRESHOLD} so the comparison is defined, without changing the config.")
-        v11_thr = V10_THRESHOLD
-    v10_res = run_model(rows, a.v10, a.v10_revision, V10_THRESHOLD, 1.0, a.device)
-    v11_res = run_model(rows, str(v11), None, float(v11_thr), float(calib["temperature"]), a.device)
-    m10 = summarize(v10_res, rows, V10_THRESHOLD)
-    m11 = summarize(v11_res, rows, float(v11_thr))
-    gain, lo, hi = paired_bootstrap(m11["pass_vector"], m10["pass_vector"])
+    cand_thr = thr.get("threshold")
+    if cand_thr is None:
+        print(f"[final] threshold is provisional; scoring {cand_name} at the baseline threshold "
+              f"{base_thr} so the comparison is defined, without changing the config.")
+        cand_thr = base_thr
+    base_res = run_model(rows, a.v10, baseline_hub_rev, float(base_thr), float(base_temp), a.device)
+    cand_res = run_model(rows, str(cand), None, float(cand_thr), float(calib["temperature"]), a.device)
+    m_base = summarize(base_res, rows, float(base_thr))
+    m_cand = summarize(cand_res, rows, float(cand_thr))
+    gain, lo, hi = paired_bootstrap(m_cand["pass_vector"], m_base["pass_vector"])
 
+    report_stem = f"final_report_{cand_name.replace('.', '_')}"
+    reuse_note = ""
+    if cand_name == "v1.2":
+        reuse_note = (
+            " These images were already used once for the v1.1 report; recipe choices for "
+            f"{cand_name} used PlantDoc validation only, not this split."
+        )
     lines = [
-        "# Final test report (v1.1 vs v1.0)", "",
+        f"# Final test report ({cand_name} vs {base_name})", "",
         f"Run {datetime.datetime.now().isoformat(timespec='seconds')}. "
-        f"Images: {len(rows)}. This split was not used for any choice.",
+        f"Images: {len(rows)}. This split was not used for any choice.{reuse_note}",
         "",
-        f"v1.1 temperature T={calib['temperature']:.3f}; threshold status **{thr['status']}** "
+        f"{cand_name} temperature T={calib['temperature']:.3f}; threshold status **{thr['status']}** "
         f"({thr['note']})",
         "",
-        *metrics_block("v1.0 (threshold 0.85, T=1)", m10, rows),
-        *metrics_block(f"v1.1 (threshold {v11_thr:.2f}, T={calib['temperature']:.3f})", m11, rows),
-        "## Paired difference (v1.1 minus v1.0 pass rate)", "",
+        *metrics_block(
+            f"{base_name} (threshold {base_thr:.2f}, T={base_temp:g})", m_base, rows
+        ),
+        *metrics_block(
+            f"{cand_name} (threshold {cand_thr:.2f}, T={calib['temperature']:.3f})", m_cand, rows
+        ),
+        f"## Paired difference ({cand_name} minus {base_name} pass rate)", "",
         f"Observed {100 * gain:+.1f} points; 95% bootstrap interval "
         f"{100 * lo:+.1f} to {100 * hi:+.1f} (1000 resamples, seed 0).",
         "",
-        "## Per-class (v1.1)", "",
-        *per_class_md(v11_res, rows),
+        f"## Per-class ({cand_name})", "",
+        *per_class_md(cand_res, rows),
         "",
     ]
-    if m11["pass_rate"] < 0.5:
+    if m_cand["pass_rate"] < 0.5:
         lines += [
-            f"**The final pass rate is {frac(m11['passes'], m11['n'])}, below 50%.** "
+            f"**The final pass rate is {frac(m_cand['passes'], m_cand['n'])}, below 50%.** "
             "Reported as-is. The threshold and the data are not changed after seeing this number.",
             "",
         ]
     if a.crop_mask:
-        masked = run_model(rows, str(v11), None, float(v11_thr), float(calib["temperature"]), a.device,
+        masked = run_model(rows, str(cand), None, float(cand_thr), float(calib["temperature"]), a.device,
                            crop_mask=True)
-        mm = summarize(masked, rows, float(v11_thr))
-        lines += metrics_block("v1.1 with crop masking (diagnostic)", mm, rows)
+        mm = summarize(masked, rows, float(cand_thr))
+        lines += metrics_block(f"{cand_name} with crop masking (diagnostic)", mm, rows)
 
     lines += [
         "The 50-image real_world_set is all from Cropped-PlantDoc `train/` and half of it chose",
@@ -326,34 +418,48 @@ def main(argv: list[str] | None = None) -> None:
         "Per-image results: `final_test_per_image.csv`.",
         "",
     ]
-    (out / "final_report_v1_1.md").write_text("\n".join(lines))
-    summary = write_final_summary(out / "final_summary.json", m10, m11, rows, float(v11_thr),
-                                  float(calib["temperature"]))
-    write_final_summary(v11 / "final_summary.json", m10, m11, rows, float(v11_thr),
-                        float(calib["temperature"]))
+    summary_kwargs = dict(
+        baseline_name=base_name,
+        candidate_name=cand_name,
+        baseline_threshold=float(base_thr),
+        baseline_temperature=float(base_temp),
+    )
+    (out / f"{report_stem}.md").write_text("\n".join(lines))
+    summary = write_final_summary(
+        out / "final_summary.json", m_base, m_cand, rows, float(cand_thr),
+        float(calib["temperature"]), **summary_kwargs,
+    )
+    write_final_summary(
+        cand / "final_summary.json", m_base, m_cand, rows, float(cand_thr),
+        float(calib["temperature"]), **summary_kwargs,
+    )
     with open(out / "final_test_per_image.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["file", "stratum", "true", "v10_pred", "v10_status",
-                                          "v10_conf", "v11_pred", "v11_status", "v11_conf"])
+        w = csv.DictWriter(f, fieldnames=["file", "stratum", "true", "base_pred", "base_status",
+                                          "base_conf", "cand_pred", "cand_status", "cand_conf"])
         w.writeheader()
-        for r, a10, a11 in zip(rows, v10_res, v11_res):
+        for r, a_base, a_cand in zip(rows, base_res, cand_res):
             w.writerow({
                 "file": r["file"], "stratum": r["stratum"], "true": r["label"],
-                "v10_pred": a10.get("disease") or "", "v10_status": a10["status"],
-                "v10_conf": a10.get("confidence") if a10.get("confidence") is not None else "",
-                "v11_pred": a11.get("disease") or "", "v11_status": a11["status"],
-                "v11_conf": a11.get("confidence") if a11.get("confidence") is not None else "",
+                "base_pred": a_base.get("disease") or "", "base_status": a_base["status"],
+                "base_conf": a_base.get("confidence") if a_base.get("confidence") is not None else "",
+                "cand_pred": a_cand.get("disease") or "", "cand_status": a_cand["status"],
+                "cand_conf": a_cand.get("confidence") if a_cand.get("confidence") is not None else "",
             })
     if guard is not None:
-        guard.write(a.revision_name, {
-            "revision": a.revision_name, "model_key": key, "v11": str(v11), "n": len(rows),
-            "passes": m11["passes"], "pass_rate": m11["pass_rate"], "date": datetime.date.today().isoformat(),
-            "threshold": v11_thr, "threshold_status": thr["status"], "temperature": calib["temperature"],
+        guard.write(cand_name, {
+            "revision": cand_name, "model_key": key, "v11": str(cand), "n": len(rows),
+            "passes": m_cand["passes"], "pass_rate": m_cand["pass_rate"],
+            "date": datetime.date.today().isoformat(),
+            "threshold": cand_thr, "threshold_status": thr["status"],
+            "temperature": calib["temperature"],
+            "baseline": base_name, "baseline_threshold": base_thr,
+            "baseline_temperature": base_temp,
             "code_commit": os.environ.get("CODE_COMMIT") or None,
         })
-        print(f"[final] guard written: {guard.describe(a.revision_name)}")
+        print(f"[final] guard written: {guard.describe(cand_name)}")
     print("\n".join(lines[:30]))
-    rw = summary["v1.1"]["real_world_set"]
-    print(f"Wrote {out}/final_report_v1_1.md, final_summary.json "
+    rw = summary[cand_name]["real_world_set"]
+    print(f"Wrote {out}/{report_stem}.md, final_summary.json "
           f"(real_world_set {rw['label']})")
 
 

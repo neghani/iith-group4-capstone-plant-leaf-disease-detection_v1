@@ -132,8 +132,8 @@ def test_assemble_card_fills_all_six_sections(tmp_path):
 
     assert v10_label in card
     assert v11_label in card
-    assert "v1.0 (before fine-tune)" in card
-    assert "v1.1 (after fine-tune)" in card
+    assert "v1.0 (baseline)" in card
+    assert "v1.1 (candidate)" in card
     assert "25" in card
     assert "CI" in card
 

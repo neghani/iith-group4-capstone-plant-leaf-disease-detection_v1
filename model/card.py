@@ -146,9 +146,11 @@ def fill_before_after(model_dir: Path, outputs: Path) -> str | None:
     if path is None:
         return None
     data = json.loads(path.read_text())
-    v10 = (data.get("v1.0") or {}).get("real_world_set") or {}
-    v11 = (data.get("v1.1") or {}).get("real_world_set") or {}
-    if not v10.get("label") or not v11.get("label"):
+    baseline = data.get("baseline") or "v1.0"
+    candidate = data.get("candidate") or "v1.1"
+    v_base = (data.get(baseline) or {}).get("real_world_set") or {}
+    v_cand = (data.get(candidate) or {}).get("real_world_set") or {}
+    if not v_base.get("label") or not v_cand.get("label"):
         return None
     dest = model_dir / "final_summary.json"
     if path.resolve() != dest.resolve():
@@ -159,8 +161,8 @@ def fill_before_after(model_dir: Path, outputs: Path) -> str | None:
         "",
         "| Release | End-to-end pass rate |",
         "|---|---|",
-        f"| v1.0 (before fine-tune) | {v10['label']} |",
-        f"| v1.1 (after fine-tune) | {v11['label']} |",
+        f"| {baseline} (baseline) | {v_base['label']} |",
+        f"| {candidate} (candidate) | {v_cand['label']} |",
     ])
 
 

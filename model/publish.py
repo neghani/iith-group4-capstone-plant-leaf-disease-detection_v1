@@ -41,48 +41,76 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--hub_model_id", default=DEFAULT_HF_MODEL_REPO)
     p.add_argument("--tag", default="v1.0", help="Release tag Phase 5 pins (HF_MODEL_REVISION). Use '' to skip tagging.")
     p.add_argument("--tag_message", default="Phase 1 release: ResNet-18 on PlantVillage")
+    p.add_argument(
+        "--branch",
+        default=None,
+        help="Hub branch to upload into (default: repo default / main). "
+        "Use 'v1.2' so main and the v1.1 tag stay untouched.",
+    )
     p.add_argument("--private", action="store_true", help="Create the repo as private if it does not exist.")
     p.add_argument("--reports_only", action="store_true", help="Upload README.md and reports/ only (skip weights).")
     p.add_argument("--commit_message", default="Phase 1: ResNet-18 on PlantVillage")
     p.add_argument("--check", action="store_true", help="Verify token / owner / repo access and exit.")
     p.add_argument("--dry_run", action="store_true", help="Show the files that would be uploaded and exit.")
-    p.add_argument("--skip_gate", action="store_true", help="Do not enforce the v1.1 publish gate (not for the real release).")
+    p.add_argument("--skip_gate", action="store_true", help="Do not enforce the stage-2 publish gate (not for the real release).")
     p.add_argument("--skip_card_check", action="store_true",
-                   help="Do not refuse v1.1 when a model-card section is missing.")
-    p.add_argument("--diagnostics", default=str(DIAGNOSTICS), help="v1.0 validation diagnostics (diagnostics.py).")
+                   help="Do not refuse v1.1/v1.2 when a model-card section is missing.")
+    p.add_argument(
+        "--diagnostics",
+        default=str(DIAGNOSTICS),
+        help="Baseline PlantDoc-val diagnostics JSON (diagnostics.py). "
+        "v1.1 gate: v1.0 file. v1.2 gate: v1.1 file (same code).",
+    )
     return p.parse_args()
 
 
+# Tags that must beat a baseline PlantDoc-val F1 and keep PlantVillage accuracy within MAX_PV_DROP.
+GATED_TAGS = {
+    "v1.1": "v1.0",
+    "v1.2": "v1.1",
+}
+
+
 def publish_gate(model_dir: Path, tag: str, diagnostics: Path = DIAGNOSTICS) -> None:
-    """v1.1 is published only if PlantDoc val macro-F1 beats v1.0 and PV accuracy drops by at most 2 points."""
-    if tag != "v1.1":
+    """Stage-2 tags publish only if PlantDoc val macro-F1 beats the baseline and PV accuracy drops by at most 2 points."""
+    baseline = GATED_TAGS.get(tag)
+    if baseline is None:
         return
     if not diagnostics.exists():
-        raise SystemExit(f"v1.1 gate: {diagnostics} missing. Run diagnostics.py on the validation split first.")
+        raise SystemExit(
+            f"{tag} gate: {diagnostics} missing. Run diagnostics.py on the PlantDoc validation split "
+            f"for the {baseline} weights first."
+        )
     diag = json.loads(diagnostics.read_text())
-    v10_f1 = float(diag["plantdoc_macro_f1"])
+    base_f1 = float(diag["plantdoc_macro_f1"])
     eval_path = model_dir / "eval_results.json"
     if not eval_path.exists():
         eval_path = model_dir / "all_results.json"
     if not eval_path.exists():
-        raise SystemExit(f"v1.1 gate: {model_dir}/eval_results.json missing.")
+        raise SystemExit(f"{tag} gate: {model_dir}/eval_results.json missing.")
     ev = json.loads(eval_path.read_text())
-    v11_f1 = ev.get("eval_plantdoc_macro_f1")
-    if v11_f1 is None:
-        raise SystemExit("v1.1 gate: eval_plantdoc_macro_f1 not in eval results.")
+    cand_f1 = ev.get("eval_plantdoc_macro_f1")
+    if cand_f1 is None:
+        raise SystemExit(f"{tag} gate: eval_plantdoc_macro_f1 not in eval results.")
     metrics_path = model_dir / "reports" / "metrics.json"
     if not metrics_path.exists():
-        raise SystemExit(f"v1.1 gate: {metrics_path} missing. Run evaluate.py on the PlantVillage test split.")
+        raise SystemExit(f"{tag} gate: {metrics_path} missing. Run evaluate.py on the PlantVillage test split.")
     pv_acc = float(json.loads(metrics_path.read_text())["accuracy"])
     problems = []
-    if v11_f1 <= v10_f1:
-        problems.append(f"PlantDoc val macro F1 {v11_f1:.4f} is not higher than v1.0 {v10_f1:.4f}")
+    if cand_f1 <= base_f1:
+        problems.append(
+            f"PlantDoc val macro F1 {cand_f1:.4f} is not higher than {baseline} {base_f1:.4f}"
+        )
     if pv_acc < V10_PV_ACCURACY - MAX_PV_DROP:
-        problems.append(f"PlantVillage test accuracy {pv_acc:.4f} dropped more than {MAX_PV_DROP:.0%} from {V10_PV_ACCURACY:.4f}")
+        problems.append(
+            f"PlantVillage test accuracy {pv_acc:.4f} dropped more than {MAX_PV_DROP:.0%} from {V10_PV_ACCURACY:.4f}"
+        )
     if problems:
-        raise SystemExit("v1.1 publish gate failed:\n  - " + "\n  - ".join(problems))
-    print(f"Publish gate OK: PlantDoc val F1 {v11_f1:.4f} > {v10_f1:.4f}; "
-          f"PlantVillage acc {pv_acc:.4f} (floor {V10_PV_ACCURACY - MAX_PV_DROP:.4f})")
+        raise SystemExit(f"{tag} publish gate failed:\n  - " + "\n  - ".join(problems))
+    print(
+        f"Publish gate OK: PlantDoc val F1 {cand_f1:.4f} > {baseline} {base_f1:.4f}; "
+        f"PlantVillage acc {pv_acc:.4f} (floor {V10_PV_ACCURACY - MAX_PV_DROP:.4f})"
+    )
 
 
 def verify_access(api, repo_id: str) -> str:
@@ -133,25 +161,29 @@ def main() -> None:
         print(f"Model card sections missing: {', '.join(card_status['missing'])}")
     if not (model_dir / "README.md").exists():
         print("Warning: README.md (model card) missing. evaluate.py writes it.")
-    if args.tag == "v1.1" and card_status["missing"] and not args.skip_card_check:
-        msg = ("v1.1 card check failed; missing sections: "
+    gated = args.tag in GATED_TAGS
+    if gated and card_status["missing"] and not args.skip_card_check:
+        msg = (f"{args.tag} card check failed; missing sections: "
                + ", ".join(card_status["missing"])
                + ". Run the matching eval scripts or pass --skip_card_check.")
         if not args.dry_run:
             raise SystemExit(msg)
         print(f"[dry run] the real publish would stop here: {msg}")
-    if args.tag == "v1.1" and not args.skip_gate:
+    if gated and not args.skip_gate:
         try:
             publish_gate(model_dir, args.tag, Path(args.diagnostics))
         except SystemExit as exc:
             if not args.dry_run:
                 raise
             print(f"[dry run] the real publish would stop here: {exc}")
-    if args.tag == "v1.1" and not (model_dir / "calibration.json").exists():
-        print("Warning: calibration.json missing; v1.1 should ship the fitted temperature.")
+    if gated and not (model_dir / "calibration.json").exists():
+        print(f"Warning: calibration.json missing; {args.tag} should ship the fitted temperature.")
+    if args.tag == "v1.2" and not args.branch:
+        print("Warning: publishing v1.2 without --branch will rewrite main. Pass --branch v1.2 to leave main/v1.1 alone.")
 
     ignore = IGNORE + (WEIGHT_PATTERNS if args.reports_only else [])
     allow = ["README.md", "reports/**"] if args.reports_only else None
+    revision = args.branch or None
 
     if args.dry_run:
         files = sorted(p.relative_to(model_dir).as_posix() for p in model_dir.rglob("*") if p.is_file())
@@ -166,14 +198,21 @@ def main() -> None:
         for rel in files:
             if wanted(rel) and not skipped(rel):
                 print("  would upload", rel)
-        print(f"Dry run: repo {args.hub_model_id}, tag {args.tag or '(none)'}")
+        print(
+            f"Dry run: repo {args.hub_model_id}, branch {args.branch or '(default)'}, "
+            f"tag {args.tag or '(none)'}"
+        )
         return
 
     api.create_repo(args.hub_model_id, repo_type="model", private=args.private, exist_ok=True)
+    if args.branch:
+        api.create_branch(args.hub_model_id, branch=args.branch, repo_type="model", exist_ok=True)
+        print(f"Branch ready: {args.branch}")
     commit = api.upload_folder(
         folder_path=str(model_dir),
         repo_id=args.hub_model_id,
         repo_type="model",
+        revision=revision,
         allow_patterns=allow,
         ignore_patterns=ignore,
         commit_message=args.commit_message,
@@ -181,10 +220,16 @@ def main() -> None:
     print("Uploaded:", getattr(commit, "commit_url", commit))
 
     if args.tag:
-        api.create_tag(args.hub_model_id, tag=args.tag, tag_message=args.tag_message, exist_ok=True)
-        print(f"Tagged {args.tag}")
+        api.create_tag(
+            args.hub_model_id,
+            tag=args.tag,
+            tag_message=args.tag_message,
+            revision=revision,
+            exist_ok=True,
+        )
+        print(f"Tagged {args.tag}" + (f" at branch {args.branch}" if args.branch else ""))
 
-    files = api.list_repo_files(args.hub_model_id, revision=args.tag or None)
+    files = api.list_repo_files(args.hub_model_id, revision=args.tag or revision)
     print("Files on the Hub:", ", ".join(sorted(files)))
     print(f"Done: https://huggingface.co/{args.hub_model_id}" + (f"/tree/{args.tag}" if args.tag else ""))
     print(f"Phase 5 pin: shared/release.json (currently HF_MODEL_REVISION). "
