@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted via @fontsource-variable packages (imported in layout.tsx), so
+   Docker builds never need to reach fonts.googleapis.com. */
+:root {
+  --font-inter: "Inter Variable", system-ui, sans-serif;
+  --font-fraunces: "Fraunces Variable", Georgia, serif;
+  --font-telugu: "Noto Sans Telugu Variable", "Inter Variable", system-ui, sans-serif;
+}
+
 body {
   @apply bg-cream text-forest antialiased;
 }

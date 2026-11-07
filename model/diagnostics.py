@@ -2,7 +2,8 @@
 
     python model/diagnostics.py --model neghani/plantvillage-mobilenetv2 --revision v1.0
 
-Writes model/outputs/diagnostics_v1_0.md and diagnostics_v1_0.json.
+Writes model/outputs/diagnostics_<revision>.md and diagnostics_<revision>.json
+(e.g. diagnostics_v1_0.json, diagnostics_v1_1.json).
 """
 
 from __future__ import annotations
@@ -101,6 +102,9 @@ def main() -> None:
     masked_top1 = masked_ok / n
     m_f1 = macro_f1_present(labels, pred)
 
+    # Hub revision "v1.0" -> diagnostics_v1_0.*; local dirs use a short stem.
+    rev_stem = (a.revision or Path(a.model).name or "model").replace(".", "_").replace("/", "_")
+    stem = f"diagnostics_{rev_stem}"
     payload = {
         "model": a.model,
         "revision": a.revision,
@@ -112,15 +116,15 @@ def main() -> None:
         "wrong_share_above": shares,
         "top_confusion": [{"true": t, "pred": p, "n": c} for t, p, c in confusion_pairs(labels, pred)],
         "absorbing": [{"pred": p, "n": c} for p, c in absorbing_classes(labels, pred)],
-        "logits_path": "diagnostics_v1_0_logits.npz",
+        "logits_path": f"{stem}_logits.npz",
     }
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    np.savez(out / "diagnostics_v1_0_logits.npz", logits=logits, labels=y, names=np.array(names))
-    (out / "diagnostics_v1_0.json").write_text(json.dumps(payload, indent=2) + "\n")
+    np.savez(out / f"{stem}_logits.npz", logits=logits, labels=y, names=np.array(names))
+    (out / f"{stem}.json").write_text(json.dumps(payload, indent=2) + "\n")
 
     lines = [
-        "# Diagnostics: v1.0 on PlantDoc validation", "",
+        f"# Diagnostics: {a.revision or Path(a.model).name} on PlantDoc validation", "",
         f"Model `{a.model}@{a.revision}`. Images: **{n}** (validation only; the final test was not opened).",
         "",
         "## 1. Confidence of wrong answers", "",
@@ -152,12 +156,12 @@ def main() -> None:
         "",
         "CROP_MASK stays **off** in the API until a later decision; this number is diagnostic only.",
         "",
-        "Logits for calibration: `diagnostics_v1_0_logits.npz`.",
+        f"Logits for calibration: `{stem}_logits.npz`.",
         "",
     ]
-    (out / "diagnostics_v1_0.md").write_text("\n".join(lines))
+    (out / f"{stem}.md").write_text("\n".join(lines))
     print("\n".join(lines[:20]))
-    print(f"Wrote {out}/diagnostics_v1_0.md")
+    print(f"Wrote {out}/{stem}.md")
 
 
 if __name__ == "__main__":

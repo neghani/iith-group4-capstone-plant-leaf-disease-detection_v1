@@ -46,6 +46,23 @@ export type TopKPrediction = {
   score: number;
 };
 
+export type ProvenanceEntry = {
+  /** Dotted path into the response, e.g. "report.description". */
+  field: string;
+  source:
+    | "image_quality_checks"
+    | "image_classifier"
+    | "decision_rules"
+    | "curated_reference"
+    | "farmer_input"
+    | "llm_summary"
+    | "template_text";
+  /** Human-readable component name, e.g. "Image classifier (org/model v1.1)". */
+  label: string;
+  /** What exactly that component contributed to the field. */
+  detail: string;
+};
+
 export type PredictResponse = {
   quality: ImageQualityResult;
   low_confidence: boolean;
@@ -53,6 +70,7 @@ export type PredictResponse = {
   top_k: TopKPrediction[];
   session_context: Record<string, unknown>;
   inference?: InferenceInfo | null;
+  provenance?: ProvenanceEntry[];
   language?: "en" | "te" | string;
   translation_applied?: boolean;
 };

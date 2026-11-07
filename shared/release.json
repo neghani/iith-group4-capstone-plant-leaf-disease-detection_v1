@@ -1,16 +1,9 @@
 {
   "hf_model_id": "neghani/plantvillage-mobilenetv2",
-  "hf_model_revision": "v1.1",
+  "hf_model_revision": "v1.2",
   "baseline_revision": "v1.0",
   "confidence_threshold": 0.5,
   "calibration_temperature": 0.885,
   "crop_strategy": "B",
-  "ood_threshold": 0.05,
-  "candidate": {
-    "hf_model_id": "neghani/plantvillage-resnet18",
-    "hf_model_revision": "v1.1",
-    "confidence_threshold": 0.55,
-    "calibration_temperature": 0.9357514486544162,
-    "note": "Previous live pin / bake-off runner-up. Swap back via shared/release.json if needed."
-  }
+  "ood_threshold": 0.05
 }

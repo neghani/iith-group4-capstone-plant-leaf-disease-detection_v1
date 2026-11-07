@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from card import assemble_card  # noqa: E402
+from card import assemble_card, hub_base_model  # noqa: E402
 from common import (  # noqa: E402
     DEFAULT_HF_MODEL_ID,
     DEFAULT_HF_MODEL_REPO,
@@ -279,7 +279,9 @@ def main() -> None:
         values = {
             "model_id": hub_id,
             "model_name": hub_id.split("/")[-1],
-            "base_model": run_info.get("base_model") or splits.get("base_model") or predictor.model.config._name_or_path,
+            "base_model": hub_base_model(
+                run_info.get("base_model") or splits.get("base_model") or predictor.model.config._name_or_path
+            ),
             "revision": args.card_revision,
             "num_classes": n_classes,
             "crop_scope": ", ".join(crops) if len(crops) <= 8 else f"{len(crops)} crops",

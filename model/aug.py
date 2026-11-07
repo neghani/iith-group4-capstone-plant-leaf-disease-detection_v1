@@ -8,6 +8,7 @@ from torchvision.transforms import (
     Compose,
     GaussianBlur,
     Normalize,
+    RandomAffine,
     RandomApply,
     RandomErasing,
     RandomHorizontalFlip,
@@ -50,10 +51,13 @@ def _processor_sizes(image_processor) -> tuple[int, int]:
     return int(resize), int(crop)
 
 
+AUG_POLICIES = ("default", "robust", "field")
+
+
 def _norm_aug_policy(policy: str | None) -> str:
     value = (policy or "default").strip().lower()
-    if value not in ("default", "robust"):
-        raise SystemExit(f"Unknown aug_policy={policy!r}; expected 'default' or 'robust'.")
+    if value not in AUG_POLICIES:
+        raise SystemExit(f"Unknown aug_policy={policy!r}; expected one of {', '.join(AUG_POLICIES)}.")
     return value
 
 
@@ -64,7 +68,10 @@ def transform_op_names(transform: Compose) -> list[str]:
 def augmentation_record(policy: str = "default") -> dict:
     policy = _norm_aug_policy(policy)
     ops = list(DEFAULT_TRAIN_OPS)
-    if policy == "robust":
+    if policy == "field":
+        # Affine (shift / zoom / shear) sits right after the rotation it generalises.
+        ops.insert(ops.index("RandomRotation") + 1, "RandomAffine")
+    if policy in ("robust", "field"):
         ops.append("RandomErasing")
     return {
         "policy": policy,
@@ -83,17 +90,25 @@ def build_transforms(image_processor, crop_size: int | None, is_training: bool,
     std = getattr(image_processor, "image_std", None) or [0.229, 0.224, 0.225]
     normalize = Normalize(mean=mean, std=std)
     if is_training:
+        policy = _norm_aug_policy(aug_policy)
+        # 'field' pushes the lab->field gap harder: more colour/lighting spread, shift/zoom/shear
+        # (leaves are rarely centred or framed like PlantVillage), and occlusion via RandomErasing.
+        jitter = (0.5, 0.5, 0.5, 0.05) if policy == "field" else (0.4, 0.3, 0.3, 0.03)
         ops = [
             RandomResizedCrop(crop, scale=rrc_scale, ratio=(0.8, 1.25)),
             RandomHorizontalFlip(),
             RandomVerticalFlip(),
             RandomRotation(degrees=180),
-            ColorJitter(brightness=0.4, contrast=0.3, saturation=0.3, hue=0.03),
+        ]
+        if policy == "field":
+            ops.append(RandomAffine(degrees=0, translate=(0.08, 0.08), scale=(0.85, 1.15), shear=8))
+        ops += [
+            ColorJitter(brightness=jitter[0], contrast=jitter[1], saturation=jitter[2], hue=jitter[3]),
             RandomApply([GaussianBlur(kernel_size=5, sigma=(0.1, 1.5))], p=0.25),
             ToTensor(),
             normalize,
         ]
-        if _norm_aug_policy(aug_policy) == "robust":
+        if policy in ("robust", "field"):
             ops.append(RandomErasing(p=0.25, scale=(0.02, 0.2), ratio=(0.3, 3.3), value=0))
         return Compose(ops)
     return Compose([Resize(resize_size), CenterCrop(crop), ToTensor(), normalize])

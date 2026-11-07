@@ -104,6 +104,9 @@ def generate_report_node(state: DiagnosisState) -> DiagnosisState:
         state.get("crop", "Unknown"),
         state.get("top_k", []),
     )
+    # Before enrichment, initial_message is the fixed template; if the LLM changes
+    # it, provenance can honestly say the summary text was LLM-written.
+    template_message = report.initial_message
     report = enrich_report_with_llm(
         report,
         reference=state.get("knowledge_entry") or {},
@@ -113,12 +116,13 @@ def generate_report_node(state: DiagnosisState) -> DiagnosisState:
         additional_symptoms=state.get("additional_symptoms", ""),
         crop_note=state.get("crop_note", ""),
     )
+    llm_used = report.initial_message != template_message
     if state.get("crop_flag") == "mismatch":
         report = apply_crop_mismatch(report, state.get("crop_hint", ""), state.get("crop", ""))
     if state.get("additional_symptoms"):
         extra = state["additional_symptoms"].strip()
         report.description = f"{report.description} You also noted: {extra}"
-    return {**state, "report": report.model_dump()}
+    return {**state, "report": report.model_dump(), "llm_used": llm_used}
 
 
 def safety_node(state: DiagnosisState) -> DiagnosisState:

@@ -94,13 +94,34 @@
     "sample": "Sample",
     "alt": "Uploaded crop leaf"
   },
+  "sources": {
+    "modelZone": "What the model detected",
+    "guidanceZone": "Care guidance",
+    "referenceChip": "From knowledge base",
+    "appRulesChip": "From app safety rules",
+    "llmChip": "AI-written summary (text only — your photo is never sent)",
+    "analyzedRegion": "Analyzed leaf region"
+  },
   "disclaimer": "Illustrative example only — this is not a verified diagnosis. Similar leaf spots can have different causes.",
   "chat": {
-    "title": "Ask a follow-up",
-    "hint": "Agriculture questions only · tied to this check in your browser session",
+    "eyebrow": "Agentic assistant",
+    "title": "Ask CropCare about this leaf",
+    "titleShort": "Ask CropCare",
+    "fab": "Ask CropCare",
+    "open": "Open CropCare assistant",
+    "close": "Close chat",
+    "hint": "Follow-up questions use this check’s prediction as context. Agriculture only — your photo is never resent.",
+    "hintShort": "Ask about this leaf check. Agriculture only — your photo is never resent.",
+    "llmChip": "LLM · text only",
     "thisCheck": "This check: {label}",
+    "tryAsking": "Try asking",
+    "suggestion1": "Should I remove the lower leaves?",
+    "suggestion2": "What should I watch for next week?",
+    "suggestion3": "Is a fungicide needed now?",
     "example": "e.g. Should I remove the lower leaves?",
     "placeholder": "Ask about symptoms, care, or monitoring…",
+    "thinking": "Thinking…",
+    "send": "Send",
     "unreachable": "Could not reach the assistant. Is the API running?"
   },
   "history": {

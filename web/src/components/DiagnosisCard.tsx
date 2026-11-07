@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ScanLine } from "lucide-react";
+import { BookOpen, Cpu, ScanLine, Sparkles } from "lucide-react";
 import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { useT } from "@/i18n/LocaleProvider";
 import { en } from "@/i18n";
@@ -34,6 +34,50 @@ function RetakeButton() {
   );
 }
 
+function SourceChip({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-sage)]/40 px-2.5 py-1 text-[11px] font-medium text-forest">
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function ZoneTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+      {children}
+    </h3>
+  );
+}
+
+function modelChipText(
+  inference: InferenceInfo | undefined,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): string | null {
+  if (!inference) return null;
+  return t("diagnosis.model", {
+    id: inference.model_id,
+    revision: inference.model_revision,
+    verified: inference.model_verified ? t("diagnosis.verified") : "",
+    ms: inference.latency_ms,
+  });
+}
+
+function ModelChip({ inference }: { inference?: InferenceInfo }) {
+  const t = useT();
+  const text = modelChipText(inference, t);
+  if (!text) return null;
+  return <SourceChip icon={<Cpu className="h-3.5 w-3.5" />} label={text} />;
+}
+
+/** Single top-1 bar — enough when the model named a disease. */
 function Top1Confidence({
   top,
   unsure,
@@ -44,7 +88,7 @@ function Top1Confidence({
   const t = useT();
   const percent = Math.round(top.score * 100);
   return (
-    <div className="mt-6 border-t border-[var(--color-border)] pt-6">
+    <div className="mt-6">
       {unsure && (
         <p className="text-xs text-[var(--color-text-muted)]">
           {t("diagnosis.possibilitiesOnly")}
@@ -56,12 +100,55 @@ function Top1Confidence({
           percent: String(percent),
         })}
       </p>
-      <div className="mt-2 h-1.5 max-w-xs rounded-full bg-sage/60">
+      <div className="mt-2 h-2 max-w-sm rounded-full bg-sage/60">
         <div
-          className="h-1.5 rounded-full bg-forest"
+          className="h-2 rounded-full bg-forest"
           style={{ width: `${percent}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Full top-k list — only for the unsure path, where no disease was chosen and
+ * the farmer needs to see every close guess.
+ */
+function TopKBars({ topK }: { topK: TopKPrediction[] }) {
+  const t = useT();
+  if (topK.length === 0) return null;
+  const [top1, ...rest] = topK;
+  return (
+    <div className="mt-6 border-t border-[var(--color-border)] pt-5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        {t("diagnosis.topMatches")}
+      </p>
+      <Top1Confidence top={top1} unsure />
+      {rest.length > 0 && (
+        <ul className="mt-4 space-y-2.5">
+          {rest.map((p) => {
+            const percent = Math.round(p.score * 100);
+            return (
+              <li key={p.label} className="max-w-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-[var(--color-text-muted)]">
+                    {p.display_name}
+                  </span>
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    {percent}%
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-sage/60">
+                  <div
+                    className="h-1.5 rounded-full bg-[var(--color-forest-muted)]"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -80,7 +167,6 @@ export function DiagnosisCard({
   qualityReason?: string | null;
 }) {
   const t = useT();
-  const top1 = topK?.[0];
   const badge =
     report.status === "quality_issue"
       ? t("diagnosis.qualityBadge")
@@ -89,14 +175,6 @@ export function DiagnosisCard({
         : report.status === "error"
           ? t("diagnosis.errorBadge")
           : report.status_label;
-  const modelLine = inference
-    ? t("diagnosis.model", {
-        id: inference.model_id,
-        revision: inference.model_revision,
-        verified: inference.model_verified ? t("diagnosis.verified") : "",
-        ms: inference.latency_ms,
-      })
-    : null;
 
   if (report.status === "quality_issue" || report.status === "error") {
     return (
@@ -137,7 +215,11 @@ export function DiagnosisCard({
     return (
       <div className="space-y-6">
         <div className="rounded-card bg-white p-6 shadow-card">
-          <span className="inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <ZoneTitle>{t("sources.modelZone")}</ZoneTitle>
+            <ModelChip inference={inference} />
+          </div>
+          <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
             <ScanLine className="h-3.5 w-3.5" />
             {badge}
           </span>
@@ -148,12 +230,31 @@ export function DiagnosisCard({
           <p className="mt-3 rounded-lg bg-sage/60 px-3 py-2 text-sm text-forest">
             {report.confidence_explanation}
           </p>
-          {top1 && <Top1Confidence top={top1} unsure />}
+          {topK && topK.length > 0 ? (
+            <TopKBars topK={topK} />
+          ) : report.alternatives.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {t("diagnosis.possibilitiesOnly")}
+              </p>
+              <ul className="mt-2 list-inside list-disc text-sm text-forest">
+                {report.alternatives.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <RetakeButton />
         </div>
         {report.actions.length > 0 && (
           <div className="rounded-card bg-white p-6 shadow-card">
-            <h4 className="font-semibold text-forest">{t("diagnosis.actions")}</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <ZoneTitle>{t("sources.guidanceZone")}</ZoneTitle>
+              <SourceChip
+                icon={<BookOpen className="h-3.5 w-3.5" />}
+                label={t("sources.appRulesChip")}
+              />
+            </div>
             <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm text-forest">
               {report.actions.map((a, i) => (
                 <li key={i}>{a.step}</li>
@@ -161,17 +262,31 @@ export function DiagnosisCard({
             </ol>
           </div>
         )}
-        {modelLine && (
-          <p className="text-xs text-[var(--color-text-muted)]">{modelLine}</p>
-        )}
       </div>
     );
   }
 
+  const hasGuidance =
+    report.description ||
+    report.symptoms.length > 0 ||
+    report.actions.length > 0 ||
+    report.monitoring_guidance;
+
+  const topMatch = topK?.[0] ?? {
+    label: report.disease_id ?? "",
+    display_name: report.diagnosis_name,
+    score: report.confidence,
+  };
+
   return (
     <div className="space-y-6">
-      <div className="rounded-card bg-white p-6 shadow-card">
-        <span className="inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
+      {/* Zone 1 — what the image classifier produced */}
+      <section className="rounded-card bg-white p-6 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ZoneTitle>{t("sources.modelZone")}</ZoneTitle>
+          <ModelChip inference={inference} />
+        </div>
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-sage px-3 py-1 text-xs font-medium text-forest">
           <ScanLine className="h-3.5 w-3.5" />
           {badge}
         </span>
@@ -179,9 +294,8 @@ export function DiagnosisCard({
         <h2 className="mt-4 font-serif text-3xl font-semibold text-forest">
           {report.diagnosis_name}
         </h2>
-        <p className="mt-2 text-[var(--color-text-muted)]">{report.description}</p>
 
-        {top1 && <Top1Confidence top={top1} />}
+        <Top1Confidence top={topMatch} />
 
         {lowConfidence && (
           <p className="mt-3 rounded-lg bg-sage/60 px-3 py-2 text-sm text-forest">
@@ -194,60 +308,80 @@ export function DiagnosisCard({
             {t("diagnosis.confirm")}
           </p>
         )}
+      </section>
 
-        {report.symptoms.length > 0 && (
-          <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-            <h4 className="font-semibold text-forest">{t("diagnosis.signs")}</h4>
-            <ul className="mt-3 space-y-2">
-              {report.symptoms.map((s) => (
-                <li key={s.name} className="text-sm">
-                  <span className="font-medium text-forest">{s.name}</span>
-                  <span className="text-[var(--color-text-muted)]">
-                    {" "}
-                    — {s.explanation}
-                  </span>
-                </li>
-              ))}
-            </ul>
+      {/* Zone 2 — curated reference content, not generated per photo */}
+      {hasGuidance && (
+        <section className="rounded-card bg-white p-6 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <ZoneTitle>{t("sources.guidanceZone")}</ZoneTitle>
+            <SourceChip
+              icon={<BookOpen className="h-3.5 w-3.5" />}
+              label={t("sources.referenceChip")}
+            />
           </div>
-        )}
-      </div>
 
-      {report.actions.length > 0 && (
-        <div className="rounded-card bg-white p-6 shadow-card">
-          <h4 className="font-semibold text-forest">{t("diagnosis.actions")}</h4>
-          <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm text-forest">
-            {report.actions.map((a, i) => (
-              <li key={i}>
-                {a.step}
-                {a.safety_note && (
-                  <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
-                    {t("diagnosis.safety")} {a.safety_note}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
-        </div>
+          {report.description && (
+            <p className="mt-4 text-[var(--color-text-muted)]">{report.description}</p>
+          )}
+
+          {report.symptoms.length > 0 && (
+            <div className="mt-6 border-t border-[var(--color-border)] pt-6">
+              <h4 className="font-semibold text-forest">{t("diagnosis.signs")}</h4>
+              <ul className="mt-3 space-y-2">
+                {report.symptoms.map((s) => (
+                  <li key={s.name} className="text-sm">
+                    <span className="font-medium text-forest">{s.name}</span>
+                    <span className="text-[var(--color-text-muted)]">
+                      {" "}
+                      — {s.explanation}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {report.actions.length > 0 && (
+            <div className="mt-6 border-t border-[var(--color-border)] pt-6">
+              <h4 className="font-semibold text-forest">{t("diagnosis.actions")}</h4>
+              <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm text-forest">
+                {report.actions.map((a, i) => (
+                  <li key={i}>
+                    {a.step}
+                    {a.safety_note && (
+                      <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
+                        {t("diagnosis.safety")} {a.safety_note}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {report.monitoring_guidance && (
+            <div className="mt-6 border-t border-[var(--color-border)] pt-6">
+              <h4 className="font-semibold text-forest">{t("diagnosis.monitoring")}</h4>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                {report.monitoring_guidance}
+              </p>
+            </div>
+          )}
+        </section>
       )}
 
-      {report.monitoring_guidance && (
-        <div className="rounded-card bg-white p-6 shadow-card">
-          <h4 className="font-semibold text-forest">{t("diagnosis.monitoring")}</h4>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            {report.monitoring_guidance}
-          </p>
-        </div>
-      )}
-
+      {/* Zone 3 — the only LLM-written text on this screen */}
       {report.initial_message && (
         <div className="rounded-card border border-sage bg-sage/40 p-5">
-          <MarkdownMessage content={report.initial_message} />
+          <SourceChip
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            label={t("sources.llmChip")}
+          />
+          <div className="mt-3">
+            <MarkdownMessage content={report.initial_message} />
+          </div>
         </div>
-      )}
-
-      {modelLine && (
-        <p className="text-xs text-[var(--color-text-muted)]">{modelLine}</p>
       )}
     </div>
   );

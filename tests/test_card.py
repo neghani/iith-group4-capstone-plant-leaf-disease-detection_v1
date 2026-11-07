@@ -132,8 +132,8 @@ def test_assemble_card_fills_all_six_sections(tmp_path):
 
     assert v10_label in card
     assert v11_label in card
-    assert "v1.0 (before fine-tune)" in card
-    assert "v1.1 (after fine-tune)" in card
+    assert "v1.0 (baseline)" in card
+    assert "v1.1 (candidate)" in card
     assert "25" in card
     assert "CI" in card
 
@@ -179,3 +179,49 @@ def test_assemble_card_missing_sections_stay_not_recorded(tmp_path):
     assert card.count(NOT_RECORDED) == 6
     assert "52.6" not in card
     assert "Potato healthy" not in card
+
+
+def test_stage2_local_base_model_maps_to_hub_root(tmp_path):
+    """Colab Stage 2 wrote base_model as the Drive Stage 1 path; the Hub rejects that metadata."""
+    from card import hub_base_model, sanitize_base_model
+
+    stage1 = tmp_path / "stage1"
+    stage1.mkdir()
+    (stage1 / "run_info.json").write_text(json.dumps({"base_model": "google/mobilenet_v2_1.0_224"}))
+    local = str(stage1)
+
+    assert hub_base_model(local) == "google/mobilenet_v2_1.0_224"
+    assert hub_base_model("neghani/plantvillage-mobilenetv2") == "neghani/plantvillage-mobilenetv2"
+
+    card = (
+        "---\n"
+        f"base_model: {local}\n"
+        "---\n"
+        f"- Base model: [`{local}`](https://huggingface.co/{local})\n"
+    )
+    fixed = sanitize_base_model(card)
+    assert local not in fixed
+    assert "base_model: google/mobilenet_v2_1.0_224" in fixed
+    assert "https://huggingface.co/google/mobilenet_v2_1.0_224" in fixed
+
+
+def test_local_base_model_without_run_info_falls_back(tmp_path):
+    from card import hub_base_model
+
+    missing = "/content/drive/MyDrive/plant-disease/v1.2/stage1"
+    assert hub_base_model(missing) == "google/mobilenet_v2_1.0_224"
+
+
+def test_assemble_card_rewrites_local_base_model(tmp_path):
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    stage1 = tmp_path / "stage1"
+    stage1.mkdir()
+    (stage1 / "run_info.json").write_text(json.dumps({"base_model": "google/mobilenet_v2_1.0_224"}))
+    _write(model_dir / "README.md", f"---\nbase_model: {stage1}\n---\n\n" + TEMPLATE)
+
+    assemble_card(model_dir, outputs=tmp_path / "outputs", latency_path=tmp_path / "latency.json")
+
+    text = (model_dir / "README.md").read_text()
+    assert str(stage1) not in text
+    assert "base_model: google/mobilenet_v2_1.0_224" in text

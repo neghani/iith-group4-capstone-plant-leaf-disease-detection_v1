@@ -233,19 +233,18 @@ def print_session_plan() -> None:
     hub = os.environ.get("HF_MODEL_ID") or DEFAULT_HF_MODEL_ID
     print("This session", flush=True)
     print("  Hub:", f"https://huggingface.co/{hub}", flush=True)
-    print("  Stage 1 PlantVillage train (section 5):",
-          "YES" if s1 else "SKIP (v1.0 already on the Hub)", flush=True)
-    print("  Stage 1 tag v1.0 (section 8):", "YES" if s1 else "SKIP", flush=True)
-    print("  Stage 2 mixed PlantVillage+PlantDoc train (section 7b):",
-          "YES" if s2 else "SKIP (v1.1 already on the Hub)", flush=True)
-    print("  Stage 2 tag v1.1 (section 7b):", "YES" if s2 else "SKIP", flush=True)
-    tags = [t for t, on in (("v1.0", s1), ("v1.1", s2)) if on]
-    print("  Hub tag this session would write:", ", ".join(tags) or "(none)", flush=True)
-    print("  shared/release.json: unchanged by this notebook", flush=True)
+    print("  MobileNetV2 v1.2 (section 11): YES — ImageNet → PlantVillage → PlantDoc mix", flush=True)
+    print("  Hub write: branch v1.2 + tag v1.2 (main and the v1.1 tag stay untouched)", flush=True)
+    print("  Legacy stage 1 tag v1.0 (section 5/8):",
+          "YES" if s1 else "SKIP", flush=True)
+    print("  Legacy stage 2 tag v1.1 (section 7b):",
+          "YES" if s2 else "SKIP", flush=True)
+    print("  shared/release.json: unchanged by this notebook (flip the live pin by hand)", flush=True)
     print(f"  PlantVillage: {knob('STAGE1_EPOCHS')} epochs, lr {knob('STAGE1_LR')}", flush=True)
     print(
         f"  PlantDoc mix: fraction {knob('PD_FRACTION')}, "
-        f"{knob('EPOCH_SAMPLES')} draws/epoch, lrs {knob('STAGE2_LRS')}",
+        f"{knob('EPOCH_SAMPLES')} draws/epoch, lrs {knob('STAGE2_LRS')}, "
+        f"warmup {knob('STAGE2_WARMUP', '0.05')}",
         flush=True,
     )
 
@@ -255,11 +254,11 @@ def print_publish_checklist() -> None:
     s1 = flag_on("RUN_STAGE1")
     s2 = flag_on("RUN_STAGE2")
     hub = os.environ.get("HF_MODEL_ID") or DEFAULT_HF_MODEL_ID
-    tags = [t for t, on in (("v1.0", s1), ("v1.1", s2)) if on]
+    tags = ["v1.2"] + [t for t, on in (("v1.0", s1), ("v1.1", s2)) if on]
     print("Hugging Face publish checklist", flush=True)
     print(f"  Repo: https://huggingface.co/{hub}", flush=True)
-    print("  1. Weights: section 5 Trainer --push_to_hub (v1.0) or section 7b local save then publish.py (v1.1)", flush=True)
-    print("  2. reports/ + model card: evaluate.py --push (v1.0) or evaluate then publish.py (v1.1)", flush=True)
-    print("  3. Release tag: publish.py --tag v1.0 (section 8) or --tag v1.1 (section 7b)", flush=True)
-    print("  This session would tag:", ", ".join(tags) or "(none; RUN_STAGE1/RUN_STAGE2 are off)", flush=True)
-    print("  shared/release.json is unchanged by this notebook. The live API pin stays until that file is edited.", flush=True)
+    print("  1. Weights: section 11 publish.py --branch v1.2 (legacy: section 5/7b)", flush=True)
+    print("  2. reports/ + model card: evaluate then publish.py", flush=True)
+    print("  3. Release tag: publish.py --tag v1.2 --branch v1.2", flush=True)
+    print("  This session would tag:", ", ".join(tags), flush=True)
+    print("  shared/release.json is unchanged by this notebook. Flip the live pin yourself after Hub review.", flush=True)

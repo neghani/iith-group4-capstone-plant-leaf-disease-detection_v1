@@ -20,6 +20,7 @@ from app.schemas import (
     TopKPrediction,
 )
 from app.services.chat import handle_chat
+from app.services.provenance import build_provenance
 from app.services.report import build_quality_report
 from app.services.translate import normalize_language, translate_report
 from app.vision.hf_client import hf_configured, probe_endpoint
@@ -125,6 +126,8 @@ async def predict(
             low_confidence=True,
             report=report,
             session_context=session_context,
+            # No classifier ran, so provenance lists only the quality gate.
+            provenance=build_provenance(report, quality=quality),
             language=lang,
             translation_applied=applied,
         )
@@ -154,21 +157,36 @@ async def predict(
         (inference or {}).get("model_id"),
     )
 
-    return PredictResponse(
-        quality=quality,
-        low_confidence=bool(session_context.get("low_confidence", True)),
-        report=report,
-        top_k=[TopKPrediction.model_validate(t) for t in result.get("top_k", [])],
-        session_context=session_context,
-        language=lang,
-        translation_applied=applied,
-        inference=InferenceInfo(
+    inference_info = (
+        InferenceInfo(
             **inference,
             input_size=[INFERENCE_SIZE, INFERENCE_SIZE],
             preprocessing={**prepared.trace, "crop_strategy": strategy},
         )
         if inference
-        else None,
+        else None
+    )
+    top_k = [TopKPrediction.model_validate(t) for t in result.get("top_k", [])]
+
+    return PredictResponse(
+        quality=quality,
+        low_confidence=bool(session_context.get("low_confidence", True)),
+        report=report,
+        top_k=top_k,
+        session_context=session_context,
+        inference=inference_info,
+        provenance=build_provenance(
+            report,
+            top_k=top_k,
+            inference=inference_info,
+            quality=quality,
+            llm_used=bool(result.get("llm_used")),
+            has_reference=bool(result.get("knowledge_entry")),
+            crop_hint=crop or "",
+            additional_symptoms=additional_symptoms or "",
+        ),
+        language=lang,
+        translation_applied=applied,
     )
 
 

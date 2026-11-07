@@ -56,6 +56,20 @@ def test_robust_policy_adds_random_erasing_and_is_not_default():
     assert augmentation_record("robust")["ops"][-1] == "RandomErasing"
 
 
+def test_field_policy_adds_affine_and_erasing_and_matches_record():
+    field = build_transforms(_StubProcessor(), 224, is_training=True, aug_policy="field")
+    ops = transform_op_names(field)
+    assert ops == [
+        "RandomResizedCrop", "RandomHorizontalFlip", "RandomVerticalFlip", "RandomRotation",
+        "RandomAffine", "ColorJitter", "RandomApply", "ToTensor", "Normalize", "RandomErasing",
+    ]
+    assert augmentation_record("field")["ops"] == ops
+    assert augmentation_record("field")["policy"] == "field"
+    # Eval transforms never get augmentation, whatever the policy.
+    eval_tf = build_transforms(_StubProcessor(), 224, is_training=False, aug_policy="field")
+    assert "RandomAffine" not in transform_op_names(eval_tf)
+
+
 def test_unknown_aug_policy_exits():
     with pytest.raises(SystemExit):
         _norm_aug_policy("cutmix")

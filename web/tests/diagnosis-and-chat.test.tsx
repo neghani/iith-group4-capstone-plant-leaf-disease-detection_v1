@@ -68,8 +68,8 @@ const topK: TopKPrediction[] = [
   },
 ];
 
-describe("DiagnosisCard top-1 display", () => {
-  it("shows only the best match with confidence, not the full top-3 list", () => {
+describe("DiagnosisCard provenance", () => {
+  it("shows only the top-1 classifier match on a firm diagnosis", () => {
     render(
       <LocaleProvider>
         <DiagnosisCard report={baseReport} topK={topK} />
@@ -79,8 +79,76 @@ describe("DiagnosisCard top-1 display", () => {
     expect(
       screen.getByText("Tomato - Early blight, 91% confidence")
     ).toBeTruthy();
+    expect(screen.getByText("What the model detected")).toBeTruthy();
     expect(screen.queryByText("Tomato - Target Spot")).toBeNull();
-    expect(screen.queryByText("6%")).toBeNull();
+    expect(screen.queryByText("Tomato - healthy")).toBeNull();
+  });
+
+  it("shows all classifier guesses when the model is not sure", () => {
+    render(
+      <LocaleProvider>
+        <DiagnosisCard
+          report={{
+            ...baseReport,
+            status: "not_sure",
+            status_label: "Not sure",
+            diagnosis_name: "I'm not confident — please retake the photo.",
+            disease_id: null,
+            initial_message: "",
+          }}
+          topK={topK}
+        />
+      </LocaleProvider>
+    );
+
+    expect(screen.getByText("Tomato - Early blight, 91% confidence")).toBeTruthy();
+    expect(screen.getByText("Tomato - Target Spot")).toBeTruthy();
+    expect(screen.getByText("Tomato - healthy")).toBeTruthy();
+  });
+
+  it("labels the curated reference and the LLM summary separately", () => {
+    render(
+      <LocaleProvider>
+        <DiagnosisCard
+          report={{ ...baseReport, initial_message: "Here is what to do." }}
+          topK={topK}
+        />
+      </LocaleProvider>
+    );
+
+    expect(screen.getByText("From knowledge base")).toBeTruthy();
+    expect(
+      screen.getByText("AI-written summary (text only — your photo is never sent)")
+    ).toBeTruthy();
+    expect(screen.getByText("Here is what to do.")).toBeTruthy();
+  });
+
+  it("shows the model chip when inference info is present", () => {
+    render(
+      <LocaleProvider>
+        <DiagnosisCard
+          report={baseReport}
+          topK={topK}
+          inference={{
+            model_id: "neghani/plantvillage-resnet18",
+            model_revision: "v1.1",
+            model_verified: true,
+            source: "endpoint",
+            endpoint_host: "inference-service:7860",
+            latency_ms: 160,
+            input_bytes: 33853,
+            input_size: [256, 256],
+            preprocessing: {},
+          }}
+        />
+      </LocaleProvider>
+    );
+
+    expect(
+      screen.getByText(
+        "Model: neghani/plantvillage-resnet18 (v1.1) · verified by server · 160 ms"
+      )
+    ).toBeTruthy();
   });
 });
 
@@ -93,7 +161,7 @@ describe("MarkdownMessage", () => {
 });
 
 describe("ChatPanel markdown", () => {
-  it("renders assistant replies with markdown formatting", async () => {
+  it("opens as a popup and renders assistant replies with markdown", async () => {
     const user = userEvent.setup();
     render(
       <LocaleProvider>
@@ -101,11 +169,17 @@ describe("ChatPanel markdown", () => {
       </LocaleProvider>
     );
 
+    expect(screen.getByRole("button", { name: "Open CropCare assistant" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Open CropCare assistant" }));
+
+    expect(screen.getByText("Ask CropCare")).toBeTruthy();
+    expect(screen.getByText("Should I remove the lower leaves?")).toBeTruthy();
+
     await user.type(
       screen.getByRole("textbox"),
       "What should I spray?"
     );
-    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
       const strong = screen.getByText("neem oil");

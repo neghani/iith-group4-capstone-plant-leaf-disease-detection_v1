@@ -19,6 +19,8 @@ class DiagnosisState(TypedDict, total=False):
     low_confidence: bool
     model_status: str  # "ok" | "not_sure" | "retake_photo"
     knowledge_entry: dict[str, Any]
+    # True when the LLM rewrote initial_message (vs the fixed template fallback).
+    llm_used: bool
     report: dict[str, Any]
     session_context: dict[str, Any]
     error: str

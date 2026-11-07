@@ -85,7 +85,7 @@ def test_chat_requests_telugu(client, monkeypatch):
     def fake_chat(message, context, history="", reply_instruction=""):
         captured["message"] = message
         captured["instruction"] = reply_instruction
-        return "సమాధానం"
+        return "సమాధానం", None
 
     monkeypatch.setattr("app.services.chat.chat_with_context", fake_chat)
     body = client.post(
