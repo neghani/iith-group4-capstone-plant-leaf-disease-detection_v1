@@ -131,6 +131,16 @@ class ChatResponse(BaseModel):
     declined: bool = False
 
 
+class WebTestRunRequest(BaseModel):
+    """Live web search + classifier smoke.
+
+    Omit ``class_id`` to randomize a mix from the high-likelihood demo pool.
+    """
+
+    class_id: str | None = None
+    n: int = Field(default=10, ge=1, le=15)
+
+
 class HealthResponse(BaseModel):
     status: str
     llm_configured: bool

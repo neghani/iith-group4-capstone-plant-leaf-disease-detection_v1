@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, History, ScanLine, Sprout } from "lucide-react";
+import { BookOpen, FlaskConical, History, ScanLine, Sprout } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/LanguageToggle";
 
 const nav = [
   { href: "/check", labelKey: "nav.check", icon: ScanLine },
+  { href: "/web-test", labelKey: "nav.webTest", icon: FlaskConical },
   { href: "/history", labelKey: "nav.history", icon: History },
   { href: "/guide", labelKey: "nav.guide", icon: BookOpen },
 ];

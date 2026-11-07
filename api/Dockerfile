@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY shared ./shared
 COPY api/app ./app
+# Includes knowledge/ + web_test_set/manifest.json (Compose also bind-mounts api/data)
 COPY api/data ./data
 
 ENV PYTHONPATH=/app

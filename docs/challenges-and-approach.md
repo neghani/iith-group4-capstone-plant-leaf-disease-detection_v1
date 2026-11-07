@@ -1,286 +1,213 @@
-# Challenges faced and approach used
+# Challenges and approach (team notes)
 
-Engineering log for the capstone write-up. Each entry: what went wrong, the evidence, the root
-cause, what we changed, and what it cost or left open. Numbers come from runs on 2026-10-11
-against `neghani/plantvillage-mobilenetv2@v1.0` (historical MobileNet baseline) unless
-stated otherwise. The live app pin is [`shared/release.json`](../shared/release.json) (`neghani/plantvillage-resnet18` and its `hf_model_revision`).
+Working log for the write-up and demo. What broke, what we measured, what we shipped.
+**Demo path we are finalising: MobileNetV2 only.** Live pin is
+[`shared/release.json`](../shared/release.json) → `neghani/plantvillage-mobilenetv2@v1.2`
+(threshold 0.5, T=0.885, crop strategy B, `ood_threshold=0.05`).
 
-## Summary
+ResNet was an experiment. It lost the field bake-off. Do not demo it unless someone asks
+about the comparison.
 
-| # | Challenge | Approach | Outcome |
-|---|-----------|----------|---------|
-| 1 | Large, clean photo rejected as "blurry" | Scale-normalised, leaf-only sharpness | Simulated 12 MP photos: 0/40 -> 40/40 accepted |
-| 2 | Phone portrait mode / background clutter | Find the leaf first (colour + focus), judge only it | Leaf chosen over blurred grass behind it |
-| 3 | Smooth leaves look "blurry" to Laplacian variance | Re-blur ratio plus a low variance floor | All 40 PlantVillage images pass, blur still rejected |
-| 4 | Which leaf, and where | Candidate ranking + square crop around the winner | Held leaf found in the reference photo |
-| 5 | Best size for inference | Two derived versions; measured fill and size | 256 px square, leaf fills 90% |
-| 6 | Browser upload and preview | Client-side downscale, small preview | Smaller upload, preview fits storage quota (browser path not yet exercised) |
-| 7 | Is the Hugging Face model really used? | Traced the call path, added provenance | Yes; every response now proves which model answered |
-| 8 | Is the prediction really used by the agent? | Traced the graph, tests that vary only the prediction | Yes; plus two real gaps fixed (crop hint) |
-| 9 | Confidently wrong on a plant it does not know | Crop-hint check + "Other crop" option | Partially mitigated; **open problem** (see Open issues) |
+Numbers below: PlantVillage lab metrics from Hub cards; field pass rates from the one-shot
+284-image test in `model/final_report.md` (MobileNet `@v1.1`). We did **not** re-run that
+final test for `@v1.2` — same held-out set was already burned on `v1.1`.
+
+## Snapshot for slides
+
+| # | What bit us | What we did | Where it landed |
+|---|-------------|-------------|-----------------|
+| 1 | Sharp phone photo rejected as blurry | Scale-normalised, leaf-only sharpness | Simulated 12 MP: 0/40 → 40/40 accepted |
+| 2 | Portrait-mode / cluttered background | Find leaf first (colour + focus), judge only it | Held leaf wins over soft grass |
+| 3 | Smooth citrus/corn look “blurry” | Re-blur ratio + variance floor | Sharp PV leaves pass; real blur still fails |
+| 4 | Wrong leaf / merged with background | Candidate ranking + square crop | Bridge to blurry grass fixed via focus drop |
+| 5 | What size to send the model | Measure fill × size on Space | 256 px square, leaf fills ~90% |
+| 6 | Browser storage quota on big uploads | Client downscale + small preview | Verified in build; still should smoke-test 12 MP |
+| 7 | “Is HF actually answering?” | Provenance headers + `inference` block | `/health?probe=true` + results footer |
+| 8 | Prediction ignored by the “agent” | Trace LangGraph; crop-hint tests | Hint mismatch / unsupported crop are real exits |
+| 9 | Lab 99% → field ~19% (`v1.0`) | Stage-2 PlantDoc mix → `v1.1` | **137/284 (48.2%)** — below 50%, reported as-is |
+| 10 | Tried ResNet for “more capacity” | Same 284 protocol bake-off | MobileNet 48.2% vs ResNet ~34% → **kept MobileNet** |
+| 11 | Confident nonsense on unknown crops | Crop hint + OOD margin + Telugu/UI honesty | Partially mitigated; strawberry case still open |
 
 ---
 
-## 1. Large, clean photo rejected as "blurry"
+## 1. Large, clean photo rejected as “blurry”
 
-**Symptom.** A sharp, well-lit leaf photo (the reference photo, `IMG_5711.jpg`, a hibiscus leaf held
-in hand) was refused with "Photo looks blurry".
+**What happened.** Reference phone photo (`IMG_5711.jpg`, hibiscus leaf in hand) got
+“Photo looks blurry”.
 
-**Evidence.**
+**Evidence.** Old gate: Laplacian variance over the whole frame at native res, threshold 80.
+Reference scored **39.8** at 768×1024. Same photo resampled:
 
-- The old gate computed Laplacian variance over the whole frame at native resolution and
-  required >= 80. The reference photo scored **39.8** at 768x1024.
-- The score depends on resolution, not only on focus. The *same* photo re-sampled:
+| Long side | 1024 | 768 | 512 | 384 | 256 |
+|-----------|------|-----|-----|-----|-----|
+| Laplacian variance | 39.8 | 64.6 | 133.6 | 217.9 | 358.3 |
 
-  | Long side | 1024 | 768 | 512 | 384 | 256 |
-  |-----------|------|-----|-----|-----|-----|
-  | Laplacian variance | 39.8 | 64.6 | 133.6 | 217.9 | 358.3 |
+Simulated 12 MP (40 PV leaves on soil in 3024×4032): **old gate 0/40**. Also hard-rejected
+sides > 4096 and files > 10 MB (48 MP phones).
 
-  A real 12 MP phone photo is 4x larger again, so it scores far lower. Simulated 12 MP photos
-  (40 PlantVillage leaves pasted on a soil background in a 3024x4032 frame): **old gate passed 0/40**,
-  every one rejected as blurry.
-- Two more hard limits sat behind it: any side > 4096 px was rejected ("dimensions too large", so
-  every 48 MP photo), and files > 10 MB were rejected.
+**Cause.** High-res neighbours are correlated → second derivative shrinks. Gate tuned on
+small images punished the sharpest photos.
 
-**Root cause.** Neighbouring pixels of a high-resolution image are strongly correlated, so the
-second derivative shrinks. A gate tuned on small images punishes exactly the photos with the most
-detail.
+**Fix.** Decode once (`load_working_copy`, JPEG draft, ≤2048). Sharpness on the leaf at
+≤256 long side. Pixel bomb guard 120 MP. Upload cap in settings is still 10 MB default
+(raise via env if demos need bigger).
 
-**Approach.** Decode once, then judge a *normalised* version:
+**Result.** Upscaled reference 3024×4032 and 6048×8064 both accepted; ~27 KB to the model.
+Blur sweep matches across resolutions (`tests/test_preprocess.py`).
 
-1. `load_working_copy` decodes with JPEG draft mode (a 48 MP file never becomes a full-size array)
-   and downsizes to <= 2048 px. Pixel-bomb guard at 120 MP instead of the 4096 px side cap; size
-   limit raised to 25 MB (`MAX_IMAGE_BYTES`).
-2. Sharpness is measured on the leaf at <= 256 px long side (see entries 2-3), so a 1 MP and a
-   48 MP photo of the same leaf score the same.
+## 2. Background clutter / portrait blur
 
-**Result.** The reference photo upscaled to 3024x4032 (1.9 MB) and 6048x8064 (5.6 MB): both
-accepted, prepared in ~0.2 s, 27 KB sent to the model. Blur sweep of the reference photo, same
-optical blur expressed at each resolution, gives matching verdicts (`tests/test_preprocess.py`).
+Whole-frame score was dominated by deliberately soft background. Locate the leaf, measure
+only its pixels (eroded 2 px so the leaf edge doesn’t inflate sharpness). Brightness on the
+leaf too — bright sky / dark soil shouldn’t fail a good leaf.
 
-## 2. Background clutter and portrait-mode blur
+## 3. Blur threshold (two tries)
 
-**Symptom.** Even after normalising scale, the whole-frame number is dominated by the background
-(deliberately blurred by phone portrait mode, or full of other plants).
+**Try A — normalised Laplacian, thr 120.** Rejected 4/40 sharp PV images (smooth citrus/corn:
+variance 34–97 vs textured leaves in the thousands).
 
-**Approach.** Locate the leaf first and measure only its pixels (eroded by 2 px so the strong
-leaf/background edge does not inflate the score). Brightness is also measured on the leaf, so a
-bright sky or dark soil does not fail an otherwise good leaf.
-
-## 3. Calibrating the blur threshold (two attempts)
-
-**Attempt A - normalised Laplacian variance, threshold 120.** Scale-independent, but rejected
-4/40 real PlantVillage images that are in perfect focus: smooth, glossy leaves (citrus, corn) have
-little texture, so their variance is 34-97 (sharp textured leaves are in the thousands). A
-variance threshold cannot tell "smooth" from "blurred".
-
-**Attempt B - re-blur ratio.** `1 - var(lap(blur(g))) / var(lap(g))`: blur the leaf a little more
-and see how much high-frequency energy disappears. Sharp leaves lose most of it, already-blurred
-leaves lose little. Reference photo blur sweep (768x1024, ratio / variance):
-
-| Gaussian sigma | 0 | 1 | 1.5 | 2 | 3 | 4 | 8 |
-|----------------|---|---|-----|---|---|---|---|
-| ratio | 0.92 | 0.86 | 0.79 | 0.70 | 0.58 | 0.86 | 0.70 |
-| variance | 465 | 224 | 113 | 58 | 29 | 4.9 | 4.8 |
-| verdict | pass | pass | pass | blur | blur | blur | blur |
-
-**New problem: the ratio is non-monotonic.** Under heavy blur only JPEG noise is left, and noise
-also "disappears" when re-blurred, so the ratio climbs back to 0.86 and a destroyed photo passed.
-Fix: keep a second, absolute criterion (variance >= 25). Final rule: reject if
+**Try B — re-blur ratio.** `1 - var(lap(blur(g))) / var(lap(g))`. Sharp leaves lose most HF
+energy; already-blurred lose little. Non-monotonic under heavy blur (JPEG noise also
+“disappears”) → keep absolute floor `variance >= 25`. Final: reject if
 `ratio < 0.78 or variance < 25`.
 
-**Calibration data.** Sharp PlantVillage leaves: min ratio 0.88, min variance 34 (all 40 pass,
-margin above 25 is thin, see Open issues). Moderate blur lands at ratio 0.70-0.77, heavy blur at
-variance 3-29. The same sweep at 3024x4032 (blur x4) gives the same verdicts.
+Calibration: 40 PV + one phone blur sweep. Floor margin over smoothest sharp leaf is thin —
+revisit with real phones if we have time.
 
-## 4. Choosing the leaf (the "CNN leaf detection" question)
+## 4. Which leaf? (we skipped a CNN detector)
 
-**Idea considered.** Run a CNN leaf detector, then keep the clearest leaf.
+Considered a CNN leaf box. Didn’t: torch in the API image, no labelled boxes, another
+unmeasured failure mode. Classical path in `shared/vision/leaf.py` (~50 ms, scipy only):
 
-**Decision.** Implemented the leaf selection with classical vision first (`vision/leaf.py`),
-behind a single function (`find_leaf_candidates`) that a CNN detector can replace later:
+- HSV vegetation mask, morph, hole fill (brown blight spots come back).
+- Failure: held leaf merged with soft grass via a thin bridge (bbox ballooned).
+  Erosion didn’t cut it. **Fix:** drop vegetation blurrier than 30% of the sharpest
+  vegetation (local Laplacian).
+- Rank up to a few candidates by `focus × sqrt(area) × centrality`.
+- No green found → judge whole frame (`leaf_found: false`), don’t hard-reject.
 
-- Why not a CNN yet: it needs torch (~1 GB) in the API image, which today is deliberately tiny
-  (the model lives in the Space); we have no labelled leaf-box data to validate a detector, and a
-  pretrained detector would add another model whose failures we cannot measure. The colour+focus
-  approach runs in ~50 ms and has no extra dependencies beyond scipy.
-- Mask: vegetation hue/saturation in HSV, opening/closing, hole filling (brown blight spots inside
-  a leaf are recovered).
-- **Failure we hit:** the held leaf merged with the out-of-focus grass behind it through a thin
-  bridge, so the crop box covered both (bbox grew from the leaf's 574x430 px to 660x696 px).
-  Attempt 1, erosion-based component splitting, did not help (the bridge was thicker than the
-  radius). **Fix:** drop vegetation that is blurrier than 30% of the sharpest vegetation in the
-  frame (local Laplacian energy). This also gives the "take the one that is clear" behaviour.
-  If the whole frame is soft nothing is dropped, and the sharpness gate rejects the photo.
-- Up to 4 candidates are ranked by `focus x sqrt(area) x centrality`; the best one goes forward.
-- If nothing green is found (heavily diseased or unusual leaf) the whole frame is judged and sent
-  (`leaf_found: false`) rather than rejecting the photo.
+Swap for a detector later behind `find_leaf_candidates` if multi-leaf field shots fail.
 
-## 5. Best size for inference (two derived versions)
+## 5. Inference size / framing
 
-One decode produces two versions, each scaled once:
+One decode → working copy (≤2048) + inference JPEG 256×256 q95 (leaf cropped, gray pad,
+LANCZOS once). Model preprocessor is short-side 256 → centre 224; sending 256 avoids a
+second resample. Old path sent 512 and the centre crop ate portrait tops.
 
-1. **Working copy**, long side <= 2048: leaf search and quality checks.
-2. **Inference copy**, 256x256 JPEG (q95): the best leaf cropped from the working copy, padded to
-   a square with neutral gray, resized once with LANCZOS.
+Fill sweep (40 PV; lab vs pasted “field”): **90% fill @ 256** won. Framing mattered more
+than pixel count. Caveat: synthetic field, n=40 — regression check, not a accuracy claim.
 
-Why 256: `preprocessor_config.json` of the model resizes the short side to 256 then centre-crops
-224, so sending 256 means the Space does no second resample (the old path sent 512 px, which was
-resampled twice, and the centre crop of a 3:4 portrait photo cut away about a third of its height).
+## 6. Browser quota
 
-Measured on the Space (40 PlantVillage test images; "lab" = original, "field" = pasted in a
-simulated 12 MP frame), top-1 correct:
+UI used to stash full base64 in `sessionStorage` (~5 MB) and upload twice. Quota error
+*after* the API answered → “Something went wrong”. `web/src/lib/image.ts` downsizes once
+(long ≤2048, JPEG 0.92; <1.5 MB untouched) + 640 preview. Still worth one real 12 MP
+browser pass before demo day.
 
-| Setting | lab | field |
-|---------|-----|-------|
-| leaf fills 80%, 256 px | 39/40 | 38/40 |
-| **leaf fills 90%, 256 px (chosen)** | **40/40** | **39/40** |
-| leaf fills 100%, 256 px | 37/40 | 36/40 |
-| 80%, 224 px | 40/40 | 38/40 |
-| 80%, 384 px | 40/40 | 38/40 |
-| 80%, 512 px | 40/40 | 38/40 |
+## 7. Proving the Hub model answered
 
-Image size barely matters (differences are one image); framing does. At 100% the centre crop clips
-the leaf. Whole-frame vs leaf crop, final pipeline:
+Path: UI → `POST /predict` → gate → LangGraph `predict` → `hf_client` → `HF_ENDPOINT_URL`
+→ `hf_space/` pipeline from `release.json`.
 
-| | old pipeline (whole frame, 512 px) | new pipeline |
-|---|---|---|
-| lab photos accepted / correct | 40 / 40 | 40 / 40 |
-| simulated 12 MP photos accepted | 0 / 40 | 40 / 40 |
-| simulated 12 MP photos correct (old gate bypassed) | 29 / 40 | 39 / 40 |
+- Empty endpoint → no fabricated diagnosis (`test_no_hf_means_no_fabricated_diagnosis`).
+- Space stamps `x-model-id` / `x-model-revision`; API returns `inference` (verified, host,
+  latency, bytes, preprocess trace). Results page shows it.
+- `GET /health?probe=true` must match `shared/release.json`.
+- **Do not** leave stale `HF_MODEL_*` in `.env` — overrides the pin and desyncs Docker.
 
-**Caveat.** The "field" photos are synthetic (PlantVillage leaves on a generated background), n=40,
-one run. Differences of one image are noise. Treat it as a regression check, not an accuracy claim;
-real field accuracy needs the real-world set in `model/data/real_world/`.
+## 8. Prediction actually drives the agent
 
-## 6. Browser: big files and the storage quota
+Graph (`api/app/agent/graph.py`):
 
-The UI read the original file into a base64 data URL and stored it in `sessionStorage` (about a 5 MB
-quota). A large photo would throw `QuotaExceededError` after the API had already answered, so the
-user saw "Something went wrong". It also uploaded the full file twice (`/quality-check`, `/predict`).
-
-`web/src/lib/image.ts` now downsizes once in the browser (long side <= 2048, JPEG 0.92, EXIF
-rotation applied; files under 1.5 MB are untouched) and builds a separate 640 px preview for
-storage. Falls back to the original file if decoding fails, and the API still validates
-everything. Verified: TypeScript + `next build`. **Not yet exercised in a real browser with a
-12 MP file.**
-
-## 7. Is the Hugging Face model really used?
-
-**Call path (verified by reading and by running it):** UI -> `POST /predict` -> quality gate ->
-LangGraph `predict` node -> `hf_client.classify_image` -> `HF_ENDPOINT_URL`.
-
-- With Docker Compose, `HF_ENDPOINT_URL` defaults to `inference-service` (`hf_space/`), which loads
-  the Hub id/revision from `hf_space/release.json` (copy of `shared/release.json`) with `transformers.pipeline`.
-  Do not set stale `HF_MODEL_*` in `.env` — that overrides the API pin and can desync inference.
-- If `HF_ENDPOINT_URL` is empty the API is not configured (serverless HF inference does not host this
-  fine-tune). `/health` reports `hf_model_configured: false` and `/predict` returns an honest
-  "Analysis unavailable" report. There is no mock/placeholder path left in the API; nothing invents a
-  diagnosis when the model is down (`test_no_hf_means_no_fabricated_diagnosis`).
-- Gap found: nothing *proved* which model answered. A misconfigured URL pointing at a different
-  model would look identical. Fixes:
-  - `hf_space/app.py` stamps every answer with `x-model-id` / `x-model-revision`.
-  - The API returns `inference` in `/predict` (model id, revision, `model_verified`, host, latency,
-    bytes, and the preprocessing trace), and the results page shows it.
-  - `GET /health?probe=true` calls the Space's `/health` and reports the model actually served.
-  - Structured logs (`leafcheck.hf`, `leafcheck.vision`) for every call.
-- Run on 2026-10-11 (then still `@v1.0`): Space on the real Hub model, API pointed at it.
-  `/health?probe=true` -> `hf_served_model: neghani/plantvillage-mobilenetv2@v1.0`;
-  `/predict` -> `model_verified: true`. Live health should match whatever `shared/release.json` pins.
-
-## 8. Is the prediction really used in the agentic flow?
-
-Flow: `predict` (HF) -> `knowledge` -> `generate_report` -> `safety` (side exits: `predict_error`,
-`unsupported_crop`).
-
-Traced and now covered by `tests/test_agent_flow.py`, which changes only the classifier output:
-
-- `disease_id`/confidence/top-3 from the HF call select the curated knowledge entry
-  (`diseases.json`; all 38 model labels have an entry, checked against the Hub `config.json`).
-- The text-only LLM prompt contains the top-3 with scores, the confidence category and a
-  below-threshold warning; the LLM never receives the image.
-- `safety` downgrades low-confidence results to "Possible match" and requires expert confirmation.
-- The chat endpoint receives `session_context` built from the same prediction.
-- Different predictions give different names, actions and prompts.
-
-**Two real gaps found and fixed**
-
-1. The crop hint was only pasted into the prompt. If the farmer said "potato" and the model said
-   "tomato", the UI still showed a confident tomato result. Now the hint is compared with the
-   predicted crop (`services/crops.py`, aliases such as maize/corn, plural handling): a mismatch
-   downgrades to "Possible match", requires confirmation, adds a visible note and tells the LLM.
-2. A hint for a crop outside the 14 the model knows (hibiscus) now routes to an
-   `unsupported_crop` node: status "Crop not supported", no disease name, no LLM write-up of a
-   guess, and the UI hides the model's matches. The UI dropdown gained "Other crop (not listed)".
-
-## 9. Stage 2: lab photos vs field photos (PlantDoc)
-
-**Symptom.** `v1.0` (PlantVillage only) passed 53/284 (18.7%) of the one-shot field-style final
-test at threshold 0.85, with 146/284 "not sure". Softmax is overconfident on the wrong class.
-
-**Approach.** Continue from the published `v1.0` weights on a 50/50 mix of PlantVillage and
-Cropped-PlantDoc (Singh et al. 2020, CC BY 4.0; 27 of 38 classes). Split by pHash cluster, exclude
-every `real_world_set` original path and near-duplicates of the held-out test, fit temperature and
-the threshold on **validation only**, and run the final test once per revision (guard JSON on the
-Hub `stage2-runs` branch or Drive, never local `outputs/`).
-
-**Result (`v1.1`, from `model/final_report.md`).** End-to-end pass rate **137/284 (48.2%)**, 95% CI
-42.5–54.0%. Pristine `plantdoc_test`: 116/236 (49.2%). `real_world_set` stratum: 21/48 (43.8%, wide).
-Not sure 91/284; quality-gate retakes 5/284. Below the 50% target; reported as-is. Paired gain over
-`v1.0` on the same 284 images: +29.6 points.
-
-**How we keep ourselves honest.** Sample sizes sit next to every percentage. The final pass rate is
-below 50% and is left as-is; the threshold and the data were not changed after seeing it. Publish
-`v1.1` only if PlantDoc val macro-F1 beats v1.0 and PlantVillage accuracy drops by at most 2 points.
-
-**Limit.** All of PlantDoc is web-sourced, so a gain overstates a farmer's phone photo.
-
-## 10. Open issues and next steps
-
-- **Live pin is ResNet `@v1.1`.** On the same 284-image final test MobileNet `@v1.1` passed
-  **137/284 (48.2%)** and ResNet `@v1.1` passed **96/284 (33.8%)**. The pin was moved to
-  `neghani/plantvillage-resnet18` at `v1.1` (threshold 0.55, T=0.936) on 2026-10-31 anyway.
-  MobileNet stays in `shared/release.json` as `candidate`. Max-softmax OOD still does not
-  reject strawberry-as-tomato on ResNet.
-- **PlantDoc sampler was weighting the wrong way.** `model/sampling.py` used per-row
-  `1/sqrt(count)`, so a class total was `sqrt(count)` and common classes got more draws
-  (Northern Leaf Blight 153 images, 108.8 expected draws; Apple scab 74 images, 75.7).
-  The intended class share is `1/sqrt(count)`, which is per-row weight `1/count**1.5`.
-  That fix is in the repo; it applies only to the next stage-2 train, not to published weights.
-- **Confidently wrong on unknown / wrong-crop leaves (the big one).** Hibiscus historically got
-  Tomato Early blight at 99.9%. A strawberry leaf (demo photo, hint=tomato) got Tomato Early blight
-  at **97%** on ResNet-18 `@v1.0` (strategy B) and only **12%** on MobileNet `@v1.1` (already
-  `not_sure` via confidence). Max-softmax / top-1−top-2 margin OOD has AUROC ~0.36 on ResNet for
-  this failure mode — it does **not** catch strawberry-as-tomato. Live pin stays MobileNet v1.1
-  with `ood_threshold=0.05` (flat softmax → `not_sure`). ResNet stays a `candidate` until a
-  crop-level head or training negatives land; see `model/outputs/ood/FALLBACK.md`.
-- **CNN leaf detector.** Swap `find_leaf_candidates` for a detector if field photos with several
-  overlapping leaves, yellow/brown leaves or very cluttered scenes fail the colour+focus approach.
-  Known weaknesses: soil or objects with leaf-like hue, fully necrotic leaves, thin grass-like
-  leaves (maize) at long range.
-- **Thresholds rest on little data.** 40 PlantVillage images + one phone photo; the variance floor
-  (25) has a thin margin over the smoothest sharp leaf (34). Re-calibrate with the real-world set.
-- **Background masking** (set non-leaf pixels to neutral gray to mimic PlantVillage) is a likely
-  accuracy win for field photos; not tried.
-- `model/common.py` still holds the original whole-frame gate (Phase 1 reference); it now differs
-  from the API.
-- HEIC photos (iPhone default) are only supported if the browser converts them to JPEG.
-- Space cold start returns 503; the client waits 2 s and retries once.
-- The browser resize path has not been exercised in a real browser with a 12 MP file.
-
-## How to reproduce
-
-```bash
-# API tests: preprocessing, agent flow, HF provenance
-cd api && PYTHONPATH=..:. .venv/bin/python -m pytest -q
-
-# Real model end to end (live pin is @v1.1 from shared/release.json)
-cd hf_space && uvicorn app:app --port 7860          # loads shared/release.json pin
-cd api && HF_ENDPOINT_URL=http://127.0.0.1:7860/ uvicorn app.main:app --port 8000
-curl "localhost:8000/health?probe=true"
-curl -F file=@leaf.jpg localhost:8000/predict | jq '.inference, .quality'
+```
+predict → knowledge → generate_report → safety
+         ↘ predict_error / unsupported_crop / retake / not_sure → safety
 ```
 
-Calibration experiments (blur sweeps, fill/size comparison, old-vs-new accuracy) were run as ad hoc
-scripts against the running Space with PlantVillage test images from the Hugging Face dataset
-`BrandonFors/Plant-Diseases-PlantVillage-Dataset`; they are not checked in.
+Covered in `tests/test_agent_flow.py` (vary only classifier output):
+
+- disease_id / top-3 select `diseases.json` (38 labels ↔ Hub `config.json`).
+- LLM gets text only (top-3, confidence band, KB). Never the image.
+- Gaps we fixed in code: crop hint was prompt-only → now mismatch downgrades; unknown crop
+  (hibiscus) → `unsupported_crop`, no disease name. UI has “Other crop”.
+
+## 9. Stage 2 / field gap (PlantDoc)
+
+`v1.0` (PlantVillage only): **53/284 (18.7%)** at thr 0.85, lots of “not sure”, softmax
+confidently wrong.
+
+Stage 2: continue from `v1.0` on 50/50 PV + Cropped-PlantDoc (Singh 2020, 27/38 classes),
+pHash split, exclude `real_world_set` near-dups, fit T + threshold on **val only**, one-shot
+final test.
+
+**MobileNet `v1.1`:** **137/284 (48.2%)**, CI 42.5–54.0%. Plantdoc_test 116/236 (49.2%).
+`real_world_set` 21/48 (43.8%, wide). Paired +29.6 vs `v1.0`. Below 50% — leave it.
+PlantDoc is web-sourced; gains overstate phone photos.
+
+## 10. MobileNet vs ResNet (why demo is MobileNet)
+
+We did try ResNet-18. Brief / habit said “maybe more capacity for fine lesions.” On the
+**same** 284 protocol:
+
+| Model | Pass | Notes |
+|---|---|---|
+| **MobileNetV2 `@v1.1`** | **137/284 (48.2%)** | thr 0.50 / T=0.885 |
+| ResNet-18 `@v1.2` (sampler fix) | 98/284 (34.5%) | thr 0.60 / T=0.996 |
+| ResNet-18 `@v1.1` | 96/284 (33.8%) | |
+| ResNet-18 `@v1.0` | 39/284 (13.7%) | PV only |
+
+ResNet looks nicer on clean PlantVillage. That did **not** transfer. MobileNet also
+abstained less (32% not-sure vs ~51%) and behaved better on the strawberry wrong-crop
+smoke (see OOD notes). Live pin flipped back to MobileNet; ResNet stays off the demo path.
+
+`v1.2` on MobileNet = clean ImageNet → PV → PlantDoc retrain (sampler fix in training),
+Hub tag `v1.2`, pin updated 2026-11-07. **No new 284 one-shot** — quote **48.2% from
+`v1.1`** as the honest field number; say `v1.2` is the same recipe with the sampler fix
+and fresh weights. Hub PV test for `v1.2` card is ~98.2% / macro-F1 ~97.2% (lab).
+
+## 11. OOD / unknown crop (still open)
+
+Hibiscus historically → Tomato Early blight ~99%. Strawberry leaf + tomato hint:
+
+| Setup | Behaviour |
+|---|---|
+| ResNet strategy B | Tomato Early blight ~97% confirmed — bad |
+| MobileNet whole-frame | low conf → not_sure |
+| MobileNet strategy B | often wrong crop → crop-hint downgrade helps |
+
+Max-softmax / margin AUROC on ResNet for this mode ~0.36 (worse than chance). Live MobileNet
+keeps `ood_threshold=0.05` (flat softmax → `not_sure`). Crop-level head or training
+negatives still needed — `model/outputs/ood/FALLBACK.md`.
+
+## Other scars worth remembering
+
+- **PlantDoc sampler bug.** Per-row `1/sqrt(count)` made common classes *more* draws.
+  Intended class share needs per-row `1/count**1.5`. Fix is in repo; applied in `v1.2` train.
+- **Two quality gates.** `model/common.py` still has the old whole-frame gate (Phase 1 /
+  some offline evals). Live API uses `shared/vision/` leaf-aware gate. Say API is source of
+  truth if asked.
+- **Telugu (not Hindi).** Proposal said regional language; we shipped EN/TE UI strings +
+  glossary-backed LLM translate (`api/app/services/translate.py`, `web` LanguageToggle).
+  Hindi pipeline still not built — don’t claim it.
+- **Web smoke set.** `/web-test` + `data/web_test_set/` for tutor demos (search → classify
+  live pin). GT is search target, not pathologist-verified.
+- HEIC depends on browser conversion. Space cold start 503 → one retry after 2 s.
+- KB entries still thin on citations.
+
+## How we reproduce before demo
+
+```bash
+# pin check
+cat shared/release.json   # expect mobilenetv2 @ v1.2
+
+# tests
+cd api && PYTHONPATH=..:. .venv/bin/python -m pytest -q
+
+# stack
+cp shared/release.json hf_space/release.json   # if you changed the pin
+docker compose up --build
+curl -s 'http://localhost:8000/health?probe=true' | jq .
+# want: hf_reachable true, model neghani/plantvillage-mobilenetv2, revision v1.2
+```
+
+Ad-hoc blur / fill sweeps were against a running Space with PV test images — not checked in.

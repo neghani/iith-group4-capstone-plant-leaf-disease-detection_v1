@@ -1,40 +1,61 @@
 # Demo acceptance checklist
 
+MobileNet path only. Pin must match `shared/release.json`
+(`neghani/plantvillage-mobilenetv2@v1.2`).
+
 ## Startup
 
-- [ ] Copy `.env.example` to `.env` (optional `LLM_API_KEY` for richer text)
-- [ ] Set `HF_ENDPOINT_URL` to the deployed Space, or leave it empty to use the local `inference-service`
-- [ ] Run `docker compose up --build`
-- [ ] `GET /health?probe=true` shows `hf_model_id` / `hf_model_revision` matching `shared/release.json` (currently `neghani/plantvillage-resnet18@v1.1`), `hf_reachable: true` and `hf_served_model` the same pin
-- [ ] Do **not** set `HF_MODEL_ID` / `HF_MODEL_REVISION` / `CALIBRATION_TEMPERATURE` in `.env` unless overriding the pin (stale values make Docker serve the wrong model)
-- [ ] Strawberry demo photo with crop=tomato must **not** return `confirmed_likely` (expect `not_sure` or `possible`)
-- [ ] Open UI at http://localhost:3000/check
-- [ ] Open API docs at http://localhost:8000/docs
+- [ ] Copy `.env.example` → `.env` (optional `LLM_API_KEY` for richer text / Telugu)
+- [ ] Leave `HF_ENDPOINT_URL` empty for local `inference-service`, or point at the Space
+- [ ] Do **not** set `HF_MODEL_ID` / `HF_MODEL_REVISION` / `CALIBRATION_TEMPERATURE` in `.env`
+      unless you mean to override the pin (stale values desync Docker from `release.json`)
+- [ ] If the pin changed: `cp shared/release.json hf_space/release.json` then rebuild
+- [ ] `docker compose up --build`
+- [ ] `GET /health?probe=true` → `hf_model_id` / `hf_model_revision` =
+      `neghani/plantvillage-mobilenetv2` / `v1.2`, `hf_reachable: true`, `hf_served_model` same
+- [ ] Strawberry (or similar) + crop=tomato must **not** land as `confirmed_likely`
+      (expect `not_sure` / `possible` via margin or crop mismatch)
+- [ ] UI http://localhost:3000/check
+- [ ] API docs http://localhost:8000/docs
 
 ## End-to-end flows
 
-- [ ] Upload a clear leaf image → quality check passes, then structured diagnosis with the model's top-3 matches, actions and monitoring
-- [ ] Upload a large phone photo (10+ MB, 12 MP or more) of a clear leaf → accepted; results page footer shows the model id/revision ("verified by server")
-- [ ] Pick "Other crop" and type a plant the model does not know (e.g. hibiscus) → "Crop not supported", no disease name
-- [ ] Pick a crop that differs from the leaf (e.g. Potato for a tomato leaf) → "Possible match" with a mismatch note
-- [ ] Upload a very dark, tiny or genuinely blurry image → results page “Please retake the photo”; `/predict` is never called
-- [ ] On `/check`, **Show a retake** → dark demo photo through `/quality-check` → retake screen, no disease name
-- [ ] On `/check`, **Show “I'm not sure”** → `/demo/not-sure.jpg` through `/predict` → “I'm not confident — please retake the photo.”, top matches as possibilities, no chat
-- [ ] Healthy leaf → “Looks healthy”, no expert-confirmation warning
-- [ ] Low-confidence case (confidence below 0.5) → status `not_sure`, not a disease write-up
-- [ ] Stop the inference service → “Analysis unavailable”, no crash
-- [ ] Follow-up chat with agriculture question → contextual reply
-- [ ] Follow-up chat with non-agriculture question → polite decline
+- [ ] Clear leaf → quality pass → structured diagnosis, top-3, actions, monitoring
+- [ ] Large phone photo (10+ MB / 12 MP if you have one) → accepted; results footer shows
+      model id/revision verified
+- [ ] “Other crop” + hibiscus (or anything outside the 14) → “Crop not supported”, no disease name
+- [ ] Wrong crop hint (Potato on a tomato leaf) → “Possible match” + mismatch note
+- [ ] Dark / tiny / genuinely blurry → retake UI; `/predict` never needed for that path
+- [ ] `/check` → **Show a retake** → retake screen, no disease name
+- [ ] `/check` → **Show “I'm not sure”** → `/demo/not-sure.jpg` → not confident / retake copy,
+      top matches as possibilities, no chat push
+- [ ] Healthy leaf → “Looks healthy”, no expert-confirmation scare
+- [ ] Low confidence (< 0.5) → `not_sure`, not a full disease write-up
+- [ ] Stop inference service → “Analysis unavailable”, API stays up
+- [ ] Chat: agriculture follow-up → contextual
+- [ ] Chat: non-agriculture → polite decline
+- [ ] Language toggle → Telugu on a successful diagnosis (needs LLM; else English stays + note)
+- [ ] Optional tutor toy: `/web-test` one row → live MobileNet badge + latency
 
-## Out of scope (verify absent)
+## Out of scope (confirm absent)
 
-- [ ] No login or signup
-- [ ] No image persistence, S3, or diagnosis history database
+- [ ] No login / signup
+- [ ] No image persistence, S3, or diagnosis history DB
 
-## Presentation script (2–3 min)
+## Day-of script (2–3 min live)
 
-1. Show Figma alignment: upload panel + diagnosis panel + chat.
-2. Analyze a tomato leaf sample; walk through signs, actions, limitations.
-3. Ask one follow-up (“Should I remove lower leaves?”).
-4. Click **Show a retake**, then go back and click **Show “I'm not sure”** — abstaining is a feature.
-5. Explain the flow: quality gate → Hugging Face ResNet-18 (`v1.1`, 96/284 = 33.8% on the 284-image final test) → text-only LLM summary grounded in the prediction. MobileNetV2 `v1.1` scored 137/284 (48.2%) on that same test and stays the previous pin.
+1. Figma alignment: upload + diagnosis + chat.
+2. Tomato sample through MobileNet `@v1.2`; walk signs / actions / limits.
+3. One follow-up (“Should I remove lower leaves?”).
+4. **Show a retake** then **Show “I'm not sure”** — abstaining is a feature.
+5. Say the flow out loud: quality gate → **MobileNetV2 `v1.2`** (field honesty number is
+   still the `v1.1` one-shot **137/284 = 48.2%**; we did not burn that set again for `v1.2`)
+   → text-only LLM grounded in the prediction. ResNet lost the same-test bake-off (~34%) —
+   only mention if asked.
+
+## Night-before
+
+- [ ] `pytest` green in api venv (`PYTHONPATH=..:.`)
+- [ ] Demo image folder pre-tested on this machine
+- [ ] Backup screen recording if Wi-Fi dies
+- [ ] Pitch + 48.2% + “LLM never sees the image” without notes

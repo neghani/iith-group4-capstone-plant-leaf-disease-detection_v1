@@ -1,5 +1,5 @@
 {
-  "n": 50,
+  "n": 29,
   "live_pin": "neghani/plantvillage-mobilenetv2@v1.2",
   "label_space": "plantvillage_38",
   "items": [
@@ -9,8 +9,7 @@
       "slug": "Apple_Apple_scab",
       "query": "apple scab leaf disease olive spots close up",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.bloomingexpert.com/wp-content/uploads/2026/06/apple-tree-diseases-apple-scab-leaf-symptoms.webp.webp"
+      "revision": "v1.2"
     },
     {
       "class_id": "Apple___Black_rot",
@@ -18,8 +17,7 @@
       "slug": "Apple_Black_rot",
       "query": "apple black rot leaf frog eye spots close up",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://gardenerspath.com/wp-content/uploads/2021/03/Frogeye-Leaf-Spot-aka-Black-Rot-Botryosphaeria-on-Apple-Tree.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Apple___Cedar_apple_rust",
@@ -27,8 +25,7 @@
       "slug": "Apple_Cedar_apple_rust",
       "query": "apple cedar apple rust leaf orange spots close up",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://cdn.britannica.com/61/185161-050-726ED959/spots-Orange-cedar-apple-rust-disease-apple-leaf.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Apple___healthy",
@@ -36,26 +33,7 @@
       "slug": "Apple_healthy",
       "query": "healthy apple tree leaf close up green single leaf",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://media.istockphoto.com/id/689821716/photo/green-apple-leaf-on-white.jpg?s=1024x1024&w=is&k=20&c=byLgqYAE3FjB2qCkHkPJLn0CJrZoxsfc6wnag1he_Ak="
-    },
-    {
-      "class_id": "Blueberry___healthy",
-      "file": "Blueberry_healthy.jpg",
-      "slug": "Blueberry_healthy",
-      "query": "healthy blueberry leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://thumbs.dreamstime.com/b/stunning-image-showcases-fresh-green-blueberry-leaves-symbolizing-nature-s-bounty-health-wellness-vibrant-color-312286071.jpg"
-    },
-    {
-      "class_id": "Cherry_(including_sour)___Powdery_mildew",
-      "file": "Cherry_including_sour_Powdery_mildew.jpg",
-      "slug": "Cherry_including_sour_Powdery_mildew",
-      "query": "cherry powdery mildew leaf white coating close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.planetnatural.com/wp-content/uploads/2023/10/Powdery-mildew-on-a-leaf.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Cherry_(including_sour)___healthy",
@@ -63,8 +41,7 @@
       "slug": "Cherry_including_sour_healthy",
       "query": "healthy cherry leaf close up green",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://c8.alamy.com/comp/2D3PFRN/green-cherry-leaf-isolated-close-up-2D3PFRN.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
@@ -72,8 +49,7 @@
       "slug": "Corn_maize_Cercospora_leaf_spot_Gray_leaf_spot",
       "query": "corn gray leaf spot rectangular lesions close up",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://images.miklix.com/64/a0/miklix_64a050f6-c476-4800-b352-db1cebf4cb64.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Corn_(maize)___Common_rust_",
@@ -81,341 +57,7 @@
       "slug": "Corn_maize_Common_rust",
       "query": "corn maize common rust leaf pustules orange close up",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://images.miklix.com/70/6b/miklix_706b45b8-c38b-4f7c-b460-f1e68d2f5fd9.jpg"
-    },
-    {
-      "class_id": "Corn_(maize)___Northern_Leaf_Blight",
-      "file": "Corn_maize_Northern_Leaf_Blight.jpg",
-      "slug": "Corn_maize_Northern_Leaf_Blight",
-      "query": "corn northern leaf blight long gray lesions",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://cropwatch.unl.edu/sites/unl.edu.ianr.extension.cropwatch/files/styles/no_crop_3840/public/media/image/Northern-corn-leaf-blight-NM-F2.jpg?itok=n9LIF9tL"
-    },
-    {
-      "class_id": "Corn_(maize)___healthy",
-      "file": "Corn_maize_healthy.jpg",
-      "slug": "Corn_maize_healthy",
-      "query": "healthy corn maize leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://thumbs.dreamstime.com/b/close-up-detail-green-corn-leaf-vertical-vein-pattern-healthy-agricultural-plant-organic-farming-208307512.jpg"
-    },
-    {
-      "class_id": "Grape___Black_rot",
-      "file": "Grape_Black_rot.jpg",
-      "slug": "Grape_Black_rot",
-      "query": "grape black rot leaf lesions brown close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://minnesotamycologicalsociety.org/wp-content/uploads/2025/08/blog_winegrapes_blackrot-foliar.jpg"
-    },
-    {
-      "class_id": "Grape___Esca_(Black_Measles)",
-      "file": "Grape_Esca_Black_Measles.jpg",
-      "slug": "Grape_Esca_Black_Measles",
-      "query": "grape esca black measles leaf stripes close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://sources.roboflow.com/dMjGrME8SnaLLAZzZe5d/tBJQvVpGJVYXrsDQhyTn/original.jpg"
-    },
-    {
-      "class_id": "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)",
-      "file": "Grape_Leaf_blight_Isariopsis_Leaf_Spot.jpg",
-      "slug": "Grape_Leaf_blight_Isariopsis_Leaf_Spot",
-      "query": "grape isariopsis leaf blight dark spots close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.thetreecenter.com/c/uploads/grapes-concord-2.jpg"
-    },
-    {
-      "class_id": "Grape___healthy",
-      "file": "Grape_healthy.jpg",
-      "slug": "Grape_healthy",
-      "query": "healthy grape vine leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://c8.alamy.com/comp/CNRXMK/close-up-of-a-green-vine-leaf-CNRXMK.jpg"
-    },
-    {
-      "class_id": "Orange___Haunglongbing_(Citrus_greening)",
-      "file": "Orange_Haunglongbing_Citrus_greening.jpg",
-      "slug": "Orange_Haunglongbing_Citrus_greening",
-      "query": "citrus greening HLB blotchy leaf yellow mottling close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://thumbs.dreamstime.com/b/image-showcases-devastating-effects-citrus-greening-disease-commonly-known-as-huanglongbing-hlb-tree-branch-379423716.jpg"
-    },
-    {
-      "class_id": "Peach___Bacterial_spot",
-      "file": "Peach_Bacterial_spot.jpg",
-      "slug": "Peach_Bacterial_spot",
-      "query": "peach bacterial spot leaf lesions close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.growingproduce.com/wp-content/uploads/2015/11/Bacterial-spot-peach-leaf_KPeter.jpg"
-    },
-    {
-      "class_id": "Peach___healthy",
-      "file": "Peach_healthy.jpg",
-      "slug": "Peach_healthy",
-      "query": "healthy peach leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://c8.alamy.com/comp/2C8NDFG/green-peach-leaf-is-isolated-on-a-white-background-close-up-2C8NDFG.jpg"
-    },
-    {
-      "class_id": "Pepper,_bell___Bacterial_spot",
-      "file": "Pepper_bell_Bacterial_spot.jpg",
-      "slug": "Pepper_bell_Bacterial_spot",
-      "query": "bell pepper bacterial spot leaf angular lesions close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.bloomingexpert.com/wp-content/uploads/2026/06/pepper-diseases-bell-pepper-bacterial-spot-leaves-closeup.webp.webp"
-    },
-    {
-      "class_id": "Pepper,_bell___healthy",
-      "file": "Pepper_bell_healthy.jpg",
-      "slug": "Pepper_bell_healthy",
-      "query": "healthy bell pepper leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://img.freepik.com/premium-photo/green-bell-pepper-leaves-close-up_159701-823.jpg"
-    },
-    {
-      "class_id": "Potato___Early_blight",
-      "file": "Potato_Early_blight.jpg",
-      "slug": "Potato_Early_blight",
-      "query": "potato early blight leaf concentric rings close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://media.sciencephoto.com/image/b2600118/400wm/B2600118-Early_blight_on_a_potato_plant.jpg"
-    },
-    {
-      "class_id": "Potato___Late_blight",
-      "file": "Potato_Late_blight.jpg",
-      "slug": "Potato_Late_blight",
-      "query": "potato late blight leaf dark water soaked lesions",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://content.ces.ncsu.edu/media/images/IMG_0022.jpg"
-    },
-    {
-      "class_id": "Potato___healthy",
-      "file": "Potato_healthy.jpg",
-      "slug": "Potato_healthy",
-      "query": "healthy potato plant leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://img.freepik.com/premium-photo/green-potato-leaves-close-up_406939-6432.jpg?w=2000"
-    },
-    {
-      "class_id": "Raspberry___healthy",
-      "file": "Raspberry_healthy.jpg",
-      "slug": "Raspberry_healthy",
-      "query": "healthy raspberry leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://static.vecteezy.com/system/resources/thumbnails/014/398/173/original/green-raspberry-leaves-close-up-summer-green-background-free-video.jpg"
-    },
-    {
-      "class_id": "Soybean___healthy",
-      "file": "Soybean_healthy.jpg",
-      "slug": "Soybean_healthy",
-      "query": "healthy soybean leaf close up green trifoliate",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://thumbs.dreamstime.com/b/closeup-green-healthy-soybean-plant-leaf-farm-field-concept-farming-industry-agriculture-organic-crops-192305010.jpg"
-    },
-    {
-      "class_id": "Squash___Powdery_mildew",
-      "file": "Squash_Powdery_mildew.jpg",
-      "slug": "Squash_Powdery_mildew",
-      "query": "squash powdery mildew leaf white spots close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://img.freepik.com/premium-photo/fungal-plant-disease-powdery-mildew-pattypan-squash-leaf-white-plaque-leaf_527985-35.jpg?w=2000"
-    },
-    {
-      "class_id": "Strawberry___Leaf_scorch",
-      "file": "Strawberry_Leaf_scorch.jpg",
-      "slug": "Strawberry_Leaf_scorch",
-      "query": "strawberry leaf scorch purple spots disease close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://c8.alamy.com/comp/PFR3BW/strawberry-leaf-spot-purple-spots-on-leaves-of-strawberry-plant-caused-by-fungus-mycosphaerella-fragariae-PFR3BW.jpg"
-    },
-    {
-      "class_id": "Strawberry___healthy",
-      "file": "Strawberry_healthy.jpg",
-      "slug": "Strawberry_healthy",
-      "query": "healthy strawberry leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://c8.alamy.com/comp/3BF892M/close-up-of-healthy-strawberry-plant-leaves-covered-in-morning-dewtop-view-of-fresh-green-strawberry-leaves-with-water-droplets-on-the-edges-3BF892M.jpg"
-    },
-    {
-      "class_id": "Tomato___Bacterial_spot",
-      "file": "Tomato_Bacterial_spot.jpg",
-      "slug": "Tomato_Bacterial_spot",
-      "query": "tomato bacterial spot leaf small dark spots close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://as1.ftcdn.net/jpg/14/55/67/96/1000_F_1455679691_vkb3ebyEDfIBJDk9vPnXeDEW4bBnGJ7W.jpg"
-    },
-    {
-      "class_id": "Tomato___Early_blight",
-      "file": "Tomato_Early_blight.jpg",
-      "slug": "Tomato_Early_blight",
-      "query": "tomato early blight leaf concentric target spots close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://ag.purdue.edu/department/arge/swpap/_media/early-blight-of-tomato-8.jpg"
-    },
-    {
-      "class_id": "Tomato___Late_blight",
-      "file": "Tomato_Late_blight.jpg",
-      "slug": "Tomato_Late_blight",
-      "query": "tomato late blight leaf water soaked lesions close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://thumbs.dreamstime.com/b/close-up-tomato-leaf-affected-late-blight-disease-showing-blackened-yellow-patches-close-up-tomato-leaf-affected-361555710.jpg"
-    },
-    {
-      "class_id": "Tomato___Leaf_Mold",
-      "file": "Tomato_Leaf_Mold.jpg",
-      "slug": "Tomato_Leaf_Mold",
-      "query": "tomato leaf mold olive green patches underside close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://ag.purdue.edu/department/arge/swpap/_media/leaf-mold-of-tomato-3.jpg"
-    },
-    {
-      "class_id": "Tomato___Septoria_leaf_spot",
-      "file": "Tomato_Septoria_leaf_spot.jpg",
-      "slug": "Tomato_Septoria_leaf_spot",
-      "query": "tomato septoria leaf spot small circular lesions close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://static.vecteezy.com/system/resources/previews/070/403/589/large_2x/tomato-leaf-with-septoria-leaf-spot-disease-photo.jpg"
-    },
-    {
-      "class_id": "Tomato___Spider_mites Two-spotted_spider_mite",
-      "file": "Tomato_Spider_mites_Two_spotted_spider_mite.jpg",
-      "slug": "Tomato_Spider_mites_Two_spotted_spider_mite",
-      "query": "tomato spider mite damage leaf stippling yellow close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://media.sciencephoto.com/image/c0583909/800wm/C0583909-Spider_mite_damage_on_tomato.jpg"
-    },
-    {
-      "class_id": "Tomato___Target_Spot",
-      "file": "Tomato_Target_Spot.jpg",
-      "slug": "Tomato_Target_Spot",
-      "query": "tomato target spot leaf lesions concentric close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://apps.lucidcentral.org/pppw_v10/images/entities/tomato_target_spot_163/img_3478a.jpg"
-    },
-    {
-      "class_id": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
-      "file": "Tomato_Tomato_Yellow_Leaf_Curl_Virus.jpg",
-      "slug": "Tomato_Tomato_Yellow_Leaf_Curl_Virus",
-      "query": "tomato yellow leaf curl virus curled yellow leaf close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://igrowtomatoes.com/wp-content/uploads/2024/07/Tomato-Leaves-Curling-yellow-leaf-curl.jpg.webp"
-    },
-    {
-      "class_id": "Tomato___Tomato_mosaic_virus",
-      "file": "Tomato_Tomato_mosaic_virus.jpg",
-      "slug": "Tomato_Tomato_mosaic_virus",
-      "query": "tomato mosaic virus mottled leaf close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://s.alicdn.com/@sc02/kf/Hc3a71612e3f141cc8eef9144f6769c91n.jpg"
-    },
-    {
-      "class_id": "Tomato___healthy",
-      "file": "Tomato_healthy.jpg",
-      "slug": "Tomato_healthy",
-      "query": "healthy tomato leaf close up green",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.shutterstock.com/shutterstock/photos/2206749191/display_1500/stock-photo-close-up-of-tomato-leaves-green-and-healthy-texture-of-the-leaves-of-greenhouse-tomato-cultivation-2206749191.jpg"
-    },
-    {
-      "class_id": "Tomato___Early_blight",
-      "file": "Tomato_Early_blight_2.jpg",
-      "slug": "Tomato_Early_blight_2",
-      "query": "tomato early blight diseased leaf field photo close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://keengarden.com/wp-content/uploads/2026/03/Early-Blight-Tomato-Diseases-4.webp"
-    },
-    {
-      "class_id": "Tomato___Late_blight",
-      "file": "Tomato_Late_blight_2.jpg",
-      "slug": "Tomato_Late_blight_2",
-      "query": "tomato late blight infected leaf garden close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://thumbs.dreamstime.com/b/tomato-leaf-late-blight-disease-close-up-close-up-tomato-leaf-late-blight-ai-generated-398597170.jpg?w=768"
-    },
-    {
-      "class_id": "Tomato___Bacterial_spot",
-      "file": "Tomato_Bacterial_spot_2.jpg",
-      "slug": "Tomato_Bacterial_spot_2",
-      "query": "tomato bacterial leaf spot symptoms close up photo",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://www.ontario.ca/files/2022-01/omafra-bacterial-diseases-of-tomato-figure-12-en-4032x2688-2021-12-09-v1.jpg"
-    },
-    {
-      "class_id": "Tomato___healthy",
-      "file": "Tomato_healthy_2.jpg",
-      "slug": "Tomato_healthy_2",
-      "query": "green healthy tomato plant leaf macro photo",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://static.vecteezy.com/system/resources/previews/051/068/446/non_2x/macro-shot-of-a-young-tomato-plant-leaf-showcasing-its-vibrant-green-color-and-intricate-details-perfect-for-botanical-nature-gardening-free-photo.jpeg"
-    },
-    {
-      "class_id": "Potato___Early_blight",
-      "file": "Potato_Early_blight_2.jpg",
-      "slug": "Potato_Early_blight_2",
-      "query": "potato early blight foliar disease leaf close up photo",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://cdn.mos.cms.futurecdn.net/aTdWJvnG8t43BaAJkFizKY-1536-80.jpg"
-    },
-    {
-      "class_id": "Potato___Late_blight",
-      "file": "Potato_Late_blight_2.jpg",
-      "slug": "Potato_Late_blight_2",
-      "query": "potato late blight infected foliage leaf close up",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://cropscience.bayer.co.uk/media/104571123/late-blight-on-foliage.jpg"
-    },
-    {
-      "class_id": "Pepper,_bell___Bacterial_spot",
-      "file": "Pepper_bell_Bacterial_spot_2.jpg",
-      "slug": "Pepper_bell_Bacterial_spot_2",
-      "query": "pepper bacterial spot diseased leaf close up photo",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "http://www.extension.umd.edu/sites/extension.umd.edu/files/styles/optimized/public/2021-03/hgic_veg_disease_BacterialLeafSpot_2-5605094_400.jpg?itok=o08rOvUY"
-    },
-    {
-      "class_id": "Pepper,_bell___healthy",
-      "file": "Pepper_bell_healthy_2.jpg",
-      "slug": "Pepper_bell_healthy_2",
-      "query": "green healthy pepper plant leaf close up photo",
-      "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://images.unsplash.com/photo-1582044697376-a2228dd87390?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA="
+      "revision": "v1.2"
     },
     {
       "class_id": "Corn_(maize)___Common_rust_",
@@ -423,36 +65,176 @@
       "slug": "Corn_maize_Common_rust_2",
       "query": "maize common rust uredinia leaf close up photo",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://live.staticflickr.com/4093/4885431993_1beec65393_b.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Corn_(maize)___Northern_Leaf_Blight",
-      "file": "Corn_maize_Northern_Leaf_Blight_2.jpg",
-      "slug": "Corn_maize_Northern_Leaf_Blight_2",
-      "query": "northern corn leaf blight lesions photo close up",
+      "file": "Corn_maize_Northern_Leaf_Blight.jpg",
+      "slug": "Corn_maize_Northern_Leaf_Blight",
+      "query": "corn northern leaf blight long gray lesions",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://jenreesources.com/wp-content/uploads/2015/07/2015070295153021.jpg"
+      "revision": "v1.2"
     },
     {
-      "class_id": "Apple___Apple_scab",
-      "file": "Apple_Apple_scab_2.jpg",
-      "slug": "Apple_Apple_scab_2",
-      "query": "apple scab infected leaf orchard close up photo",
+      "class_id": "Corn_(maize)___healthy",
+      "file": "Corn_maize_healthy.jpg",
+      "slug": "Corn_maize_healthy",
+      "query": "healthy corn maize leaf close up green",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://img.freepik.com/premium-photo/scab-leaves-apple-tree-close-up-diseases-apple-orchard-summer_246836-1845.jpg"
+      "revision": "v1.2"
     },
     {
       "class_id": "Grape___Black_rot",
-      "file": "Grape_Black_rot_2.jpg",
-      "slug": "Grape_Black_rot_2",
-      "query": "grape black rot diseased leaf vineyard close up",
+      "file": "Grape_Black_rot.jpg",
+      "slug": "Grape_Black_rot",
+      "query": "grape black rot leaf lesions brown close up",
       "model": "neghani/plantvillage-mobilenetv2",
-      "revision": "v1.2",
-      "source_url": "https://c8.alamy.com/comp/PNW547/rot-of-a-vine-and-a-grape-leaf-close-up-protection-of-the-vineyard-garden-from-diseases-and-fungi-PNW547.jpg"
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Grape___Esca_(Black_Measles)",
+      "file": "Grape_Esca_Black_Measles.jpg",
+      "slug": "Grape_Esca_Black_Measles",
+      "query": "grape esca black measles leaf stripes close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Grape___healthy",
+      "file": "Grape_healthy.jpg",
+      "slug": "Grape_healthy",
+      "query": "healthy grape vine leaf close up green",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Pepper,_bell___Bacterial_spot",
+      "file": "Pepper_bell_Bacterial_spot.jpg",
+      "slug": "Pepper_bell_Bacterial_spot",
+      "query": "bell pepper bacterial spot leaf angular lesions close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Pepper,_bell___Bacterial_spot",
+      "file": "Pepper_bell_Bacterial_spot_2.jpg",
+      "slug": "Pepper_bell_Bacterial_spot_2",
+      "query": "pepper bacterial spot diseased leaf close up photo",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Pepper,_bell___healthy",
+      "file": "Pepper_bell_healthy.jpg",
+      "slug": "Pepper_bell_healthy",
+      "query": "healthy bell pepper leaf close up green",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Potato___Early_blight",
+      "file": "Potato_Early_blight.jpg",
+      "slug": "Potato_Early_blight",
+      "query": "potato early blight leaf concentric rings close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Potato___Early_blight",
+      "file": "Potato_Early_blight_2.jpg",
+      "slug": "Potato_Early_blight_2",
+      "query": "potato early blight foliar disease leaf close up photo",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Potato___Late_blight",
+      "file": "Potato_Late_blight.jpg",
+      "slug": "Potato_Late_blight",
+      "query": "potato late blight leaf dark water soaked lesions",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Potato___Late_blight",
+      "file": "Potato_Late_blight_2.jpg",
+      "slug": "Potato_Late_blight_2",
+      "query": "potato late blight infected foliage leaf close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Raspberry___healthy",
+      "file": "Raspberry_healthy.jpg",
+      "slug": "Raspberry_healthy",
+      "query": "healthy raspberry leaf close up green",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Squash___Powdery_mildew",
+      "file": "Squash_Powdery_mildew.jpg",
+      "slug": "Squash_Powdery_mildew",
+      "query": "squash powdery mildew leaf white spots close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Strawberry___Leaf_scorch",
+      "file": "Strawberry_Leaf_scorch.jpg",
+      "slug": "Strawberry_Leaf_scorch",
+      "query": "strawberry leaf scorch purple spots disease close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Tomato___Bacterial_spot",
+      "file": "Tomato_Bacterial_spot.jpg",
+      "slug": "Tomato_Bacterial_spot",
+      "query": "tomato bacterial spot leaf small dark spots close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Tomato___Early_blight",
+      "file": "Tomato_Early_blight.jpg",
+      "slug": "Tomato_Early_blight",
+      "query": "tomato early blight leaf concentric target spots close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Tomato___Early_blight",
+      "file": "Tomato_Early_blight_2.jpg",
+      "slug": "Tomato_Early_blight_2",
+      "query": "tomato early blight diseased leaf field photo close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Tomato___Spider_mites Two-spotted_spider_mite",
+      "file": "Tomato_Spider_mites_Two_spotted_spider_mite.jpg",
+      "slug": "Tomato_Spider_mites_Two_spotted_spider_mite",
+      "query": "tomato spider mite damage leaf stippling yellow close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+      "file": "Tomato_Tomato_Yellow_Leaf_Curl_Virus.jpg",
+      "slug": "Tomato_Tomato_Yellow_Leaf_Curl_Virus",
+      "query": "tomato yellow leaf curl virus curled yellow leaf close up",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
+    },
+    {
+      "class_id": "Tomato___healthy",
+      "file": "Tomato_healthy_2.jpg",
+      "slug": "Tomato_healthy_2",
+      "query": "green healthy tomato plant leaf macro photo",
+      "model": "neghani/plantvillage-mobilenetv2",
+      "revision": "v1.2"
     }
   ],
-  "note": "Web smoke set for manual review. Delete non-leaf / noisy files, then keep the rest for UI demos. Not a decision / bake-off set."
+  "note": "Reviewed subset kept after manual delete of non-leaf/noise. GT for web-test search uses class_id + query."
 }

@@ -1,9 +1,10 @@
+import json
 import logging
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.agent.graph import diagnosis_graph
@@ -18,11 +19,14 @@ from app.schemas import (
     InferenceInfo,
     PredictResponse,
     TopKPrediction,
+    WebTestRunRequest,
 )
 from app.services.chat import handle_chat
 from app.services.provenance import build_provenance
 from app.services.report import build_quality_report
 from app.services.translate import normalize_language, translate_report
+from app.services.web_test import list_classes as web_test_classes
+from app.services.web_test import run_web_test
 from app.vision.hf_client import hf_configured, probe_endpoint
 from app.vision.quality import PreparedImage, prepare_image, validate_upload
 from shared.vision.config import INFERENCE_SIZE
@@ -198,3 +202,20 @@ def chat(body: ChatRequest) -> ChatResponse:
         [turn.model_dump() for turn in body.history],
         language=normalize_language(body.language),
     )
+
+
+@app.get("/web-test/classes")
+def web_test_list_classes() -> dict:
+    """PlantVillage classes + curated reviewed subset for the Web Test UI."""
+    return web_test_classes()
+
+
+@app.post("/web-test/run")
+def web_test_run(body: WebTestRunRequest) -> StreamingResponse:
+    """Search N web images for a class, classify each, stream NDJSON rows one-by-one."""
+
+    def events():
+        for event in run_web_test(body.class_id, body.n):
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
