@@ -57,6 +57,7 @@ from common import (  # noqa: E402
     scan_imagefolder,
     stratified_split,
 )
+from card import hub_base_model  # noqa: E402
 from data_protocol import (  # noqa: E402
     Item,
     MATCH_DIST,
@@ -597,7 +598,8 @@ def main(argv: list[str] | None = None) -> None:
     (output_dir / "run_info.json").write_text(json.dumps(run_info, indent=2))
 
     card_kwargs = {
-        "finetuned_from": model_args.model_name_or_path,
+        # A local --init_from dir (Stage 2 of v1.2) must not reach the Hub card metadata as a path.
+        "finetuned_from": hub_base_model(model_args.model_name_or_path),
         "dataset": ["PlantVillage", "PlantDoc"] if extra_info else "PlantVillage",
         "tasks": "image-classification",
         "tags": ["image-classification", "plant-disease", "plantvillage", "resnet-18", "agriculture"]

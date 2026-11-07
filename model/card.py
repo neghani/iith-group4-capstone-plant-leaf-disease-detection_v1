@@ -10,10 +10,57 @@ import re
 import shutil
 from pathlib import Path
 
+from common import FALLBACK_BASE_MODEL
+
 HERE = Path(__file__).resolve().parent
 OUTPUTS = HERE / "outputs"
 LATENCY_PATH = HERE / "latency.json"
 NOT_RECORDED = "Not recorded."
+
+# A Hub repo id is exactly "owner/name". Anything else that looks like a path is local.
+_HUB_ID = re.compile(r"[\w.-]+/[\w.-]+")
+_BASE_MODEL_LINE = re.compile(r"^base_model:[ \t]*(.+?)[ \t]*$", re.M)
+_MAX_BASE_HOPS = 5
+
+
+def is_local_ref(value: str) -> bool:
+    """True for a filesystem path such as /content/drive/... (Hub ids never look like this)."""
+    if value.startswith(("/", "~", ".", "\\")):
+        return True
+    return not _HUB_ID.fullmatch(value) and Path(value).exists()
+
+
+def hub_base_model(value: str | None, _hops: int = 0) -> str:
+    """Return a Hub repo id for a base_model value.
+
+    A local run dir (e.g. the Stage 1 folder used as --init_from) is followed through its
+    run_info.json until a Hub id is found. If that trail is missing, fall back to the ImageNet
+    MobileNetV2 root, which every Phase 1 run starts from.
+    """
+    if not value:
+        return FALLBACK_BASE_MODEL
+    if not is_local_ref(value):
+        return value
+    info = Path(value).expanduser() / "run_info.json"
+    if _hops < _MAX_BASE_HOPS and info.is_file():
+        try:
+            parent = json.loads(info.read_text()).get("base_model")
+        except (OSError, ValueError):
+            parent = None
+        if parent and parent != value:
+            return hub_base_model(parent, _hops + 1)
+    return FALLBACK_BASE_MODEL
+
+
+def sanitize_base_model(text: str) -> str:
+    """Replace a local path in the README base_model front matter (and its link) with a Hub id."""
+    m = _BASE_MODEL_LINE.search(text)
+    if m is None:
+        return text
+    raw = m.group(1).strip().strip("'\"")
+    if not is_local_ref(raw):
+        return text
+    return text.replace(raw, hub_base_model(raw))
 
 WEAK_CLASSES = (
     ("Potato___healthy", "Potato healthy"),
@@ -280,5 +327,6 @@ def assemble_card(
                   f"(missing artifact under {model_dir} or {outputs}).")
             text = replace_block(text, start, end, NOT_RECORDED)
 
+    text = sanitize_base_model(text)
     card_path.write_text(text if text.endswith("\n") else text + "\n")
     return {"filled": filled, "missing": missing}
