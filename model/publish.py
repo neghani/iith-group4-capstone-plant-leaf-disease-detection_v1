@@ -4,10 +4,15 @@ Token comes from HF_TOKEN (.env locally, Colab secret in Colab, or `hf auth logi
 
 Examples:
     python model/publish.py --check                      # verify token, owner and repo access only
-    python model/publish.py --dry_run                    # fill the card, list what would be uploaded
-    python model/publish.py                              # upload model/outputs/plantvillage-mobilenetv2 + tag v1.0
+    python model/publish.py --release v1.2 --model <stage2 dir> --dry_run   # the v1.2 release, no upload
+    python model/publish.py --release v1.2 --model <stage2 dir>             # upload branch + tag v1.2
+    python model/publish.py                              # upload model/outputs/plantvillage-resnet18 + tag v1.0
     python model/publish.py --tag v1.1 --private
     python model/publish.py --reports_only               # re-push README.md + reports/ (no weights)
+
+--release sets the branch, tag and messages for a named release. Gated tags need the baseline
+PlantDoc-val diagnostics; if they are missing, they are computed once (inference only) into
+<model dir>/../artifacts, so no separate notebook step is needed.
 
 Fills README.md from trainer_state.json, reports/metrics.json, final_summary.json,
 calibration.json, latency.json and strategy_comparison.md before uploading.
@@ -17,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -30,38 +36,113 @@ V10_PV_ACCURACY = 0.9912
 MAX_PV_DROP = 0.02
 DIAGNOSTICS = HERE / "outputs" / "diagnostics_v1_0.json"
 
+# Named releases. Everything that used to be typed by hand in each notebook cell lives here.
+RELEASES = {
+    "v1.2": {
+        "hub_model_id": "neghani/plantvillage-mobilenetv2",
+        "tag": "v1.2",
+        "branch": "v1.2",  # leaves main and the v1.1 tag untouched
+        "tag_message": "MobileNetV2 v1.2: PlantVillage then PlantDoc mix",
+        "commit_message": "MobileNetV2 v1.2: ImageNet -> PlantVillage -> PlantDoc mix",
+    },
+}
+# Used when no --release is given (the original ResNet-18 Phase 1 defaults).
+PLAIN_DEFAULTS = {
+    "tag": "v1.0",
+    "tag_message": "Phase 1 release: ResNet-18 on PlantVillage",
+    "commit_message": "Phase 1: ResNet-18 on PlantVillage",
+}
+
 # Trainer scratch files that should never land on the Hub.
 IGNORE = ["checkpoint-*", "checkpoint-*/**", "runs/**", "optimizer.pt", "scheduler.pt", "rng_state*.pth", "*.log", ".DS_Store"]
 WEIGHT_PATTERNS = ["*.safetensors", "*.bin", "pytorch_model*"]
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--release", choices=sorted(RELEASES), default=None,
+                   help="Named release preset: sets --branch, --tag, --tag_message and --commit_message.")
     p.add_argument("--model", default=str(DEFAULT_MODEL_DIR), help="Local model directory produced by train.py.")
-    p.add_argument("--hub_model_id", default=DEFAULT_HF_MODEL_REPO)
-    p.add_argument("--tag", default="v1.0", help="Release tag Phase 5 pins (HF_MODEL_REVISION). Use '' to skip tagging.")
-    p.add_argument("--tag_message", default="Phase 1 release: ResNet-18 on PlantVillage")
+    p.add_argument("--hub_model_id", default=None,
+                   help="Hub repo. Default: the --release repo, else neghani/plantvillage-resnet18.")
+    p.add_argument("--tag", default=None, help="Release tag Phase 5 pins (HF_MODEL_REVISION). Use '' to skip tagging.")
+    p.add_argument("--tag_message", default=None)
     p.add_argument(
         "--branch",
         default=None,
         help="Hub branch to upload into (default: repo default / main). "
-        "Use 'v1.2' so main and the v1.1 tag stay untouched.",
+        "Use 'v1.2' (or --release v1.2) so main and the v1.1 tag stay untouched.",
     )
     p.add_argument("--private", action="store_true", help="Create the repo as private if it does not exist.")
     p.add_argument("--reports_only", action="store_true", help="Upload README.md and reports/ only (skip weights).")
-    p.add_argument("--commit_message", default="Phase 1: ResNet-18 on PlantVillage")
+    p.add_argument("--commit_message", default=None)
     p.add_argument("--check", action="store_true", help="Verify token / owner / repo access and exit.")
     p.add_argument("--dry_run", action="store_true", help="Show the files that would be uploaded and exit.")
     p.add_argument("--skip_gate", action="store_true", help="Do not enforce the stage-2 publish gate (not for the real release).")
     p.add_argument("--skip_card_check", action="store_true",
-                   help="Do not refuse v1.1/v1.2 when a model-card section is missing.")
+                   help="Debug only: publish even if a model-card section is missing. Release presets never set this.")
     p.add_argument(
         "--diagnostics",
-        default=str(DIAGNOSTICS),
-        help="Baseline PlantDoc-val diagnostics JSON (diagnostics.py). "
-        "v1.1 gate: v1.0 file. v1.2 gate: v1.1 file (same code).",
+        default=None,
+        help="Baseline PlantDoc-val diagnostics JSON. Default: <model dir>/../artifacts/diagnostics_<baseline>.json, "
+        "computed once if missing. v1.1 gate: v1.0 file. v1.2 gate: v1.1 file (same code).",
     )
-    return p.parse_args()
+    args = p.parse_args(argv)
+    return resolve_release(args)
+
+
+def resolve_release(args: argparse.Namespace) -> argparse.Namespace:
+    """Fill unset options from the --release preset, then from the plain Phase 1 defaults."""
+    preset = RELEASES[args.release] if args.release else {}
+    if args.hub_model_id is None:
+        args.hub_model_id = preset.get("hub_model_id", DEFAULT_HF_MODEL_REPO)
+    for key in ("tag", "branch", "tag_message", "commit_message"):
+        if getattr(args, key) is None:
+            setattr(args, key, preset.get(key, PLAIN_DEFAULTS.get(key)))
+    if args.diagnostics is None:
+        args.diagnostics = str(default_diagnostics_path(Path(args.model), args.tag))
+    return args
+
+
+def default_diagnostics_path(model_dir: Path, tag: str) -> Path:
+    """Where the gate baseline lives for a gated tag: next to the model's run folder, in artifacts/."""
+    baseline = GATED_TAGS.get(tag)
+    if baseline is None:
+        return DIAGNOSTICS
+    return model_dir.parent / "artifacts" / f"diagnostics_{baseline.replace('.', '_')}.json"
+
+
+def ensure_diagnostics(path: Path, baseline: str, hub_model_id: str) -> Path:
+    """Return the baseline PlantDoc-val diagnostics, computing them once if missing.
+
+    Inference only (never opens the final test). Builds the PlantDoc validation manifest first
+    if that is missing too. Results are cached at `path`, so later runs skip this.
+    """
+    if path.exists():
+        return path
+    repo = HERE.parent
+    manifest = HERE / "data" / "plantdoc_train" / "manifest.csv"
+    print(f"{path} missing: computing {baseline} PlantDoc-val diagnostics once (inference only).")
+    if not manifest.exists():
+        subprocess.run(
+            [sys.executable, "-m", "model.prepare_plantdoc",
+             "--exclude_set", str(HERE / "data" / "real_world_set"),
+             "--artifacts_dir", str(path.parent), "--skip_if_exists"],
+            cwd=repo, check=True,
+        )
+    subprocess.run(
+        [sys.executable, "-m", "model.diagnostics",
+         "--model", hub_model_id, "--revision", baseline,
+         "--manifest", str(manifest), "--extra_dir", str(manifest.parent),
+         "--out", str(path.parent)],
+        cwd=repo, check=True,
+    )
+    if not path.exists():
+        raise SystemExit(
+            f"Diagnostics ran but {path} was not written. diagnostics.py names its output "
+            f"diagnostics_{baseline.replace('.', '_')}.json; pass --diagnostics with that path."
+        )
+    return path
 
 
 # Tags that must beat a baseline PlantDoc-val F1 and keep PlantVillage accuracy within MAX_PV_DROP.
@@ -188,8 +269,9 @@ def main() -> None:
             raise SystemExit(msg)
         print(f"[dry run] the real publish would stop here: {msg}")
     if gated and not args.skip_gate:
+        diag = ensure_diagnostics(Path(args.diagnostics), GATED_TAGS[args.tag], args.hub_model_id)
         try:
-            publish_gate(model_dir, args.tag, Path(args.diagnostics))
+            publish_gate(model_dir, args.tag, diag)
         except SystemExit as exc:
             if not args.dry_run:
                 raise

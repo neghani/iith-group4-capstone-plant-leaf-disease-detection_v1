@@ -63,6 +63,30 @@ class DiagnosisReport(BaseModel):
     initial_message: str = ""
 
 
+ProvenanceSourceId = Literal[
+    "image_quality_checks",  # OpenCV gate: brightness, blur, leaf segmentation
+    "image_classifier",  # the Hugging Face CNN that named the disease
+    "decision_rules",  # fixed thresholds turning scores into status/confidence text
+    "curated_reference",  # knowledge-base notes written ahead of time, not generated
+    "farmer_input",  # optional crop hint / symptoms typed into the form
+    "llm_summary",  # LLM-written farmer summary (text only, never sees the photo)
+    "template_text",  # canned template used when the LLM is unavailable or skipped
+]
+
+
+class ProvenanceEntry(BaseModel):
+    """Declares which component produced one field of the response.
+
+    Tutors/reviewers reading the raw JSON can tell the classifier apart from the
+    LLM without opening the frontend.
+    """
+
+    field: str  # dotted path into the response, e.g. "report.description"
+    source: ProvenanceSourceId
+    label: str  # human-readable component name, e.g. "Image classifier (org/model v1.1)"
+    detail: str  # what exactly that component contributed to the field
+
+
 class InferenceInfo(BaseModel):
     """Proof of what ran: which Hugging Face model answered and what image it received."""
 
@@ -84,6 +108,7 @@ class PredictResponse(BaseModel):
     top_k: list[TopKPrediction] = Field(default_factory=list)
     session_context: dict = Field(default_factory=dict)
     inference: InferenceInfo | None = None
+    provenance: list[ProvenanceEntry] = Field(default_factory=list)
     language: str = "en"
     translation_applied: bool = False
 

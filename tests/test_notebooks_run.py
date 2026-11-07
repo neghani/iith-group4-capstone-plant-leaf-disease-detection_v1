@@ -62,19 +62,17 @@ def test_mobilenet_notebook_still_present():
     assert "google/mobilenet_v2" in src
     assert "RUN_V12" not in src
     assert "## 11. MobileNetV2 v1.2" in src
-    assert '"--branch", "v1.2"' in src
     assert "V12_STAGE1" in src
-    assert "--skip_card_check" in src
+    # Publish goes through the named release preset; no hand-typed branch/tag args, no card bypass.
+    assert '"--release", "v1.2"' in src
+    assert "--skip_card_check" not in src
+    assert '"--branch", "v1.2"' not in src
     assert "compare_stage2_sweep" not in src
     # v1.2 stage 1 must not push to the Hub (leaves main/v1.1 alone).
     stage1 = next(c for c in cells if "V12_STAGE1" in c and "google/mobilenet_v2_1.0_224" in c)
     assert "--push_to_hub" not in stage1
     assert 'flag_on("RUN_V12")' not in stage1
-    publish = next(
-        c for c in cells
-        if 'run_mod(*common' in c or ('"--skip_card_check"' in c and "model.publish" in c)
-    )
-    assert '"--branch", "v1.2"' in publish
+    publish = next(c for c in cells if '"model.publish"' in c and '"--release", "v1.2"' in c)
     assert "shared/release.json" in publish  # manual pin reminder only
 
 

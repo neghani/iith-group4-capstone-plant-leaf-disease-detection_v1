@@ -72,6 +72,57 @@ def test_predict_high_confidence(client, good_leaf, hf_calls, llm_prompts):
     assert sent.format == "JPEG" and sent.size == (256, 256)
 
 
+def test_predict_provenance_maps_fields_to_sources(client, good_leaf, hf_calls, llm_prompts):
+    body = client.post(
+        "/predict", files=_upload(good_leaf), data={"crop": "tomato", "additional_symptoms": "rings"}
+    ).json()
+    prov = {e["field"]: e["source"] for e in body["provenance"]}
+    assert prov["top_k"] == "image_classifier"
+    assert prov["report.disease_id"] == "image_classifier"
+    assert prov["report.confidence"] == "image_classifier"
+    assert prov["inference"] == "image_classifier"
+    assert prov["quality.brightness"] == "image_quality_checks"
+    assert prov["inference.preprocessing"] == "image_quality_checks"
+    assert prov["report.status"] == "decision_rules"
+    assert prov["report.alternatives"] == "decision_rules"
+    assert prov["report.description"] == "curated_reference"
+    assert prov["report.actions"] == "curated_reference"
+    assert prov["request.crop_hint"] == "farmer_input"
+    assert prov["request.additional_symptoms"] == "farmer_input"
+    assert prov["report.initial_message"] == "llm_summary"  # llm_prompts returned text
+    # Every label is farmer-readable and the LLM is named, not hidden.
+    labels = {e["label"] for e in body["provenance"]}
+    assert any("LLM" in label for label in labels)
+
+
+def test_predict_provenance_without_llm_falls_back_to_template(client, good_leaf, hf_calls):
+    body = client.post("/predict", files=_upload(good_leaf)).json()  # no llm_prompts fixture
+    prov = {e["field"]: e["source"] for e in body["provenance"]}
+    assert prov["report.initial_message"] == "template_text"
+
+
+def test_predict_provenance_not_sure_path(client, good_leaf, hf_calls, llm_prompts):
+    hf_calls.scores = [
+        LabelScore("Potato___Late_blight", 0.41),
+        LabelScore("Potato___Early_blight", 0.38),
+    ]
+    body = client.post("/predict", files=_upload(good_leaf)).json()
+    prov = {e["field"]: e["source"] for e in body["provenance"]}
+    # Classifier still ran and owns top_k, but no disease was chosen and no reference used.
+    assert prov["top_k"] == "image_classifier"
+    assert "report.disease_id" not in prov
+    assert "report.description" not in prov
+    assert prov["report.initial_message"] == "template_text"  # no LLM call when unsure
+    assert llm_prompts == []
+
+
+def test_predict_provenance_quality_gate_blocks_classifier(client, dark_leaf, hf_calls):
+    body = client.post("/predict", files=_upload(dark_leaf)).json()
+    prov = {e["field"]: e["source"] for e in body["provenance"]}
+    assert prov["quality.brightness"] == "image_quality_checks"
+    assert not any(src == "image_classifier" for src in prov.values())
+
+
 def test_llm_gets_prediction_as_text_only(client, good_leaf, hf_calls, llm_prompts):
     client.post("/predict", files=_upload(good_leaf), data={"additional_symptoms": "rings"})
     system, user = llm_prompts[0]
@@ -161,7 +212,7 @@ def test_chat_context_includes_prediction(monkeypatch):
         captured["message"] = message
         captured["context"] = context
         captured["history"] = history
-        return "reply"
+        return "reply", None
 
     monkeypatch.setattr(chat, "chat_with_context", fake_chat)
     ctx = {
@@ -208,3 +259,53 @@ def test_followup_is_the_next_turn_not_a_new_chat():
     assert "Bell Pepper Bacterial Spot" in messages[3].content
     assert "how the decease will help with sunlight" in messages[3].content
     assert "Reply in Telugu" not in messages[3].content
+    assert "short paragraphs" in messages[0].content
+
+
+def test_chat_fallback_is_markdown_not_a_summary_dump(monkeypatch):
+    from app.services import chat
+
+    monkeypatch.setattr(chat, "chat_with_context", lambda *a, **k: (None, "no_key"))
+    long_summary = (
+        "Looks healthy: Soybean — Healthy. No disease signs were detected on this soybean leaf. "
+        "Keep up good field practices to keep the crop healthy. What you can do now: "
+        "1. Rotate crops and use quality seed. 2. Check a few plants across the field."
+    )
+    reply = chat.handle_chat(
+        "Is a fungicide needed now?",
+        {
+            "diagnosis_name": "Soybean — Healthy",
+            "crop": "Soybean",
+            "status": "healthy",
+            "summary": long_summary,
+        },
+    ).reply
+
+    assert "**This leaf check:** Soybean — Healthy" in reply
+    assert long_summary not in reply
+    assert "Based on your current diagnosis" not in reply
+    assert "**Your question:** Is a fungicide needed now?" in reply
+    assert "No spray is needed" in reply
+    assert "LLM_API_KEY" in reply
+    assert reply.count("\n\n") >= 2
+
+
+def test_chat_surfaces_openai_credit_failure(monkeypatch):
+    from app.services import chat
+
+    monkeypatch.setattr(
+        chat,
+        "chat_with_context",
+        lambda *a, **k: (
+            None,
+            "OpenAI says this API key has **no credits left** (HTTP 429). "
+            "Add billing credits at platform.openai.com, then ask again.",
+        ),
+    )
+    reply = chat.handle_chat(
+        "Is a fungicide needed now?",
+        {"diagnosis_name": "Soybean — Healthy", "crop": "Soybean", "status": "healthy"},
+    ).reply
+    assert "no credits left" in reply
+    assert "LLM_API_KEY" not in reply
+    assert "set an LLM API key" not in reply.lower()

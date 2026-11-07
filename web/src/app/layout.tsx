@@ -1,23 +1,15 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, Noto_Sans_Telugu } from "next/font/google";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/fraunces";
+import "@fontsource-variable/noto-sans-telugu";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-});
-
-const telugu = Noto_Sans_Telugu({
-  subsets: ["telugu"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-telugu",
-});
+// Fonts are self-hosted via @fontsource packages (imported above) instead of
+// next/font/google, which fetches font data from fonts.googleapis.com during
+// `next build` and fails inside Docker builds without network access.
+// globals.css maps these variables to the fontsource family names; Tailwind's
+// font-sans/font-serif utilities keep consuming the same variables.
 
 export const metadata: Metadata = {
   title: "CropCare AI",
@@ -30,10 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${fraunces.variable} ${telugu.variable}`}
-    >
+    <html lang="en">
       <body className="font-sans">
         <LocaleProvider>{children}</LocaleProvider>
       </body>

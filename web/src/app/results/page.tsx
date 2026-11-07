@@ -14,6 +14,27 @@ import { cropName } from "@/i18n";
 import { useLocale } from "@/i18n/LocaleProvider";
 import type { CheckSession } from "@/lib/types";
 
+/** The quality gate records the leaf box it analyzed; numbers come from /predict. */
+function leafOverlay(session: CheckSession): {
+  bbox?: number[] | null;
+  bboxSpace?: number[] | null;
+  imageSize?: number[] | null;
+} {
+  const prep = session.inference?.preprocessing as Record<string, unknown> | undefined;
+  if (!prep) return {};
+  const pick = (key: string): number[] | null => {
+    const value = prep[key];
+    return Array.isArray(value) && value.every((n) => typeof n === "number")
+      ? (value as number[])
+      : null;
+  };
+  return {
+    bbox: pick("chosen_bbox"),
+    bboxSpace: pick("work_size"),
+    imageSize: pick("original_size"),
+  };
+}
+
 export default function ResultsPage() {
   const router = useRouter();
   const { locale, t } = useLocale();
@@ -91,24 +112,26 @@ export default function ResultsPage() {
         </p>
       )}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <CropPhotoCard src={session.previewDataUrl} />
-        <DiagnosisCard
-          report={session.report}
-          lowConfidence={session.lowConfidence}
-          topK={session.topK}
-          inference={session.inference}
-          qualityReason={session.qualityReason}
-        />
+      <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="w-full max-w-md shrink-0 lg:max-w-[22rem] xl:max-w-md">
+          <CropPhotoCard src={session.previewDataUrl} {...leafOverlay(session)} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <DiagnosisCard
+            report={session.report}
+            lowConfidence={session.lowConfidence}
+            topK={session.topK}
+            inference={session.inference}
+            qualityReason={session.qualityReason}
+          />
+        </div>
       </div>
 
       {showChat && (
-        <div className="mt-8">
-          <ChatPanel
-            key={session.id}
-            sessionContext={predictionChatContext(session)}
-          />
-        </div>
+        <ChatPanel
+          key={session.id}
+          sessionContext={predictionChatContext(session)}
+        />
       )}
 
       <p className="mt-8 text-xs text-[var(--color-text-muted)]">

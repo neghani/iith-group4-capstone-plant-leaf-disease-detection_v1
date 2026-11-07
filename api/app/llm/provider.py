@@ -43,7 +43,9 @@ AGRICULTURE_SYSTEM = (
     "Decline in one sentence only when the question is clearly unrelated to plants, crops, or this leaf check. "
     "Do not invent chemical products; prefer general integrated pest management guidance "
     "and remind users to confirm with local extension services for critical decisions. "
-    "The diagnosis comes from an image classifier; if its confidence is low, say the result is uncertain."
+    "The diagnosis comes from an image classifier; if its confidence is low, say the result is uncertain. "
+    "Format for a small chat bubble: short paragraphs, blank lines between them, "
+    "and markdown bullet lists when you give steps. Never paste the whole diagnosis summary back."
 )
 
 
@@ -82,32 +84,57 @@ def build_chat_messages(
     ]
 
 
-def _invoke(messages: list) -> str | None:
+def _farmer_facing_error(exc: BaseException) -> str:
+    text = f"{type(exc).__name__}: {exc}".lower()
+    if (
+        "429" in text
+        or "rate limit" in text
+        or "no credits" in text
+        or "insufficient_quota" in text
+        or "quota" in text
+        or "billing" in text
+    ):
+        return (
+            "OpenAI says this API key has **no credits left** (HTTP 429). "
+            "Add billing credits at platform.openai.com, then ask again."
+        )
+    if "401" in text or "invalid_api_key" in text or "incorrect api key" in text:
+        return "OpenAI rejected the API key. Check `LLM_API_KEY` in `.env` and restart the API."
+    return "The language model call failed. Showing a short canned reply instead."
+
+
+def _invoke(messages: list) -> tuple[str | None, str | None]:
+    """Returns (reply, farmer-facing error). Exactly one side is set on failure paths."""
     for message in messages:
         if not isinstance(message.content, str):
             raise TypeError("LLM accepts text only; images go to the Hugging Face classifier.")
     model = get_chat_model()
     if model is None:
         print("\n>>> [LLM STATUS]: model is None (check .env LLM_API_KEY)\n", flush=True)
-        return None
+        return None, "no_key"
     try:
         response = model.invoke(messages)
         content = response.content
         if isinstance(content, str):
-            return content.strip()
-        return str(content).strip()
+            text = content.strip()
+        else:
+            text = str(content).strip()
+        if not text:
+            return None, "The language model returned an empty reply."
+        return text, None
     except Exception as exc:
         print(f"\n{'='*50}", flush=True)
         print(f">>> [LLM CALL FAILED]: {type(exc).__name__}: {exc}", flush=True)
         traceback.print_exc()
         print(f"{'='*50}\n", flush=True)
-        return None
+        return None, _farmer_facing_error(exc)
 
 
 def generate_text(system: str, user: str) -> str | None:
     if not isinstance(system, str) or not isinstance(user, str):
         raise TypeError("LLM accepts text only; images go to the Hugging Face classifier.")
-    return _invoke([SystemMessage(content=system), HumanMessage(content=user)])
+    text, _err = _invoke([SystemMessage(content=system), HumanMessage(content=user)])
+    return text
 
 
 def chat_with_context(
@@ -115,7 +142,8 @@ def chat_with_context(
     context_summary: str,
     history: str = "",
     reply_instruction: str = "",
-) -> str | None:
+) -> tuple[str | None, str | None]:
+    """Returns (reply, error). `error` is `no_key`, a farmer-facing string, or None on success."""
     return _invoke(
         build_chat_messages(user_message, context_summary, history, reply_instruction)
     )
