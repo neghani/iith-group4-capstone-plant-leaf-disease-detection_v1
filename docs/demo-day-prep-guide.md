@@ -215,53 +215,245 @@ Also exercise UI helpers on `/check`: **Show a retake**, **Show “I'm not sure�
 
 ---
 
-## Trainer questions — short answers
+## Trainer Q&A prep (rehearse out loud)
 
-**Why MobileNet?** Brief preference, CPU-friendly, and it won our field bake-off vs ResNet.
+Answers match the **MobileNet demo path** (`@v1.2` pin; field number from `@v1.1`
+one-shot **137/284**). If you blank, say the number and the limit — don’t invent.
 
-**Why not freeze the backbone?** Full fine-tune; lesions differ from ImageNet. Two-stage
-warmup is a fair next experiment; we didn’t run it.
+### Deep learning / ML
 
-**Why macro-F1?** Class counts ~150–5.5k. Accuracy hides weak small classes.
+**Q1. Why MobileNetV2?**
+Small, CPU-friendly, depthwise-separable, in the brief. We also ran ResNet-18 through the
+same 284 field protocol and MobileNet won (48.2% vs ~34%). Demo pin is MobileNet; ResNet
+is the comparison story, not the live path.
 
-**99% too good?** Yes for deployment. Near-dups + lab background. Trust 48.2% on 284.
+**Q2. What is transfer learning and why use it?**
+Start from ImageNet weights (edges / textures), replace the head with 38-way, fine-tune on
+PlantVillage then PlantDoc mix. Converges in a few epochs on ~43k images; better than from
+scratch for us.
 
-**Softmax overconfident?** Always picks something. Threshold, top-3, crop hint, OOD margin,
-gate. Still fails some wrong-crop cases (strawberry).
+**Q3. Did you freeze layers?**
+No — full fine-tune. Lesions aren’t ImageNet textures. Head-only warmup then unfreeze with
+a smaller LR is a fair next experiment; we didn’t run it.
 
-**Threshold 0.5?** Sweep on in-distribution / PlantDoc val rules. Tuned before final test;
-not retuned after seeing 48.2%.
+**Q4. Why macro-F1 and not accuracy?**
+Classes are imbalanced (~150 to ~5.5k). Accuracy is dominated by big classes. Macro-F1
+weights each class equally; we select checkpoints on val macro-F1 (PlantDoc val in stage 2).
 
-**Train/serve skew?** API leaf crop → 256 square; processor centre-crops 224. Same as
-`preprocessor_config.json`.
+**Q5. 99% sounds too good. Is it?**
+Real on the PlantVillage held-out split, optimistic for the field: near-duplicate leaf shots
+and uniform backgrounds. Say it yourself: lab ceiling vs honest **137/284 (48.2%)** on the
+one-shot field-style set. `v1.2` Hub card is ~98% lab — same story.
 
-**Blur detection?** Leaf-only re-blur ratio + variance floor at fixed scale. Whole-frame
-Laplacian depended on resolution.
+**Q6. What is in your augmentation and why?**
+Random resized crop, H/V flips, rotation up to 180°, colour jitter, random Gaussian blur.
+Meant to imitate tilted / inverted / partial / dim / soft phone photos. PlantDoc path uses a
+wider RRC scale than PlantVillage.
 
-**Leaf without a CNN?** HSV + focus filter + components. Fast, keeps API torch-free.
-Fails on fully brown leaves → whole-frame fallback.
+**Q7. Explain the confusion matrix. What gets confused?**
+Rows true, columns predicted. Look-alikes: tomato early blight vs Septoria vs target spot;
+corn leaf spots / northern blight. Tiny-support classes (e.g. potato healthy on PV test)
+make recall noisy — quote support next to the %.
 
-**Why HF not Kaggle Models for publish?** Versioned tags + `from_pretrained(revision=…)` +
-Spaces. Data came from Kaggle.
+**Q8. What is top-3 accuracy and why show it?**
+Correct if the true label is in the top three scores. Lab top-3 is basically saturated. We
+show top-3 to the farmer and the LLM so ambiguity is visible.
 
-**Why own container?** HF serverless: “model not supported” for this fine-tune.
+**Q9. What learning rate and why?**
+Stage 1 style: AdamW ~5e-4, cosine, warmup. Stage 2 (PlantDoc mix): lower LR (~1e-4) from
+`v1.0` / stage-1 weights, label smoothing 0.1. We didn’t publish a full LR sweep — say
+“common fine-tune practice, not heavily tuned.”
 
-**Is it agentic?** Orchestrated workflow with tools (classifier, KB) and conditional exits.
-We didn’t give the LLM free tool choice on purpose — advice-like domain.
+**Q10. What is softmax and why is it overconfident?**
+Softmax forces scores to sum to 1; it always picks something. No “none of the above.”
+Mitigations: confidence threshold, top-3, crop-hint check, quality gate, OOD margin
+(`ood_threshold=0.05` → flat softmax → `not_sure`). Still fails some wrong-crop cases
+(strawberry → tomato on ResNet; MobileNet is better but not solved — see OOD notes).
 
-**LLM never sees the image?** Specialised vision model decides; language model explains.
-Also cost / hallucination control. Enforced in code.
+**Q11. How did you pick the 0.5 threshold?**
+Sweep; pick by a coverage / precision-style rule on validation (PlantDoc val for stage 2).
+Live pin: **0.50**, T=**0.885**. Not retuned after seeing the 48.2% final number.
 
-**LLM down?** Structured fields from KB; template summary; chat fallback.
+**Q12. How do you prevent train/serve skew?**
+Same processor config: resize short side 256, centre-crop 224, ImageNet mean/std. API crops
+the leaf, pads square, resizes once to 256 so the Space does a clean crop.
 
-**Biggest weakness?** Field generalisation + wrong-crop confidence. Measured; next step is
-crop head / negatives, not another backbone flip.
+**Q13. What would you do to improve real-world accuracy?**
+Measure first (we did). Then: more phone-like data (keep test held out), background-robust
+aug, crop-level head / negatives for OOD, calibration refresh — only then a bigger backbone.
+We already tried ResNet; it lost on our field set.
 
-**Changed from proposal?** Next.js, OpenAI-compatible LLM, leaf-aware gate, Telugu not
-Hindi, MobileNet kept after ResNet bake-off.
+**Q14. Why not object detection or segmentation?**
+One leaf, one label. Boxes/masks are expensive. We do cheap colour+focus localisation only
+for crop + gate.
 
-**Two more weeks?** Cluster splits for leakage, phone-photo set, crop-level head, KB
-sources, Hindi if marks need it.
+**Q15. Why a stratified split with a seed?**
+Every class in train/val/test in proportion; `splits.json` + seed 42 for reproducibility.
+Near-dup leakage across splits is a known limit (random per-image, not per-leaf cluster).
+
+**Q16. Why did ResNet lose the bake-off?**
+Same 284 images, strategy B. MobileNet 137/284; ResNet v1.2 (sampler fix) 98/284; more
+“not sure” on ResNet. Stronger on clean lab photos didn’t transfer. Talk sheet:
+`docs/model-bakeoff.md`.
+
+**Q17. What is `v1.2` vs `v1.1`?**
+`v1.1` = first PlantDoc stage-2 release with the locked 284 one-shot (48.2%). `v1.2` =
+clean ImageNet → PV → PlantDoc retrain with the PlantDoc sampler fix; Hub tag + live pin.
+We did **not** re-burn the final test set — quote 48.2% from `v1.1` as the field number.
+
+### Image quality gate
+
+**Q18. How do you detect blur?**
+Laplacian variance is resolution- and background-sensitive. We find the leaf, fix scale
+(≤256), use a **re-blur ratio** plus an absolute variance floor (reject if
+`ratio < 0.78 or variance < 25`).
+
+**Q19. How do you find the leaf without a neural net?**
+HSV vegetation mask, drop out-of-focus vegetation, morph, connected components, rank by
+focus × size × centrality. Keeps the API image torch-free (~50 ms). CNN detector can
+replace the same function later.
+
+**Q20. What fails?**
+Heavily brown/yellow leaves can fool the colour mask → whole-frame fallback. Thresholds
+hand-calibrated on a blur sweep + ~40 PV images, not a labelled good/bad phone set.
+
+**Q21. Why run the gate twice?**
+`/quality-check` for fast UX; `/predict` re-runs server-side because the client isn’t
+trusted.
+
+**Q22. Why did the old gate reject sharp phone photos?**
+Variance computed at native resolution. Same sharp leaf scored ~40 at 1024 px and ~360 at
+256 px. Simulated 12 MP: old gate 0/40. Details in `docs/challenges-and-approach.md`.
+
+### MLOps / publishing
+
+**Q23. Why Hugging Face and not Kaggle for publishing?**
+Data from Kaggle. Weights need versioned tags + `from_pretrained(..., revision=…)` + a free
+container host (Spaces / our Docker). Kaggle Models doesn’t replace that for our loader.
+
+**Q24. How do you version and reproduce?**
+Seed, `splits.json`, `run_info.json`, model card, Hub tags (`v1.0` baseline, `v1.1` field
+report, `v1.2` live). API/Space read `shared/release.json` (copy to `hf_space/release.json`
+after pin changes). Don’t leave stale `HF_MODEL_*` in `.env`.
+
+**Q25. Why not HF serverless inference?**
+It doesn’t host this custom fine-tune (“Model not supported by provider hf-inference”).
+We serve the pinned revision from `hf_space/`.
+
+**Q26. How do you handle secrets?**
+`.env` git-ignored; `.env.example` committed; Colab secrets; `publish.py --check` for write
+token / owner. Never open `.env` on the projector.
+
+**Q27. How did you avoid Colab’s stale-code problem?**
+`notebooks/colab_sync.py` hard-resets to `origin/main`; don’t `files.upload()` training code.
+
+**Q28. How do you prove which model answered?**
+Space stamps `x-model-id` / `x-model-revision`. `/predict` returns `inference` with
+`model_verified`. `/health?probe=true` must match the pin.
+
+### Agentic / LLM
+
+**Q-A1. Is this really agentic?**
+Honest: orchestrated **workflow** with conditional routing (error, unsupported crop, retake,
+not_sure, low confidence / mismatch), deterministic tools (classifier, KB lookup), one
+generative step. We did **not** let the LLM choose tools in a loop — predictability over
+autonomy for advice-like output. Stronger agentic option later: tool-calling chat.
+
+**Q-A2. Why LangGraph?**
+Explicit nodes/edges, conditional exits, typed state (`DiagnosisState`). Easy to show and
+test (`test_agent_flow.py`).
+
+**Q-A3. How do you stop hallucination?**
+(1) LLM never diagnoses, (2) grounded in curated `diseases.json`, (3) prompt forbids product
+names/doses, (4) low conf / mismatch → possible match + expert flag, (5) disclaimer,
+(6) template fallback if LLM is down.
+
+**Q-A4. How do you keep chat on-topic?**
+Keyword pre-filter + system prompt that declines non-agri in one line. Keyword layer is
+brittle (“bugs eating my cabbage” can miss); prompt is the second layer. Classifier guard =
+future work.
+
+**Q-A5. Why does the LLM never see the image?**
+Separation + safety: specialised model decides, language model explains. Avoids vision-LLM
+hallucination/cost. `generate_text` is text-only by construction.
+
+**Q-A6. How is the LLM swappable?**
+OpenAI-compatible client; change `LLM_MODEL` / `LLM_BASE_URL` (Grok: `https://api.x.ai/v1`).
+Proposal said Grok first; default is OpenAI-shaped.
+
+**Q-A7. What if the LLM is down?**
+Structured fields from KB; `initial_message` falls back to template; chat has a fallback
+reply. Rehearse demo **with and without** `LLM_API_KEY`.
+
+**Q-A8. Where is memory/state?**
+Browser `sessionStorage` sends `session_context` on each `/chat`. Server is stateless — no
+diagnosis DB for the demo.
+
+**Q-A9. How do you evaluate the LLM output?**
+API tests with a fake LLM; provenance tracks whether the summary was rewritten. No formal
+human LLM eval yet — say that if asked. Optional next: evaluator node vs KB.
+
+**Q-A10. How would you add RAG?**
+Replace dict lookup with embeddings over extension docs; cite sources. Corpus is small
+enough for exact lookup today; KB still needs `sources` fields.
+
+**Q-A11. Regional language?**
+Shipped **Telugu** MVP (UI strings + glossary-backed translate), not the proposal’s full
+Hindi/IndicTrans stack. Toggle in the UI; needs LLM for diagnosis TE. Don’t claim Hindi.
+
+### System design
+
+**Q29. Why separate inference-service from the API?**
+Keeps torch out of the API image, scales independently, swap host via `HF_ENDPOINT_URL`.
+
+**Q30. What if the model server is down?**
+Graph → error node → “Analysis unavailable”. API doesn’t crash. Checklist item: stop
+inference and verify.
+
+**Q31. How would you scale this?**
+Stateless API behind a load balancer, model replicas, queue for spikes, GPU or ONNX/int8
+later, CDN for UI.
+
+**Q32. Security / privacy?**
+Demo: no auth, no image store, history only in the browser. Production: tight CORS,
+rate-limit, auth, upload scanning, retention. Compose CORS is wide open on purpose for demo.
+
+**Q33. Main risk of wrong advice?**
+Misdiagnosis → wrong spray. Mitigations: expert-confirmation flags, disclaimer, no doses in
+LLM text, top-3, crop mismatch / unsupported exits.
+
+**Q34. How do you test?**
+`api` pytest with fake classifier / fake LLM: gate blocks before model, healthy / low-conf /
+HF failure / text-only prompt, release pin tests. Model quality: `evaluate.py`,
+`final_test.py` (guarded — don’t re-run casually), compare bake-off artefacts.
+
+**Q35. Browser vs Docker networking?**
+Browser hits `http://localhost:8000`. API hits `http://inference-service:7860/` inside
+compose. Different “localhost”s — classic trap. `NEXT_PUBLIC_API_URL` is a **build arg**;
+change needs rebuild.
+
+### Process / honesty
+
+**Q36. How much did AI write?**
+Be truthful about what you can explain line-by-line. Self-test at the bottom of this doc.
+Trainers prefer honest + understood over polished fog.
+
+**Q37. Biggest weakness?**
+Field generalisation of a lab-trained model, and wrong-crop confidence. Both measured;
+next step is crop head / negatives / more phone data — not flipping back to ResNet.
+
+**Q38. What changed from the proposal?**
+Next.js instead of Streamlit; OpenAI-compatible LLM; leaf-aware gate; Telugu MVP not full
+Hindi; MobileNet kept after ResNet bake-off; compose has three services not “two.”
+
+**Q39. What would you do with two more weeks?**
+Cluster-based splits (leakage), real phone set, crop-level head, KB source citations,
+learned gate thresholds, Hindi if marks demand it.
+
+**Q40. Which numbers should I trust?**
+Lab accuracy/F1 = in-distribution ceiling. **137/284 (48.2%)** = deployment-shaped honesty
+for MobileNet stage-2. Threshold sweep = how often we say “not sure.” Don’t mix ResNet
+lab flex with MobileNet field claim.
 
 ---
 
