@@ -1,8 +1,14 @@
 # AI-Powered Plant Disease Detection and Farmer Assistance
 
-A farmer uploads a photo of a crop leaf. A quality gate checks the photo, the fine-tuned ResNet-18 on Hugging Face predicts the disease, and a LangGraph agent turns the prediction into treatment guidance with an optional text-only LLM. Follow-up chat stays in the agriculture domain.
+A farmer uploads a photo of a crop leaf. A quality gate checks the photo, a fine-tuned
+**MobileNetV2** on Hugging Face predicts the disease, and a LangGraph agent turns the
+prediction into treatment guidance with an optional text-only LLM. Follow-up chat stays in
+the agriculture domain.
 
-Capstone Project 7, Group 4.
+Capstone Project 7, Group 4 (CropCare AI).
+
+**Documentation pack:** [docs/README.md](docs/README.md) — overview, architecture, evaluation,
+API/user guide, runbook, limitations, demo Q&A.
 
 ## UI Prototype
 
@@ -11,10 +17,15 @@ Capstone Project 7, Group 4.
 
 ## Project Status
 
-- **Phase 1 (model):** Live pin is ResNet-18 `@v1.1` on [`neghani/plantvillage-resnet18`](https://huggingface.co/neghani/plantvillage-resnet18) (`shared/release.json`, threshold 0.55, T=0.936). MobileNetV2 `@v1.1` remains the previous pin; see [model/README.md](model/README.md)
-- **Phase 2 (demo):** FastAPI + LangGraph agent, **Next.js (CropCare AI) UI**, Docker Compose — implemented
-- **Phase 5:** Phase 1 Hugging Face model wired into the API (two-step quality gate, remote classifier, prediction-driven LLM) — implemented
-- **Hindi UI / translation:** planned
+- **Phase 1 (model):** Live pin is **MobileNetV2 `@v1.2`** on
+  [`neghani/plantvillage-mobilenetv2`](https://huggingface.co/neghani/plantvillage-mobilenetv2)
+  (`shared/release.json`: threshold **0.5**, T=**0.885**, crop strategy **B**, OOD **0.05**).
+  ResNet-18 was tried in a bake-off and lost on the field set — see
+  [docs/model-bakeoff.md](docs/model-bakeoff.md).
+- **Field-style result (locked):** **137/284 (48.2%)** on MobileNet `@v1.1` (same protocol;
+  `@v1.2` not re-burned). Lab PlantVillage ~98–99% — do not mix the two.
+- **Phase 2 (demo):** FastAPI + LangGraph, Next.js UI, Docker Compose — implemented
+- **Localisation:** English + **Telugu** MVP (Hindi not shipped)
 - **Out of scope for demo:** authentication, persistent image storage, server-side history
 
 ## Tech Stack
@@ -24,30 +35,36 @@ Capstone Project 7, Group 4.
 | API and core logic | [FastAPI](https://fastapi.tiangolo.com/) | `/health`, `/quality-check`, `/predict`, `/chat` |
 | Agent flow | [LangGraph](https://langchain-ai.github.io/langgraph/) | Predict → knowledge → report → safety (quality gate runs before the graph) |
 | Data validation | [Pydantic](https://docs.pydantic.dev/) | API and diagnosis report schemas |
-| User interface | [Next.js](https://nextjs.org/) + Tailwind | Figma-aligned CropCare AI shell |
-| Disease model | ResNet-18 `@v1.1` live pin ([Hugging Face](https://huggingface.co/neghani/plantvillage-resnet18)); MobileNetV2 `@v1.1` previous pin | 38 classes; pin + `ood_threshold` in `shared/release.json`; served by `hf_space/` |
-| LLM | OpenAI ChatGPT API (optional) | Text only: farmer summary from the prediction, and chat; template fallback without key |
+| User interface | [Next.js](https://nextjs.org/) + Tailwind | Figma-aligned CropCare AI shell; EN / Te |
+| Disease model | MobileNetV2 `@v1.2` ([Hugging Face](https://huggingface.co/neghani/plantvillage-mobilenetv2)) | 38 classes; pin in `shared/release.json`; served by `hf_space/` |
+| LLM | OpenAI-compatible API (optional) | Text only: farmer summary + chat; KB/template fallback without key |
 | Containers | Docker Compose | `inference-service` + `api-service` + `ui-service` |
 
-## Architecture
+## Architecture (short)
 
-1. Next.js (`/check`) shrinks big phone photos in the browser (long side 2048 px), then sends the image to `POST /quality-check`. The API decodes once, finds the sharpest leaf (colour + focus), and checks brightness and sharpness on that leaf at a fixed scale, so large photos are not penalised. On failure the farmer gets retake guidance and nothing else runs.
-2. On pass, the UI sends the image to `POST /predict`. The API re-runs the same gate, then crops the best leaf to a 256 px square JPEG (the size the classifier's own preprocessing expects).
-3. The API calls the Hugging Face classifier at `HF_ENDPOINT_URL` and gets the top-3 labels with scores. The response's `inference` block records which model/revision answered (`model_verified` = reported by the server itself). Below `CONFIDENCE_THRESHOLD` (0.55, the ResNet v1.1 threshold) the result is marked "Possible match" and needs expert confirmation.
-4. Curated `api/data/knowledge/diseases.json` (all 38 classes) grounds symptoms, actions and monitoring. If the farmer's crop hint disagrees with the predicted crop the result is downgraded; a crop the model was never trained on gets a "Crop not supported" report instead of a disease name.
-5. The LLM gets only text: the top-3 predictions, the confidence level, the knowledge entry, and the farmer's notes. It writes the farmer summary. The image is never sent to the LLM.
-6. Results and history live in **sessionStorage** only; `POST /chat` uses the prediction context (diagnosis, confidence, top-3) from the client.
+1. Next.js (`/check`) shrinks large photos in the browser, then `POST /quality-check`. The API
+   finds the sharpest leaf and checks brightness / blur; on fail → retake, no model call.
+2. On pass, `POST /predict` re-runs the gate, crops strategy **B** to a 256 px square, and
+   calls the inference service (`HF_ENDPOINT_URL`).
+3. Top-3 + scores come back; below `confidence_threshold` (0.5) → “Possible match” /
+   not-sure path. Crop-hint mismatch or unsupported crop downgrades the report.
+4. Curated `api/data/knowledge/diseases.json` grounds symptoms and actions.
+5. The LLM receives **text only** (never the image). Chat is topic-guarded to agriculture.
+6. Results / history stay in **sessionStorage** on the client.
+
+Full diagrams: [docs/02-architecture.md](docs/02-architecture.md).
 
 ## Repository Layout
 
 ```text
 .
-├── api/
+├── api/                 # FastAPI + LangGraph + KB
 ├── web/                 # Next.js CropCare AI UI
-├── hf_space/            # inference server for the HF model (Space or local container)
-├── model/               # Phase 1: train / evaluate / push MobileNetV2 to Hugging Face
-├── notebooks/           # Colab notebook driving model/ scripts
-├── docs/
+├── hf_space/            # inference server (Hub pin)
+├── model/               # train / evaluate / push MobileNetV2
+├── shared/              # release.json + vision gate/crop
+├── notebooks/           # Colab drivers
+├── docs/                # capstone deliverables
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -58,7 +75,7 @@ Capstone Project 7, Group 4.
 ### Prerequisites
 
 - Docker and Docker Compose, or Python 3.11+ and Node 20+
-- Optional: `LLM_API_KEY` from [OpenAI](https://platform.openai.com/)
+- Optional: `LLM_API_KEY` from [OpenAI](https://platform.openai.com/) (or compatible base URL)
 
 ### Configuration
 
@@ -66,21 +83,25 @@ Capstone Project 7, Group 4.
 cp .env.example .env
 ```
 
-Set `LLM_API_KEY` for LLM-polished summaries and chat. Set `NEXT_PUBLIC_API_URL=http://localhost:8000` so the browser can reach the API when using Docker.
+Set `LLM_API_KEY` for polished summaries and chat. Set
+`NEXT_PUBLIC_API_URL=http://localhost:8000` so the browser reaches the API under Docker.
 
-The disease model is called over HTTP at `HF_ENDPOINT_URL`. Hugging Face serverless inference does not host this fine-tune, so either deploy [`hf_space/`](hf_space/README.md) as a Space and set `HF_ENDPOINT_URL=https://<space-host>/`, or leave it empty with Docker Compose to use the local `inference-service`.
+**Do not** set `HF_MODEL_ID` / `HF_MODEL_REVISION` / `CALIBRATION_TEMPERATURE` in `.env`
+unless you intentionally override the pin — stale values desync Docker from `release.json`.
 
 ### Run with Docker
-
-Three containers (UI :3000, API :8000, model :7860):
 
 ```bash
 docker compose up --build
 ```
 
-The inference container loads **`shared/release.json`** (copied into `hf_space/release.json` at build time). Do not set `HF_MODEL_ID` / `HF_MODEL_REVISION` in `.env` unless you are deliberately overriding that pin — stale values will make Docker serve the wrong Hub model while the API pin still reads `release.json`.
+| URL | What |
+|-----|------|
+| http://localhost:3000/check | Farmer UI |
+| http://localhost:8000/docs | OpenAPI |
+| http://localhost:8000/health?probe=true | Pin + inference alive |
 
-After you change the live pin:
+After changing the live pin:
 
 ```bash
 cp shared/release.json hf_space/release.json
@@ -88,50 +109,45 @@ docker compose build --no-cache
 docker compose up
 ```
 
-Check: `curl -s http://localhost:7860/health` and `curl -s 'http://localhost:8000/health?probe=true'` should show the same `hf_model_id` / revision as `shared/release.json`.
-
-All three services in **one** container (one port, same as Render):
+One-container profile (Render-style):
 
 ```bash
 docker compose --profile all up --build cropcare
 ```
 
-- **Farmer UI:** http://localhost:3000 — `/check` upload, `/results` diagnosis + chat
-- **API:** http://localhost:8000 (three-container) or http://localhost:3000/docs (one-container)
+Longer ops notes: [docs/06-setup-and-runbook.md](docs/06-setup-and-runbook.md).
 
-### Deploy one machine on Render
+### Deploy (one machine)
 
-Language **Docker**, Dockerfile Path **`Dockerfile`**, context **repo root**. Or connect the repo and apply `render.yaml`. First build pulls the Hub model into the image; use a **Standard** (2 GB) instance — starter 512 MB will OOM. After deploy, open `https://<service>.onrender.com/check`.
-
-### Deploy one machine on Railway
-
-New project → this GitHub repo. [`railway.toml`](railway.toml) selects the root Dockerfile, health-checks `/health`, and waits up to 5 minutes for the model to load. Generate a domain, set RAM to **at least 2 GB**, and optionally add `LLM_API_KEY`. Open `https://<service>.up.railway.app/check`.
+- **Render:** Docker, root `Dockerfile`, ≥ **2 GB** RAM (starter OOM).
+- **Railway:** `railway.toml`; generate domain; ≥ 2 GB; optional `LLM_API_KEY`.
 
 ### Run locally (without Docker)
 
 ```bash
-# Terminal 1 — model inference server (needs torch + transformers)
+# Terminal 1 — inference
 cd hf_space && pip install -r requirements.txt && uvicorn app:app --port 7860
 
 # Terminal 2 — API
-cd api && source .venv/bin/activate  # create venv + pip install -r requirements.txt first
-HF_ENDPOINT_URL=http://localhost:7860/ PYTHONPATH=. uvicorn app.main:app --reload --port 8000
+cd api && source .venv/bin/activate
+HF_ENDPOINT_URL=http://localhost:7860/ PYTHONPATH=..:. \
+  uvicorn app.main:app --reload --port 8000
 
 # Terminal 3 — UI
 cd web && npm install
 NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 ```
 
-Open http://localhost:3000
-
 ## API
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | Health, LLM key configured, HF model id / revision / endpoint configured; `?probe=true` also asks the inference server which model it serves |
-| POST | `/quality-check` | Step 1: multipart image → `{ ok, message, brightness, blur_score, leaf_found, leaf_coverage, original_size }` (no model call) |
-| POST | `/predict` | Step 2: multipart image → gate re-check, HF prediction (`top_k`), structured diagnosis report, `inference` provenance |
-| POST | `/chat` | JSON `{ "message", "session_context" }` → agriculture-focused reply |
+| GET | `/health` | Health + pin; `?probe=true` verifies inference server |
+| POST | `/quality-check` | Gate only (no model) |
+| POST | `/predict` | Gate + classify + diagnosis report |
+| POST | `/chat` | Agriculture-focused follow-up |
+
+Details: [docs/05-api-and-user-guide.md](docs/05-api-and-user-guide.md).
 
 ## Tests
 
@@ -140,14 +156,27 @@ cd api && pip install -r requirements-dev.txt
 PYTHONPATH=..:. pytest -q
 ```
 
-## Design notes
+## Capstone docs
 
-Challenges hit and the approach taken (large-photo handling, HF model verification, how the prediction drives the agent, open issues): [docs/challenges-and-approach.md](docs/challenges-and-approach.md).
-
-## Demo checklist
-
-See [docs/phase2-demo-checklist.md](docs/phase2-demo-checklist.md).
+| Doc | Purpose |
+|-----|---------|
+| [docs/README.md](docs/README.md) | Index of all deliverables |
+| [docs/00-executive-summary.md](docs/00-executive-summary.md) | One-pager |
+| [docs/01-project-overview.md](docs/01-project-overview.md) | Problem / scope / what shipped |
+| [docs/02-architecture.md](docs/02-architecture.md) | System diagrams |
+| [docs/03-design-decisions.md](docs/03-design-decisions.md) | Why these choices |
+| [docs/09-training-story.md](docs/09-training-story.md) | Lab → PlantDoc → field (DL story) |
+| [docs/10-slide-visuals.md](docs/10-slide-visuals.md) | Charts + product screenshots |
+| [docs/04-evaluation-report.md](docs/04-evaluation-report.md) | Metrics to quote |
+| [docs/05-api-and-user-guide.md](docs/05-api-and-user-guide.md) | UI + API |
+| [docs/06-setup-and-runbook.md](docs/06-setup-and-runbook.md) | Run / demo ops |
+| [docs/07-limitations-and-future-work.md](docs/07-limitations-and-future-work.md) | Gaps + next |
+| [docs/08-submission-checklist.md](docs/08-submission-checklist.md) | Hand-in ticks |
+| [docs/challenges-and-approach.md](docs/challenges-and-approach.md) | Engineering log |
+| [docs/demo-day-prep-guide.md](docs/demo-day-prep-guide.md) | Pitch + Q&A |
+| [docs/phase2-demo-checklist.md](docs/phase2-demo-checklist.md) | Day-of checklist |
 
 ## Disclaimer
 
-Treatment suggestions are for general guidance only and must be validated with local agricultural experts before critical action.
+Treatment suggestions are for general guidance only and must be validated with local
+agricultural experts before critical action.

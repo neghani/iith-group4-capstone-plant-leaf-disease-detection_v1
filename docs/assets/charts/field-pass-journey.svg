@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="420" viewBox="0 0 920 420" role="img" aria-labelledby="t d">
+  <title id="t">Field pass rate journey</title>
+  <desc id="d">MobileNet pass rate on locked 284-image set: v1.0 18.7%, v1.1 48.2%, goal 50%</desc>
+  <rect width="920" height="420" fill="#f7f4ef"/>
+  <text x="40" y="42" font-family="Georgia, serif" font-size="22" fill="#1a2e1a">From lab ceiling to field pass rate</text>
+  <text x="40" y="68" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#4a5a4a">Locked 284 one-shot (strategy B). Live pin v1.2 uses same recipe + sampler fix — field set not re-burned.</text>
+  <!-- goal line at 50% -->
+  <line x1="120" y1="120" x2="120" y2="340" stroke="#c8c2b8" stroke-width="1"/>
+  <line x1="120" y1="340" x2="860" y2="340" stroke="#c8c2b8" stroke-width="1"/>
+  <line x1="120" y1="220" x2="860" y2="220" stroke="#b85c38" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="868" y="224" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#b85c38">50% goal</text>
+  <!-- bars: scale 0-100% maps y 340..120 (220px) -->
+  <!-- v1.0 18.7% -> height 41.14 -->
+  <rect x="200" y="298.9" width="120" height="41.1" fill="#6b7c6b"/>
+  <text x="260" y="290" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1a2e1a">18.7%</text>
+  <text x="260" y="362" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a2e1a">v1.0</text>
+  <text x="260" y="378" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#5a6a5a">PlantVillage only</text>
+  <!-- v1.1 48.2% -> height 106.04 -->
+  <rect x="400" y="233.96" width="120" height="106.04" fill="#2f6b3a"/>
+  <text x="460" y="224" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1a2e1a">48.2%</text>
+  <text x="460" y="362" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a2e1a">v1.1 ★</text>
+  <text x="460" y="378" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#5a6a5a">+ PlantDoc stage 2</text>
+  <!-- lab marker note -->
+  <text x="640" y="160" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a2e1a">Lab held-out ~98–99%</text>
+  <text x="640" y="180" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">(different test — do not plot</text>
+  <text x="640" y="196" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">on the same axis as field)</text>
+  <text x="640" y="230" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2f6b3a">+29.6 pp vs v1.0</text>
+  <text x="640" y="248" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#5a6a5a">bootstrap CI +23.9 to +35.2</text>
+  <text x="40" y="408" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#6a7a6a">Source: model/final_report.md · MobileNet · 137/284</text>
+</svg>

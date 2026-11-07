@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360" role="img">
+  <rect width="900" height="360" fill="#f7f4ef"/>
+  <text x="36" y="40" font-family="Georgia, serif" font-size="22" fill="#1a2e1a">Two numbers — keep them apart</text>
+  <rect x="36" y="70" width="400" height="240" fill="#fff" stroke="#d5cfc4"/>
+  <rect x="464" y="70" width="400" height="240" fill="#fff" stroke="#d5cfc4"/>
+  <text x="56" y="100" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5a6a5a">LAB (PlantVillage held-out)</text>
+  <text x="56" y="180" font-family="Georgia, serif" font-size="48" fill="#2f6b3a">~98–99%</text>
+  <text x="56" y="210" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a2e1a">Accuracy / macro-F1 ceiling</text>
+  <text x="56" y="236" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">Near-dup leakage risk · plain backgrounds</text>
+  <text x="56" y="256" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">Useful for training health — not phones</text>
+  <text x="484" y="100" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5a6a5a">FIELD-STYLE (locked 284)</text>
+  <text x="484" y="180" font-family="Georgia, serif" font-size="48" fill="#b85c38">48.2%</text>
+  <text x="484" y="210" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a2e1a">137/284 end-to-end pass</text>
+  <text x="484" y="236" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">Web photos · below 50% goal</text>
+  <text x="484" y="256" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">Quote this for deployment honesty</text>
+</svg>

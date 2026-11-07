@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="412" viewBox="0 0 880 412" role="img">
+  <rect width="880" height="412" fill="#f7f4ef"/>
+  <text x="32" y="32" font-family="Georgia, serif" font-size="20" fill="#1a2e1a">Where field passes fail (v1.1, 284 set)</text>
+  <text x="32" y="54" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5a6a5a">Pass = correct and confident enough. Lowest 12 classes shown. Source: model/final_report.md</text>
+
+<text x="32" y="84" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Tomato bacterial spot</text>
+<rect x="280" y="70" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="70" width="2.0" height="18" fill="#b85c38" rx="2"/>
+<text x="772" y="84" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">0/11</text>
+<text x="32" y="112" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Cherry healthy</text>
+<rect x="280" y="98" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="98" width="2.0" height="18" fill="#b85c38" rx="2"/>
+<text x="772" y="112" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">0/12</text>
+<text x="32" y="140" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Tomato mosaic virus</text>
+<rect x="280" y="126" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="126" width="2.0" height="18" fill="#b85c38" rx="2"/>
+<text x="772" y="140" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">0/12</text>
+<text x="32" y="168" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Tomato leaf mold</text>
+<rect x="280" y="154" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="154" width="60.0" height="18" fill="#b85c38" rx="2"/>
+<text x="772" y="168" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">1/8</text>
+<text x="32" y="196" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Apple scab</text>
+<rect x="280" y="182" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="182" width="80.0" height="18" fill="#b85c38" rx="2"/>
+<text x="772" y="196" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">2/12</text>
+<text x="32" y="224" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Tomato healthy</text>
+<rect x="280" y="210" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="210" width="96.0" height="18" fill="#b85c38" rx="2"/>
+<text x="772" y="224" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">2/10</text>
+<text x="32" y="252" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Tomato late blight</text>
+<rect x="280" y="238" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="238" width="130.9" height="18" fill="#c4a35a" rx="2"/>
+<text x="772" y="252" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">3/11</text>
+<text x="32" y="280" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Apple cedar rust</text>
+<rect x="280" y="266" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="266" width="174.5" height="18" fill="#c4a35a" rx="2"/>
+<text x="772" y="280" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">4/11</text>
+<text x="32" y="308" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Corn NLB</text>
+<rect x="280" y="294" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="294" width="184.6" height="18" fill="#c4a35a" rx="2"/>
+<text x="772" y="308" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">5/13</text>
+<text x="32" y="336" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Potato late blight</text>
+<rect x="280" y="322" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="322" width="213.3" height="18" fill="#c4a35a" rx="2"/>
+<text x="772" y="336" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">4/9</text>
+<text x="32" y="364" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Tomato early blight</text>
+<rect x="280" y="350" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="350" width="218.2" height="18" fill="#c4a35a" rx="2"/>
+<text x="772" y="364" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">5/11</text>
+<text x="32" y="392" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">Blueberry healthy</text>
+<rect x="280" y="378" width="480" height="18" fill="#e8e2d8" rx="2"/>
+<rect x="280" y="378" width="221.5" height="18" fill="#c4a35a" rx="2"/>
+<text x="772" y="392" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a2e1a">6/13</text>
+</svg>
