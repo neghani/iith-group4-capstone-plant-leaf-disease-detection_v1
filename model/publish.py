@@ -136,6 +136,24 @@ def verify_access(api, repo_id: str) -> str:
     return name
 
 
+def hub_tag_exists(api, repo_id: str, tag: str) -> bool:
+    """True when the Hub model repo already has this git tag."""
+    refs = api.list_repo_refs(repo_id, repo_type="model")
+    return any(t.name == tag for t in refs.tags)
+
+
+def refuse_if_tag_exists(api, repo_id: str, tag: str) -> None:
+    """v1.2 must be created once. Never overwrite an existing v1.2 tag."""
+    if tag != "v1.2":
+        return
+    if hub_tag_exists(api, repo_id, tag):
+        raise SystemExit(
+            f"Refuse publish: tag {tag!r} already exists on {repo_id}. "
+            f"This run will not overwrite it. Inspect "
+            f"https://huggingface.co/{repo_id}/tree/{tag} and choose a new tag if you need another release."
+        )
+
+
 def main() -> None:
     args = parse_args()
     if not args.dry_run:
@@ -186,6 +204,19 @@ def main() -> None:
     revision = args.branch or None
 
     if args.dry_run:
+        if args.tag == "v1.2":
+            # Dry-run still needs a token to check whether the tag already exists.
+            if get_hf_token():
+                dry_api = hf_api()
+                if hub_tag_exists(dry_api, args.hub_model_id, args.tag):
+                    print(
+                        f"[dry run] the real publish would stop here: tag {args.tag!r} "
+                        f"already exists on {args.hub_model_id}"
+                    )
+                else:
+                    print(f"[dry run] tag {args.tag!r} is free on {args.hub_model_id}")
+            else:
+                print("[dry run] skipped tag-exists check (no HF token)")
         files = sorted(p.relative_to(model_dir).as_posix() for p in model_dir.rglob("*") if p.is_file())
         import fnmatch
 
@@ -204,6 +235,8 @@ def main() -> None:
         )
         return
 
+    refuse_if_tag_exists(api, args.hub_model_id, args.tag)
+
     api.create_repo(args.hub_model_id, repo_type="model", private=args.private, exist_ok=True)
     if args.branch:
         api.create_branch(args.hub_model_id, branch=args.branch, repo_type="model", exist_ok=True)
@@ -220,12 +253,13 @@ def main() -> None:
     print("Uploaded:", getattr(commit, "commit_url", commit))
 
     if args.tag:
+        # exist_ok=False for v1.2 so a race cannot silently retarget the tag.
         api.create_tag(
             args.hub_model_id,
             tag=args.tag,
             tag_message=args.tag_message,
             revision=revision,
-            exist_ok=True,
+            exist_ok=False if args.tag == "v1.2" else True,
         )
         print(f"Tagged {args.tag}" + (f" at branch {args.branch}" if args.branch else ""))
 

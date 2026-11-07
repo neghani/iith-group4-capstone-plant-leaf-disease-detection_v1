@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from publish import GATED_TAGS, publish_gate
+from publish import GATED_TAGS, publish_gate, refuse_if_tag_exists
 
 
 def _model_dir(tmp: Path, *, pd_f1: float, pv_acc: float) -> Path:
@@ -54,3 +54,30 @@ def test_v12_gate_fails_on_pv_drop(tmp_path):
 def test_v10_tag_skips_gate(tmp_path):
     model = _model_dir(tmp_path, pd_f1=0.1, pv_acc=0.1)
     publish_gate(model, "v1.0", tmp_path / "missing.json")
+
+
+class _FakeRefs:
+    def __init__(self, tags):
+        self.tags = [type("T", (), {"name": t})() for t in tags]
+
+
+class _FakeApi:
+    def __init__(self, tags):
+        self._tags = tags
+
+    def list_repo_refs(self, repo_id, repo_type=None):
+        return _FakeRefs(self._tags)
+
+
+def test_refuse_if_v12_tag_exists():
+    with pytest.raises(SystemExit, match="already exists"):
+        refuse_if_tag_exists(_FakeApi(["v1.1", "v1.2"]), "neghani/plantvillage-mobilenetv2", "v1.2")
+
+
+def test_refuse_allows_missing_v12_tag():
+    refuse_if_tag_exists(_FakeApi(["v1.0", "v1.1"]), "neghani/plantvillage-mobilenetv2", "v1.2")
+
+
+def test_refuse_skips_non_v12_tags():
+    # Even if v1.1 exists, refuse_if_tag_exists only guards v1.2.
+    refuse_if_tag_exists(_FakeApi(["v1.1"]), "neghani/plantvillage-mobilenetv2", "v1.1")
