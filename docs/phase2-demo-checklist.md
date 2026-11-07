@@ -36,6 +36,7 @@ MobileNet path only. Pin must match `shared/release.json`
 - [ ] Chat: non-agriculture → polite decline
 - [ ] Language toggle → Telugu on a successful diagnosis (needs LLM; else English stays + note)
 - [ ] Optional tutor toy: `/web-test` one row → live MobileNet badge + latency
+- [ ] Optional: `/local-test` → 10 random `real_world_set` images (gate + abstain + GT crop hint)
 
 ## Out of scope (confirm absent)
 

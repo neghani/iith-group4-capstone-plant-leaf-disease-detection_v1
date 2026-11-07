@@ -6,7 +6,6 @@ label. For tutor demos / smoke only; respect image-site terms and do not redistr
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import random
@@ -18,8 +17,10 @@ import httpx
 from PIL import Image
 
 from app.config import get_settings
-from app.vision.hf_client import HFInferenceError, classify_image, hf_configured
+from app.services.smoke_common import classify_prepared_row, tally_verdicts
+from app.vision.hf_client import hf_configured
 from app.vision.predictor import display_name
+from app.vision.quality import prepare_image
 
 _log = logging.getLogger("leafcheck.web_test")
 
@@ -204,62 +205,22 @@ def _fetch_jpeg(url: str, timeout: float = 20.0) -> bytes | None:
         return None
 
 
-def _thumb_data_url(jpeg: bytes) -> str:
-    img = Image.open(BytesIO(jpeg)).convert("RGB")
-    img.thumbnail((160, 160))
-    buf = BytesIO()
-    img.save(buf, format="JPEG", quality=70)
-    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-    return f"data:image/jpeg;base64,{b64}"
-
-
-def _classify_row(index: int, class_id: str, url: str, jpeg: bytes) -> dict:
-    settings = get_settings()
-    pin_id, pin_rev = settings.hf_model_id, settings.hf_model_revision
-    try:
-        scores = classify_image(jpeg, "image/jpeg", top_k=3)
-    except HFInferenceError as exc:
-        return {
-            "status": "row",
-            "index": index,
-            "image": _thumb_data_url(jpeg),
-            "source_url": url,
-            "gt_id": class_id,
-            "gt_display": display_name(class_id),
-            "pred_id": None,
-            "pred_display": None,
-            "score": None,
-            "match": False,
-            "error": str(exc),
-            "model_id": pin_id,
-            "model_revision": pin_rev,
-            "latency_ms": None,
-        }
-
-    top = scores[0]
-    return {
-        "status": "row",
-        "index": index,
-        "image": _thumb_data_url(jpeg),
-        "source_url": url,
-        "gt_id": class_id,
-        "gt_display": display_name(class_id),
-        "pred_id": top.label,
-        "pred_display": display_name(top.label),
-        "score": round(float(top.score), 4),
-        "match": top.label == class_id,
-        "top_k": [
-            {
-                "label": s.label,
-                "display_name": display_name(s.label),
-                "score": round(float(s.score), 4),
-            }
-            for s in scores[:3]
-        ],
-        "model_id": scores.meta.get("model_id") or pin_id,
-        "model_revision": scores.meta.get("model_revision") or pin_rev,
-        "latency_ms": scores.meta.get("latency_ms"),
-    }
+def _classify_row(
+    index: int,
+    class_id: str,
+    url: str,
+    jpeg: bytes,
+    *,
+    use_gt_crop_hint: bool = True,
+) -> dict:
+    prepared = prepare_image(jpeg)
+    if not prepared.quality.ok:
+        # Prefer another URL when possible; callers that already accepted the bytes
+        # still get an abstain/retake row via the shared scorer.
+        pass
+    return classify_prepared_row(
+        index, class_id, url, jpeg, prepared, use_gt_crop_hint=use_gt_crop_hint
+    )
 
 
 def _one_image_for_class(class_id: str) -> tuple[str, bytes] | None:
@@ -276,7 +237,12 @@ def _one_image_for_class(class_id: str) -> tuple[str, bytes] | None:
     return None
 
 
-def run_web_test(class_id: str | None = None, n: int = 10) -> Iterator[dict]:
+def run_web_test(
+    class_id: str | None = None,
+    n: int = 10,
+    *,
+    use_gt_crop_hint: bool = True,
+) -> Iterator[dict]:
     """Yield NDJSON events. If class_id is None, randomize a mix from DEMO_POOL."""
     if not hf_configured():
         yield {"status": "error", "detail": "HF_ENDPOINT_URL is not configured."}
@@ -285,6 +251,7 @@ def run_web_test(class_id: str | None = None, n: int = 10) -> Iterator[dict]:
     n = max(1, min(int(n), 15))
     settings = get_settings()
     pin_id, pin_rev = settings.hf_model_id, settings.hf_model_revision
+    threshold = float(settings.confidence_threshold)
 
     if class_id:
         if class_id not in CLASS_QUERIES:
@@ -315,33 +282,35 @@ def run_web_test(class_id: str | None = None, n: int = 10) -> Iterator[dict]:
         "n": n,
         "model_id": pin_id,
         "model_revision": pin_rev,
+        "confidence_threshold": threshold,
+        "use_gt_crop_hint": use_gt_crop_hint,
     }
 
-    correct = 0
-    rows = 0
+    collected: list[dict] = []
     for class_target in schedule:
         found = _one_image_for_class(class_target)
         if found is None:
             continue
         url, jpeg = found
-        if rows == 0:
+        if not collected:
             yield {"status": "found", "candidates": n}
-        row = _classify_row(rows, class_target, url, jpeg)
-        if row.get("match"):
-            correct += 1
+        row = _classify_row(
+            len(collected), class_target, url, jpeg, use_gt_crop_hint=use_gt_crop_hint
+        )
+        collected.append(row)
         yield row
-        rows += 1
 
-    if rows == 0:
+    if not collected:
         yield {"status": "error", "detail": "Could not download any web images for this run."}
         return
 
+    tallied = tally_verdicts(collected)
     yield {
         "status": "done",
         "mode": mode,
-        "n": rows,
-        "correct": correct,
-        "accuracy": round(correct / rows, 3) if rows else 0.0,
+        **tallied,
+        "confidence_threshold": threshold,
+        "use_gt_crop_hint": use_gt_crop_hint,
         "class_id": class_id,
         "gt_display": display_name(class_id) if class_id else "randomized demo pool",
         "model_id": pin_id,

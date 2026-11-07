@@ -19,9 +19,12 @@ from app.schemas import (
     InferenceInfo,
     PredictResponse,
     TopKPrediction,
+    LocalTestRunRequest,
     WebTestRunRequest,
 )
 from app.services.chat import handle_chat
+from app.services.local_test import list_local_set as local_test_meta
+from app.services.local_test import run_local_test
 from app.services.provenance import build_provenance
 from app.services.report import build_quality_report
 from app.services.translate import normalize_language, translate_report
@@ -215,7 +218,28 @@ def web_test_run(body: WebTestRunRequest) -> StreamingResponse:
     """Search N web images for a class, classify each, stream NDJSON rows one-by-one."""
 
     def events():
-        for event in run_web_test(body.class_id, body.n):
+        for event in run_web_test(
+            body.class_id, body.n, use_gt_crop_hint=body.use_gt_crop_hint
+        ):
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
+
+
+@app.get("/local-test/meta")
+def local_test_get_meta() -> dict:
+    """Availability of model/data/real_world_set for the Local Test UI."""
+    return local_test_meta()
+
+
+@app.post("/local-test/run")
+def local_test_run(body: LocalTestRunRequest) -> StreamingResponse:
+    """Sample N labelled real_world_set images, classify, stream NDJSON rows."""
+
+    def events():
+        for event in run_local_test(
+            body.n, use_gt_crop_hint=body.use_gt_crop_hint, split=body.split
+        ):
             yield json.dumps(event, ensure_ascii=False) + "\n"
 
     return StreamingResponse(events(), media_type="application/x-ndjson")

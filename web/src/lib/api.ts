@@ -101,23 +101,44 @@ export type WebTestClassesResponse = {
   model_id: string;
   model_revision: string;
   hf_configured: boolean;
+  confidence_threshold?: number;
   demo_pool: WebTestClass[];
   curated: WebTestClass[];
   all: WebTestClass[];
   note: string;
 };
 
+export type LocalTestMetaResponse = {
+  model_id: string;
+  model_revision: string;
+  hf_configured: boolean;
+  confidence_threshold?: number;
+  set_dir: string | null;
+  available: boolean;
+  n_images: number;
+  n_labels_csv: number;
+  splits: Record<string, number>;
+  note: string;
+};
+
+export type SmokeVerdict = "yes" | "no" | "abstain" | "crop_mismatch";
+
 export type WebTestEvent =
   | {
       status: "searching";
-      mode?: "mixed" | "single";
-      class_id: string | null;
+      mode?: "mixed" | "single" | "local";
+      source?: string;
+      class_id?: string | null;
       gt_display: string;
       query?: string | null;
       schedule?: string[];
       n: number;
       model_id: string;
       model_revision: string;
+      confidence_threshold?: number;
+      use_gt_crop_hint?: boolean;
+      split?: string | null;
+      set_dir?: string;
     }
   | { status: "found"; candidates: number }
   | {
@@ -131,49 +152,48 @@ export type WebTestEvent =
       pred_display: string | null;
       score: number | null;
       match: boolean;
+      verdict?: SmokeVerdict;
+      crop_mismatch?: boolean;
+      gt_crop?: string;
+      pred_crop?: string | null;
+      confidence_threshold?: number;
+      use_gt_crop_hint?: boolean;
       error?: string;
       top_k?: { label: string; display_name: string; score: number }[];
       model_id?: string;
       model_revision?: string;
       latency_ms?: number | null;
+      gate_ok?: boolean;
+      leaf_found?: boolean | null;
+      crop_strategy?: string;
+      model_status?: string;
+      split?: string;
+      plantdoc_class?: string;
     }
   | {
       status: "done";
-      mode?: "mixed" | "single";
+      mode?: "mixed" | "single" | "local";
+      source?: string;
       n: number;
       correct: number;
+      abstain?: number;
+      wrong?: number;
       accuracy: number;
-      class_id: string | null;
+      answered_accuracy?: number | null;
+      confidence_threshold?: number;
+      use_gt_crop_hint?: boolean;
+      class_id?: string | null;
       gt_display: string;
       model_id?: string;
       model_revision?: string;
     }
   | { status: "error"; detail: string };
 
-export async function fetchWebTestClasses(): Promise<WebTestClassesResponse> {
-  const res = await fetch(`${API_URL}/web-test/classes`, { cache: "no-store" });
-  if (!res.ok) throw new Error(await errorDetail(res, "Could not load web-test classes"));
-  return res.json();
-}
-
-/** Stream NDJSON events from search → classify (rows appear one by one). */
-export async function runWebTest(
-  n: number,
-  onEvent: (event: WebTestEvent) => void,
-  signal?: AbortSignal,
-  classId?: string | null
+async function readNdjsonStream(
+  res: Response,
+  onEvent: (event: WebTestEvent) => void
 ): Promise<void> {
-  const body: { n: number; class_id?: string } = { n };
-  if (classId) body.class_id = classId;
-  const res = await fetch(`${API_URL}/web-test/run`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
-    body: JSON.stringify(body),
-    signal,
-  });
-  if (!res.ok) throw new Error(await errorDetail(res, "Web test failed"));
-  if (!res.body) throw new Error("No response body from web test");
-
+  if (!res.body) throw new Error("No response body");
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -191,4 +211,63 @@ export async function runWebTest(
   }
   const tail = buffer.trim();
   if (tail) onEvent(JSON.parse(tail) as WebTestEvent);
+}
+
+export async function fetchWebTestClasses(): Promise<WebTestClassesResponse> {
+  const res = await fetch(`${API_URL}/web-test/classes`, { cache: "no-store" });
+  if (!res.ok) throw new Error(await errorDetail(res, "Could not load web-test classes"));
+  return res.json();
+}
+
+export async function fetchLocalTestMeta(): Promise<LocalTestMetaResponse> {
+  const res = await fetch(`${API_URL}/local-test/meta`, { cache: "no-store" });
+  if (!res.ok) throw new Error(await errorDetail(res, "Could not load local-test meta"));
+  return res.json();
+}
+
+/** Stream NDJSON events from search → classify (rows appear one by one). */
+export async function runWebTest(
+  n: number,
+  onEvent: (event: WebTestEvent) => void,
+  signal?: AbortSignal,
+  classId?: string | null,
+  useGtCropHint: boolean = true
+): Promise<void> {
+  const body: { n: number; class_id?: string; use_gt_crop_hint: boolean } = {
+    n,
+    use_gt_crop_hint: useGtCropHint,
+  };
+  if (classId) body.class_id = classId;
+  const res = await fetch(`${API_URL}/web-test/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, "Web test failed"));
+  await readNdjsonStream(res, onEvent);
+}
+
+/** Stream NDJSON from labelled real_world_set sample → classify. */
+export async function runLocalTest(
+  n: number,
+  onEvent: (event: WebTestEvent) => void,
+  signal?: AbortSignal,
+  useGtCropHint: boolean = true,
+  split?: string | null
+): Promise<void> {
+  const body: {
+    n: number;
+    use_gt_crop_hint: boolean;
+    split?: string;
+  } = { n, use_gt_crop_hint: useGtCropHint };
+  if (split) body.split = split;
+  const res = await fetch(`${API_URL}/local-test/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new Error(await errorDetail(res, "Local test failed"));
+  await readNdjsonStream(res, onEvent);
 }

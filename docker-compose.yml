@@ -19,6 +19,8 @@ services:
       - "8000:8000"
     volumes:
       - ./api/data:/app/data:ro
+      # Local Test UI: labelled PlantDoc set (images often git-ignored — keep locally).
+      - ./model/data/real_world_set:/app/model/data/real_world_set:ro
     depends_on:
       - inference-service
 

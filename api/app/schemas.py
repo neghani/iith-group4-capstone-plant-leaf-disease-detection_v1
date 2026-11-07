@@ -139,6 +139,18 @@ class WebTestRunRequest(BaseModel):
 
     class_id: str | None = None
     n: int = Field(default=10, ge=1, le=15)
+    use_gt_crop_hint: bool = True
+
+
+class LocalTestRunRequest(BaseModel):
+    """Smoke on labelled photos from ``model/data/real_world_set`` (random sample)."""
+
+    n: int = Field(default=10, ge=1, le=15)
+    use_gt_crop_hint: bool = True
+    split: str | None = Field(
+        default=None,
+        description="Optional labels.csv split filter: tune | final. Omit for any.",
+    )
 
 
 class HealthResponse(BaseModel):

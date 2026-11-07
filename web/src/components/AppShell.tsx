@@ -2,14 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, FlaskConical, History, ScanLine, Sprout } from "lucide-react";
-import type { ReactNode } from "react";
+import {
+  BookOpen,
+  FlaskConical,
+  FolderOpen,
+  History,
+  ScanLine,
+  Sprout,
+} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useT } from "@/i18n/LocaleProvider";
 import { LanguageToggle } from "@/components/LanguageToggle";
+
+/** Show Local Test nav only when localStorage["local-test"] === "true". */
+const LOCAL_TEST_FLAG = "local-test";
 
 const nav = [
   { href: "/check", labelKey: "nav.check", icon: ScanLine },
   { href: "/web-test", labelKey: "nav.webTest", icon: FlaskConical },
+  {
+    href: "/local-test",
+    labelKey: "nav.localTest",
+    icon: FolderOpen,
+    requiresLocalTestFlag: true,
+  },
   { href: "/history", labelKey: "nav.history", icon: History },
   { href: "/guide", labelKey: "nav.guide", icon: BookOpen },
 ];
@@ -23,6 +39,19 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const t = useT();
+  const [showLocalTest, setShowLocalTest] = useState(false);
+
+  useEffect(() => {
+    try {
+      setShowLocalTest(localStorage.getItem(LOCAL_TEST_FLAG) === "true");
+    } catch {
+      setShowLocalTest(false);
+    }
+  }, []);
+
+  const visibleNav = nav.filter(
+    (item) => !item.requiresLocalTestFlag || showLocalTest
+  );
 
   return (
     <div className="flex min-h-screen bg-cream">
@@ -41,7 +70,7 @@ export function AppShell({
         </p>
 
         <nav className="flex flex-col gap-1">
-          {nav.map(({ href, labelKey, icon: Icon }) => {
+          {visibleNav.map(({ href, labelKey, icon: Icon }) => {
             const label = t(labelKey);
             const active =
               pathname === href || (href === "/check" && pathname === "/");
