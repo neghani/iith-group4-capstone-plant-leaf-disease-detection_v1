@@ -1,5 +1,6 @@
 from dataclasses import asdict
 
+from app.demo_log import demo
 from app.agent.state import DiagnosisState
 from app.config import get_settings
 from app.schemas import DiagnosisReport
@@ -19,10 +20,23 @@ from app.vision.predictor import predict
 
 
 def predict_node(state: DiagnosisState) -> DiagnosisState:
+    demo("AGENT", "▶", "node: predict — sending leaf crop to the classifier")
     try:
         pred = predict(state["prepared"])
     except HFInferenceError as exc:
+        demo("AGENT", "✖", f"predict failed — classifier unavailable ({exc})")
         return {**state, "error": str(exc)}
+    top1 = (
+        f"{pred.top_k[0].display_name} {pred.top_k[0].score:.1%}"
+        if pred.top_k
+        else "n/a"
+    )
+    demo(
+        "AGENT",
+        "✔",
+        f"predict → {pred.disease_id or '(no class)'} conf={pred.confidence:.3f}"
+        f" status={pred.status} · top1 {top1}",
+    )
     flag, note = _check_crop_hint(state.get("crop_hint", ""), pred.crop)
     return {
         **state,
@@ -55,11 +69,13 @@ def _check_crop_hint(hint: str, predicted_crop: str) -> tuple[str, str]:
 
 
 def predict_error_node(state: DiagnosisState) -> DiagnosisState:
+    demo("AGENT", "▶", "node: predict_error — building 'Analysis unavailable' report")
     report = build_error_report()
     return {**state, "report": report.model_dump(), "top_k": []}
 
 
 def unsupported_crop_node(state: DiagnosisState) -> DiagnosisState:
+    demo("AGENT", "▶", "node: unsupported_crop — building 'Crop not supported' report")
     report = build_unsupported_crop_report(state.get("crop_hint", ""))
     return {**state, "report": report.model_dump()}
 
@@ -67,6 +83,7 @@ def unsupported_crop_node(state: DiagnosisState) -> DiagnosisState:
 def retake_node(state: DiagnosisState) -> DiagnosisState:
     strategy = state.get("strategy") or {}
     message = strategy.get("message") or "Please retake the photo with the leaf in focus."
+    demo("AGENT", "▶", f"node: retake — {message}")
     report = build_quality_report(message)
     return {**state, "report": report.model_dump(), "top_k": []}
 
@@ -75,6 +92,11 @@ def not_sure_node(state: DiagnosisState) -> DiagnosisState:
     strategy = state.get("strategy") or {}
     ood_thr = float(strategy.get("ood_threshold") or 0.0)
     margin = strategy.get("margin")
+    demo(
+        "AGENT",
+        "▶",
+        f"node: not_sure — conf={state.get('confidence', 0):.3f} margin={margin} ood_thr={ood_thr}",
+    )
     reason = ""
     if (
         ood_thr > 0
@@ -93,11 +115,22 @@ def not_sure_node(state: DiagnosisState) -> DiagnosisState:
 
 
 def knowledge_node(state: DiagnosisState) -> DiagnosisState:
+    demo("AGENT", "▶", "node: knowledge — KB lookup in diseases.json")
     entry = get_entry(state["disease_id"]) or {}
+    if entry:
+        demo(
+            "AGENT",
+            "✔",
+            f"KB hit: '{entry.get('display_name', state['disease_id'])}'"
+            f" ({len(entry.get('symptoms', []))} symptoms, {len(entry.get('actions', []))} actions)",
+        )
+    else:
+        demo("AGENT", "→", "no curated KB entry — falling back to a label-only report")
     return {**state, "knowledge_entry": entry}
 
 
 def generate_report_node(state: DiagnosisState) -> DiagnosisState:
+    demo("AGENT", "▶", "node: generate_report — building the structured report")
     report = build_report_from_knowledge(
         state["disease_id"],
         state["confidence"],
@@ -117,7 +150,14 @@ def generate_report_node(state: DiagnosisState) -> DiagnosisState:
         crop_note=state.get("crop_note", ""),
     )
     llm_used = report.initial_message != template_message
+    demo(
+        "AGENT",
+        "✔",
+        "generate_report done — summary "
+        + ("rewritten by the LLM" if llm_used else "from the curated KB template"),
+    )
     if state.get("crop_flag") == "mismatch":
+        demo("AGENT", "→", "crop hint mismatch — downgrading report to 'Possible match'")
         report = apply_crop_mismatch(report, state.get("crop_hint", ""), state.get("crop", ""))
     if state.get("additional_symptoms"):
         extra = state["additional_symptoms"].strip()
@@ -126,6 +166,7 @@ def generate_report_node(state: DiagnosisState) -> DiagnosisState:
 
 
 def safety_node(state: DiagnosisState) -> DiagnosisState:
+    demo("AGENT", "▶", "node: safety — final guardrails and disclaimers")
     report_dict = state.get("report") or {}
     report = DiagnosisReport.model_validate(report_dict)
     settings = get_settings()
@@ -156,4 +197,10 @@ def safety_node(state: DiagnosisState) -> DiagnosisState:
         "top_k": state.get("top_k", []),
         "summary": report.initial_message,
     }
+    demo(
+        "AGENT",
+        "✔",
+        f"safety done → status={report.status} expert_confirmation={report.expert_confirmation_required}"
+        f" low_confidence={low} · graph END",
+    )
     return {**state, "report": report.model_dump(), "session_context": ctx}

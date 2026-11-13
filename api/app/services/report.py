@@ -359,10 +359,20 @@ def enrich_report_with_llm(
     crop_note: str = "",
 ) -> DiagnosisReport:
     """Farmer-facing summary from the classifier output; structured fields stay as built."""
+    from app.demo_log import demo
+
+    demo(
+        "REPORT",
+        "▶",
+        "LLM summary requested — classifier text + curated KB reference, never the photo",
+    )
     prompt = build_report_prompt(
         report, reference, top_k or [], low_confidence, crop_hint, additional_symptoms, crop_note
     )
     text = generate_text(REPORT_SYSTEM, prompt)
     if text:
+        demo("REPORT", "✔", "LLM summary accepted into the report")
         report.initial_message = text
+    else:
+        demo("REPORT", "→", "LLM unavailable/empty — keeping the KB template summary (fail soft)")
     return report

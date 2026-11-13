@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.agent.graph import diagnosis_graph
 from app.config import get_settings
+from app.demo_log import Stage, demo
 from app.llm.provider import llm_configured
 from app.schemas import (
     ChatRequest,
@@ -110,6 +111,7 @@ def health(probe: bool = False) -> HealthResponse:
 @app.post("/quality-check", response_model=ImageQualityResult)
 async def quality_check(file: Annotated[UploadFile, File(...)]) -> ImageQualityResult:
     """Step 1: cheap local checks only (type, size, dimensions, brightness, blur)."""
+    demo("API", "▶", f"POST /quality-check — {file.content_type}, {file.size or '?'} bytes")
     return (await _gate_upload(file)).quality
 
 
@@ -121,6 +123,13 @@ async def predict(
     language: Annotated[str | None, Form()] = None,
 ) -> PredictResponse:
     """Step 2: re-runs the gate server-side, then HF classifier -> knowledge -> LLM -> safety."""
+    demo(
+        "API",
+        "▶",
+        f"POST /predict — {file.content_type}, {file.size or '?'} bytes"
+        + (f", crop_hint={crop}" if crop else "")
+        + (f", symptoms='{additional_symptoms}'" if additional_symptoms else ""),
+    )
     lang = normalize_language(language)
     prepared = await _gate_upload(file)
     quality = prepared.quality
@@ -152,16 +161,13 @@ async def predict(
     report, session_context, applied = _localize(report, session_context, lang)
     inference = result.get("inference")
     strategy = result.get("strategy") or {}
-    _log.info(
-        "predict: disease=%s conf=%.3f status=%s crop_flag=%r strategy=%s crops=%s agreement=%s model=%s",
-        report.disease_id,
-        report.confidence,
-        report.status,
-        result.get("crop_flag", ""),
-        strategy.get("strategy"),
-        strategy.get("n_crops"),
-        strategy.get("agreement"),
-        (inference or {}).get("model_id"),
+    demo(
+        "API",
+        "✔",
+        f"/predict done → {report.diagnosis_name} ({report.status_label})"
+        f" conf={report.confidence:.3f} · strategy={strategy.get('strategy')}"
+        f" crops={strategy.get('n_crops')} agreement={strategy.get('agreement')}"
+        f" model={(inference or {}).get('model_id')}",
     )
 
     inference_info = (
@@ -199,6 +205,7 @@ async def predict(
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(body: ChatRequest) -> ChatResponse:
+    demo("CHAT", "▶", f"POST /chat — farmer asks: '{body.message[:80]}'")
     return handle_chat(
         body.message,
         body.session_context,

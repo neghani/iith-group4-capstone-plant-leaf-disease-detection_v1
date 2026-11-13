@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 
 from PIL import Image
 
+from app.demo_log import Stage
 from app.schemas import ImageQualityResult
 from shared.vision.candidates import Candidate, find_candidates
 from shared.vision.quality import GateResult, check_gate, load_working_copy, rejected
@@ -40,14 +41,19 @@ def _quality(gate: GateResult) -> ImageQualityResult:
 
 
 def prepare_image(data: bytes) -> PreparedImage:
+    stage = Stage("QUALITY", f"gate ▶ decoding upload ({len(data) / 1024:.0f} KB)")
     started = time.perf_counter()
     img, meta, reason = load_working_copy(data)
     if img is None:
         gate = rejected(reason or "unreadable", meta)
+        stage.fail(f"unreadable image — gate REJECT ({gate.reason})")
         return PreparedImage(_quality(gate), gate=gate, trace=gate.trace)
 
     decoded = time.perf_counter()
+    w, h = meta["original_size"]
+    stage.info(f"decoded {w}×{h} · finding leaf candidates")
     candidates = find_candidates(img)
+    stage.info(f"{len(candidates)} leaf candidate(s) found · running quality checks")
     gate = check_gate(img, candidates, meta["original_size"])
     trace = {
         **meta,
@@ -56,7 +62,12 @@ def prepare_image(data: bytes) -> PreparedImage:
         "analyse_ms": round((time.perf_counter() - decoded) * 1000),
     }
     if not gate.ok:
+        stage.fail(f"gate REJECT ({gate.reason}) — {gate.message}")
         return PreparedImage(_quality(gate), gate=gate, trace=trace)
+    stage.ok(
+        f"PASS — brightness {gate.brightness:.2f} · blur {gate.blur_score:.1f}"
+        f" · leaf {gate.leaf_coverage:.1%}"
+    )
     logger.info("image prepared: %s", trace)
     return PreparedImage(_quality(gate), img, candidates, gate, trace)
 

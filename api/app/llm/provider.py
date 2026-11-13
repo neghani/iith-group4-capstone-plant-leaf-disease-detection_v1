@@ -1,9 +1,11 @@
 import logging
-import traceback
+import time
+
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.config import get_settings
+from app.demo_log import Stage, demo
 
 _log = logging.getLogger("leafcheck.llm")
 
@@ -16,10 +18,10 @@ def llm_configured() -> bool:
 def get_chat_model(temperature: float = 0.2) -> ChatOpenAI | None:
     settings = get_settings()
     if not settings.llm_api_key.strip():
+        demo("LLM", "✖", "no API key — LLM disabled, falling back to KB templates")
         return None
-
     base_url = settings.llm_base_url.strip() or None
-    print(f"\n[LLM ROUTE CHECK] Model: {settings.llm_model} | Base URL: {base_url}", flush=True)
+    demo("LLM", "→", f"route → model={settings.llm_model} base_url={base_url or 'api.openai.com'}")
 
     kwargs: dict = {
         "model": settings.llm_model,
@@ -108,25 +110,27 @@ def _invoke(messages: list) -> tuple[str | None, str | None]:
     for message in messages:
         if not isinstance(message.content, str):
             raise TypeError("LLM accepts text only; images go to the Hugging Face classifier.")
+    prompt_chars = sum(len(m.content) for m in messages)
+    stage = Stage("LLM")
+    stage.start(f"call ▶ {len(messages)} messages, {prompt_chars} chars of prompt (text only — never the image)")
     model = get_chat_model()
     if model is None:
-        print("\n>>> [LLM STATUS]: model is None (check .env LLM_API_KEY)\n", flush=True)
+        stage.fail("no API key — using canned/KB fallback reply")
         return None, "no_key"
     try:
+        started = time.perf_counter()
         response = model.invoke(messages)
+        latency = (time.perf_counter() - started) * 1000
         content = response.content
-        if isinstance(content, str):
-            text = content.strip()
-        else:
-            text = str(content).strip()
+        text = content.strip() if isinstance(content, str) else str(content).strip()
         if not text:
+            stage.fail("empty reply from the model")
             return None, "The language model returned an empty reply."
+        stage.ok(f"reply in {latency / 1000:.1f} s ({len(text)} chars)")
         return text, None
     except Exception as exc:
-        print(f"\n{'='*50}", flush=True)
-        print(f">>> [LLM CALL FAILED]: {type(exc).__name__}: {exc}", flush=True)
-        traceback.print_exc()
-        print(f"{'='*50}\n", flush=True)
+        stage.fail(f"call failed — {type(exc).__name__}: {exc}")
+        _log.exception("LLM call failed")
         return None, _farmer_facing_error(exc)
 
 

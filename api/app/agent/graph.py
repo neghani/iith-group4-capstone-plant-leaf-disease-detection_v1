@@ -1,5 +1,6 @@
 from langgraph.graph import END, START, StateGraph
 
+from app.demo_log import demo
 from app.agent.nodes import (
     generate_report_node,
     knowledge_node,
@@ -15,13 +16,18 @@ from app.agent.state import DiagnosisState
 
 def _route_after_predict(state: DiagnosisState) -> str:
     if state.get("error"):
+        demo("AGENT", "→", "route: predict_error — no fabricated write-up will be produced")
         return "predict_error"
     if state.get("crop_flag") == "unsupported":
+        demo("AGENT", "→", f"route: unsupported_crop — crop '{state.get('crop_hint', '')}' was never trained on")
         return "unsupported_crop"
     if state.get("model_status") == "retake_photo":
+        demo("AGENT", "→", "route: retake — photo quality too low to classify")
         return "retake"
     if state.get("model_status") == "not_sure":
+        demo("AGENT", "→", "route: not_sure — confidence/margin below threshold")
         return "not_sure"
+    demo("AGENT", "→", "route: knowledge — confident prediction, continuing the graph")
     return "knowledge"
 
 
